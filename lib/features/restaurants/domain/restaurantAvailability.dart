@@ -4,12 +4,14 @@ class RestaurantAvailability {
     required this.isInApp,
     required this.isAcceptingOrders,
     this.workingHours,
+    this.allowMissingWorkingHours = false,
   });
 
   final String status;
   final bool isInApp;
   final bool isAcceptingOrders;
   final String? workingHours;
+  final bool allowMissingWorkingHours;
 
   String get _statusUpper => status.trim().toUpperCase();
 
@@ -19,16 +21,16 @@ class RestaurantAvailability {
 
   bool get _isWithinWorkingHours {
     final value = workingHours?.trim() ?? '';
-    if (value.isEmpty) return true;
+    if (value.isEmpty) return allowMissingWorkingHours;
     final matches = RegExp(r'([01]?\d|2[0-3]):([0-5]\d)').allMatches(value).toList();
-    if (matches.length < 2) return true;
+    if (matches.length < 2) return false;
     int minutes(RegExpMatch match) =>
         int.parse(match.group(1)!) * 60 + int.parse(match.group(2)!);
     final opens = minutes(matches[0]);
     final closes = minutes(matches[1]);
     final now = DateTime.now();
     final current = now.hour * 60 + now.minute;
-    if (opens == closes) return true;
+    if (opens == closes) return false;
     if (closes > opens) return current >= opens && current < closes;
     return current >= opens || current < closes;
   }
