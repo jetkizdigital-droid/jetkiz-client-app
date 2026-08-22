@@ -412,7 +412,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                     sigmaY: 2,
                                   ),
                                   child: Container(
-                                    color: Colors.white.withOpacity(0.06),
+                                    color: Colors.white.withValues(alpha: 0.06),
                                   ),
                                 ),
                               ),
@@ -430,7 +430,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                           ),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.white.withOpacity(0.88),
+                                                Colors.white.withValues(alpha: 0.88),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -462,7 +462,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                             vertical: 7,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _green.withOpacity(0.92),
+                                            color: _green.withValues(alpha: 0.92),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -921,7 +921,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
           if (_showSuccess)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                   child: Center(
@@ -1081,7 +1081,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white.withOpacity(0.8),
+      color: Colors.white.withValues(alpha: 0.8),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
         children: [
@@ -1176,7 +1176,7 @@ class _MediaActionButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.28),
+                  color: color.withValues(alpha: 0.28),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),

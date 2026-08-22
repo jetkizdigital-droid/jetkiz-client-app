@@ -67,11 +67,7 @@ class EditProfileSheet extends StatefulWidget {
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
   static const _green = Color(0xFF4CAF50);
-  static const _fieldFill = Color(0xFFF9FAFB);
-  static const _fieldBorder = Color(0xFFE5E7EB);
   static const _titleColor = Color(0xFF1F2937);
-  static const _labelColor = Color(0xFF374151);
-  static const _hintColor = Color(0xFF9CA3AF);
 
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;

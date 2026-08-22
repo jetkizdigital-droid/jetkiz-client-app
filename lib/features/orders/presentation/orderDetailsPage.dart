@@ -62,11 +62,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
             'Не удалось загрузить детали заказа';
       });
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -104,6 +100,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           ],
         ),
       );
+      if (!mounted) return;
       if (replace != true) return;
       cart.clear();
     }

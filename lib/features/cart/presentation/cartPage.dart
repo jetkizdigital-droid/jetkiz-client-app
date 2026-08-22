@@ -481,7 +481,7 @@ class _GuestCart extends StatelessWidget {
             const SizedBox(height: 20),
             Text(strings.guestCartTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
             Text(strings.guestCartSubtitle,
                 textAlign: TextAlign.center),
@@ -539,7 +539,7 @@ class _CartAddressCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.20),
+                  color: Colors.white.withValues(alpha: 0.20),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -984,7 +984,7 @@ class _CartSummary extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
+                            color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(

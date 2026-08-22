@@ -22,7 +22,6 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
   late final RestaurantReviewsApi _api;
 
   bool _loading = true;
-  bool _refreshing = false;
   String? _error;
   RestaurantReviewPageData? _data;
 
@@ -34,11 +33,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _refreshing = true;
-      });
-    } else {
+    if (!refresh) {
       setState(() {
         _loading = true;
         _error = null;
@@ -66,11 +61,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
         _error = 'Не удалось загрузить отзывы';
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _refreshing = false;
-      });
+      if (mounted) setState(() => _loading = false);
     }
   }
 

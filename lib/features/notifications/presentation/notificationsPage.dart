@@ -159,11 +159,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _error = 'Не удалось загрузить уведомления';
       });
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _loading = false;
-      });
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -189,11 +185,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
       _showError('Не удалось обновить уведомления');
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _refreshing = false;
-      });
+      if (mounted) setState(() => _refreshing = false);
     }
   }
 
@@ -283,11 +275,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
       _showError('Не удалось отметить уведомления как прочитанные');
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _markAllLoading = false;
-      });
+      if (mounted) setState(() => _markAllLoading = false);
     }
   }
 

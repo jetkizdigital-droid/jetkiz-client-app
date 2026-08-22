@@ -95,11 +95,7 @@ class _OrdersPageState extends State<OrdersPage> {
         _errorText = error.toString();
       });
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -159,11 +155,7 @@ class _OrdersPageState extends State<OrdersPage> {
     } catch (_) {
       // Не блокируем экран из-за ошибки догрузки.
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoadingMore = false;
-      });
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 

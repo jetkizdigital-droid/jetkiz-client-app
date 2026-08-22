@@ -28,9 +28,6 @@ class RestaurantsPage extends StatefulWidget {
 class _RestaurantsPageState extends State<RestaurantsPage> {
   static const Color _green = Color(0xFF489F2A);
   static const Color _bg = Color(0xFFF7FAF5);
-  static const Color _text = Color(0xFF111827);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _border = Color(0xFFE5E7EB);
 
   late final RestaurantsApi _restaurantsApi;
   final TextEditingController _searchController = TextEditingController();
@@ -252,7 +249,7 @@ class RestaurantCard extends StatelessWidget {
                     top: 10,
                     right: 10,
                     child: Material(
-                      color: Colors.white.withOpacity(0.94),
+                      color: Colors.white.withValues(alpha: 0.94),
                       shape: const CircleBorder(),
                       elevation: 1,
                       child: FavoriteRestaurantButton(
@@ -512,7 +509,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.95),
+        color: color.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

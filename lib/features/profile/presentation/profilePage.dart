@@ -487,12 +487,12 @@ class _ProfileHeaderCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const SizedBox(
+              SizedBox(
                 width: 96,
                 child: Text(
                   strings.profileEditPhoto,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: _textLight,
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
@@ -553,14 +553,14 @@ class _ProfileHeaderCard extends StatelessWidget {
                       color: _green.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _ActiveDot(),
-                        SizedBox(width: 6),
+                        const _ActiveDot(),
+                        const SizedBox(width: 6),
                         Text(
                           strings.profileActive,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: _green,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

@@ -112,11 +112,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
         _error = 'Не удалось загрузить меню ресторана';
       });
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -329,7 +325,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       productId: item.id,
       restaurantId: widget.restaurantId,
       restaurantName:
-          widget.restaurantName ?? _menuData?.restaurant.name ?? '',
+          widget.restaurantName ?? _menuData?.restaurant.displayName ?? '',
       title: item.title,
       price: item.price,
       quantity: 1,
@@ -356,7 +352,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       productId: item.id,
       restaurantId: widget.restaurantId,
       restaurantName:
-          widget.restaurantName ?? _menuData?.restaurant.name ?? '',
+          widget.restaurantName ?? _menuData?.restaurant.displayName ?? '',
       title: item.title,
       price: item.price,
       quantity: 1,
