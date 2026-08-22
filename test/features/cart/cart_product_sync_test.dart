@@ -148,14 +148,14 @@ void main() {
         ..addItem(
           productId: 'p1',
           restaurantId: 'r1',
-          title: 'РџР»РѕРІ',
+          title: 'Плов',
           price: 2000,
           quantity: 1,
         )
         ..addItem(
           productId: 'p2',
           restaurantId: 'r1',
-          title: 'РЎР°Р»Р°С‚',
+          title: 'Салат',
           price: 1500,
           quantity: 1,
         );
@@ -174,7 +174,7 @@ void main() {
       repository.addItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
       );
@@ -189,7 +189,7 @@ void main() {
       const item = CartItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
         syncState: CartItemSyncState.notFound,
@@ -202,7 +202,7 @@ void main() {
       const item = CartItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
         syncState: CartItemSyncState.unavailable,
@@ -324,7 +324,7 @@ void main() {
       repository.addItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
       );
@@ -335,7 +335,7 @@ void main() {
       repository.addItem(
         productId: 'p2',
         restaurantId: 'r1',
-        title: 'РЎР°Р»Р°С‚',
+        title: 'Салат',
         price: 1500,
         quantity: 1,
       );
@@ -386,7 +386,7 @@ void main() {
       repository.addItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
       );
@@ -425,7 +425,7 @@ void main() {
       repository.addItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
       );
@@ -450,7 +450,7 @@ void main() {
       repository.addItem(
         productId: 'p1',
         restaurantId: 'r1',
-        title: 'РџР»РѕРІ',
+        title: 'Плов',
         price: 2000,
         quantity: 1,
       );

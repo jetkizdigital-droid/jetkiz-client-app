@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 
@@ -21,20 +25,50 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const _notificationsKey = 'jetkiz.notifications.enabled';
   bool notificationsEnabled = true;
 
   static const _background = Color(0xFFF5F5F5);
   static const _tileColor = Color(0xFFD9D9D9);
   static const _green = Color(0xFF489F2A);
 
-  void _showContractSoon() {
-    final strings = AppLocalizationScope.of(context).strings;
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreference();
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(strings.settingsContractSoon),
-      ),
+  Future<void> _loadNotificationPreference() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      notificationsEnabled = preferences.getBool(_notificationsKey) ?? true;
+    });
+  }
+
+  Future<void> _setNotificationsEnabled(bool value) async {
+    setState(() => notificationsEnabled = value);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_notificationsKey, value);
+
+    final service = PushNotificationService(ApiClient());
+    if (value) {
+      await service.registerCurrentToken();
+    } else {
+      await service.unregisterCurrentToken();
+    }
+  }
+
+  Future<void> _openPrivacy() async {
+    final opened = await launchUrl(
+      Uri.parse('https://jetkiz.asia/privacy'),
+      mode: LaunchMode.externalApplication,
     );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось открыть страницу')),
+      );
+    }
   }
 
   @override
@@ -90,7 +124,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     const Icon(Icons.chevron_right),
                   ],
                 ),
-                onTap: _showContractSoon,
+                onTap: _openPrivacy,
               ),
               const SizedBox(height: 10),
               _tile(
@@ -102,11 +136,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Switch(
                       value: notificationsEnabled,
                       activeThumbColor: _green,
-                      onChanged: (v) {
-                        setState(() {
-                          notificationsEnabled = v;
-                        });
-                      },
+                      onChanged: _setNotificationsEnabled,
                     ),
                   ],
                 ),

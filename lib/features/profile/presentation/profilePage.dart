@@ -2,9 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
+import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
+import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersPage.dart';
 import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
@@ -146,6 +151,7 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     try {
+      await PushNotificationService(_apiClient).unregisterCurrentToken();
       await _profileApi.logout();
     } finally {
       await _clearLocalSessionAndExit();
@@ -156,7 +162,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final authStorage = AuthStorage();
 
     await authStorage.clear();
-    _apiClient.clearAccessToken();
+    await _apiClient.clearAccessToken();
+    CartRepository.instance.clear();
+    AddressRepository.instance.clearSelectedAddress();
+    FavoritesController.instance.reset();
 
     if (!mounted) return;
 
@@ -165,6 +174,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _showComingSoon(String title) {
     _showSnack('$title скоро будет доступно.');
+  }
+
+  Future<void> _openWebPage(String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      _showSnack('Не удалось открыть страницу');
+    }
   }
 
   void _showSnack(String message) {
@@ -233,13 +250,13 @@ class _ProfilePageState extends State<ProfilePage> {
         icon: Icons.support_agent_outlined,
         label: 'Поддержка',
         iconColor: const Color(0xFF06B6D4),
-        onTap: () => _showComingSoon('Поддержка'),
+        onTap: () => _openWebPage('https://jetkiz.asia'),
       ),
       _ProfileMenuItem(
         icon: Icons.description_outlined,
         label: 'Публичная оферта',
         iconColor: const Color(0xFF6366F1),
-        onTap: () => _showComingSoon('Публичная оферта'),
+        onTap: () => _openWebPage('https://jetkiz.asia/privacy'),
       ),
     ];
 

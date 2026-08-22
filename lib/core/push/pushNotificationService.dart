@@ -92,6 +92,26 @@ class PushNotificationService {
     await _sendTokenToBackend(token);
   }
 
+  Future<void> unregisterCurrentToken() async {
+    final token = await getToken();
+    if (token == null || token.trim().isEmpty) return;
+
+    try {
+      final deviceId = await _apiClient.getDeviceId();
+      await _apiClient.dio.post(
+        '/notification-devices/unregister',
+        data: {
+          'token': token.trim(),
+          'deviceId': deviceId,
+        },
+      );
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('PushNotificationService: unregister failed: $error');
+      }
+    }
+  }
+
   Future<void> _requestPermission() async {
     try {
       final settings = await _messaging.requestPermission(

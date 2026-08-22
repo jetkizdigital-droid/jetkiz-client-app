@@ -61,6 +61,25 @@ class FavoritesController extends ChangeNotifier {
   bool isRestaurantBusy(String id) => _busyRestaurantIds.contains(id);
   bool isProductBusy(String id) => _busyProductIds.contains(id);
 
+  void reset() {
+    _restaurantIds.clear();
+    _productIds.clear();
+    _busyRestaurantIds.clear();
+    _busyProductIds.clear();
+    _restaurants = const [];
+    _products = const [];
+    _idsLoaded = false;
+    _restaurantsLoaded = false;
+    _productsLoaded = false;
+    _isInitializing = false;
+    _isRestaurantsLoading = false;
+    _isProductsLoading = false;
+    _restaurantError = null;
+    _productError = null;
+    _lastUpdated = null;
+    notifyListeners();
+  }
+
   Future<void> initialize() async {
     if (_idsLoaded || _isInitializing) return;
 

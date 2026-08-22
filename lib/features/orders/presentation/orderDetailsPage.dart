@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderDetailsData.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 import 'package:jetkiz_mobile/features/reviews/presentation/createReviewPage.dart';
 
 class OrderDetailsPage extends StatefulWidget {
@@ -57,7 +59,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
       setState(() {
         _errorText =
-            'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С‘РЎвЂљРЎРЉ Р Т‘Р ВµРЎвЂљР В°Р В»Р С‘ Р В·Р В°Р С”Р В°Р В·Р В°';
+            'Не удалось загрузить детали заказа';
       });
     } finally {
       if (!mounted) return;
@@ -68,7 +70,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
   }
 
-  void _repeatOrder() {
+  Future<void> _repeatOrder() async {
     final order = _order;
     if (order == null) return;
 
@@ -77,26 +79,60 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(
           content: Text(
-              'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•Р С—РЎР‚Р ВµР Т‘Р ВµР В»Р С‘РЎвЂљРЎРЉ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р… Р В·Р В°Р С”Р В°Р В·Р В°'),
+              'Не удалось определить ресторан заказа'),
         ),
       );
       return;
     }
 
+    final cart = CartRepository.instance;
+    if (cart.hasRestaurant && !cart.belongsToRestaurant(restaurantId)) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Заменить товары в корзине?'),
+          content: const Text('В корзине уже есть блюда другого ресторана.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Отмена'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Заменить'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true) return;
+      cart.clear();
+    }
+
+    var addedCount = 0;
     for (final item in order.items) {
-      CartRepository.instance.addItem(
+      final result = cart.addItem(
         productId: item.productId,
         restaurantId: restaurantId,
         title: item.title,
         price: item.price,
         quantity: item.quantity,
       );
+      if (result == CartAddResult.added || result == CartAddResult.updated) {
+        addedCount++;
+      }
+    }
+
+    if (addedCount == 0) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Не удалось повторить заказ')),
+      );
+      return;
     }
 
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       const SnackBar(
         content: Text(
-            'Р вЂќР С•Р В±Р В°Р Р†Р В»Р ВµР Р…Р С• Р Р† Р С”Р С•РЎР‚Р В·Р С‘Р Р…РЎС“'),
+            'Добавлено в корзину'),
       ),
     );
 
@@ -109,7 +145,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     final restaurantName = order.restaurant?.nameRu.trim().isNotEmpty == true
         ? order.restaurant!.nameRu
-        : 'Р В Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…';
+        : 'Ресторан';
 
     final firstItem = order.items.isNotEmpty ? order.items.first : null;
 
@@ -130,21 +166,27 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     final restaurant = _order?.restaurant;
     if (restaurant == null) return;
 
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text(
-            'Р С›РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљРЎРЉ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…: ${restaurant.nameRu}'),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantMenuPage(
+          restaurantId: restaurant.id,
+          restaurantName: restaurant.nameRu,
+          restaurantImageUrl: restaurant.resolvedCoverImageUrl,
+        ),
       ),
     );
   }
 
-  void _openSupport() {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(
-        content: Text(
-            'Р СџР С•Р Т‘Р Т‘Р ВµРЎР‚Р В¶Р С”Р В° Р В±РЎС“Р Т‘Р ВµРЎвЂљ Р С—Р С•Р Т‘Р С”Р В»РЎР‹РЎвЂЎР ВµР Р…Р В° Р С—Р С•Р В·Р В¶Р Вµ'),
-      ),
+  Future<void> _openSupport() async {
+    final opened = await launchUrl(
+      Uri.parse('https://jetkiz.asia'),
+      mode: LaunchMode.externalApplication,
     );
+    if (!opened && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Не удалось открыть поддержку')),
+      );
+    }
   }
 
   @override
@@ -166,7 +208,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         backgroundColor: _bg,
         body: Center(
           child: Text(
-            'Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…',
+            'Заказ не найден',
             style: TextStyle(
               color: _textMuted,
               fontSize: 15,
@@ -240,37 +282,37 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
   static String _formatDateTime(DateTime value) {
     const months = <int, String>{
-      1: 'РЎРЏР Р…Р Р†Р В°РЎР‚РЎРЏ',
-      2: 'РЎвЂћР ВµР Р†РЎР‚Р В°Р В»РЎРЏ',
-      3: 'Р СР В°РЎР‚РЎвЂљР В°',
-      4: 'Р В°Р С—РЎР‚Р ВµР В»РЎРЏ',
-      5: 'Р СР В°РЎРЏ',
-      6: 'Р С‘РЎР‹Р Р…РЎРЏ',
-      7: 'Р С‘РЎР‹Р В»РЎРЏ',
-      8: 'Р В°Р Р†Р С–РЎС“РЎРѓРЎвЂљР В°',
-      9: 'РЎРѓР ВµР Р…РЎвЂљРЎРЏР В±РЎР‚РЎРЏ',
-      10: 'Р С•Р С”РЎвЂљРЎРЏР В±РЎР‚РЎРЏ',
-      11: 'Р Р…Р С•РЎРЏР В±РЎР‚РЎРЏ',
-      12: 'Р Т‘Р ВµР С”Р В°Р В±РЎР‚РЎРЏ',
+      1: 'января',
+      2: 'февраля',
+      3: 'марта',
+      4: 'апреля',
+      5: 'мая',
+      6: 'июня',
+      7: 'июля',
+      8: 'августа',
+      9: 'сентября',
+      10: 'октября',
+      11: 'ноября',
+      12: 'декабря',
     };
 
     String two(int n) => n.toString().padLeft(2, '0');
-    return '${value.day} ${months[value.month] ?? ''} ${value.year} Р Р† ${two(value.hour)}:${two(value.minute)}';
+    return '${value.day} ${months[value.month] ?? ''} ${value.year} в ${two(value.hour)}:${two(value.minute)}';
   }
 
   static String _paymentStatusLabel(String raw) {
     switch (raw.toUpperCase()) {
       case 'PAID':
-        return 'Р С›Р С—Р В»Р В°РЎвЂЎР ВµР Р…Р С•';
+        return 'Оплачено';
       case 'PENDING':
-        return 'Р С›Р С—Р В»Р В°РЎвЂЎР ВµР Р…Р С•';
+        return 'Оплачено';
       case 'FAILED':
-        return 'Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С•Р С—Р В»Р В°РЎвЂљРЎвЂ№';
+        return 'Ошибка оплаты';
       case 'REFUNDED':
-        return 'Р вЂ™Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљ РЎРѓРЎР‚Р ВµР Т‘РЎРѓРЎвЂљР Р†';
+        return 'Возврат средств';
       default:
         return raw.trim().isEmpty
-            ? 'Р РЋРЎвЂљР В°РЎвЂљРЎС“РЎРѓ Р С•Р С—Р В»Р В°РЎвЂљРЎвЂ№ Р Р…Р ВµР С‘Р В·Р Р†Р ВµРЎРѓРЎвЂљР ВµР Р…'
+            ? 'Статус оплаты неизвестен'
             : raw;
     }
   }
@@ -284,7 +326,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (isPickup && status == 'READY') {
       return const _StatusUi(
-        label: 'Р СљР С•Р В¶Р Р…Р С• Р В·Р В°Р В±Р С‘РЎР‚Р В°РЎвЂљРЎРЉ',
+        label: 'Можно забирать',
         bgColor: Color(0xFFE6F0FF),
         textColor: Color(0xFF2B6CB0),
         icon: Icons.shopping_bag_outlined,
@@ -293,7 +335,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (isPickup && status == 'DELIVERED') {
       return const _StatusUi(
-        label: 'Р СџР С•Р В»РЎС“РЎвЂЎР ВµР Р…',
+        label: 'Получен',
         bgColor: Color(0xFFF3F4F6),
         textColor: Color(0xFF4B5563),
         icon: Icons.check_circle_rounded,
@@ -308,7 +350,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       'ON_THE_WAY',
     ].contains(status)) {
       return const _StatusUi(
-        label: 'Р вЂ™ Р С—РЎС“РЎвЂљР С‘',
+        label: 'В пути',
         bgColor: _green,
         textColor: Colors.white,
         icon: Icons.access_time_rounded,
@@ -317,7 +359,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (status == 'DELIVERED' || status == 'PAID') {
       return const _StatusUi(
-        label: 'Р вЂќР С•РЎРѓРЎвЂљР В°Р Р†Р В»Р ВµР Р…',
+        label: 'Доставлен',
         bgColor: Color(0xFFF3F4F6),
         textColor: Color(0xFF4B5563),
         icon: Icons.check_circle_rounded,
@@ -326,7 +368,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (status == 'CANCELED') {
       return const _StatusUi(
-        label: 'Р С›РЎвЂљР СР ВµР Р…РЎвЂР Р…',
+        label: 'Отменён',
         bgColor: Color(0xFFFEF2F2),
         textColor: Color(0xFFDC2626),
         icon: Icons.cancel_rounded,
@@ -334,7 +376,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
 
     return const _StatusUi(
-      label: 'Р РЋРЎвЂљР В°РЎвЂљРЎС“РЎРѓ',
+      label: 'Статус',
       bgColor: Color(0xFFF3F4F6),
       textColor: Color(0xFF4B5563),
       icon: Icons.info_outline_rounded,
@@ -366,7 +408,7 @@ class _DetailsHeader extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              'Р вЂ”Р В°Р С”Р В°Р В· РІвЂћвЂ“$number',
+              'Заказ №$number',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 20,
@@ -542,7 +584,7 @@ class _RestaurantBlock extends StatelessWidget {
                         ),
                         SizedBox(width: 6),
                         Text(
-                          'Р В Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…',
+                          'Ресторан',
                           style: TextStyle(
                             fontSize: 13,
                             color: _OrderDetailsPageState._textLight,
@@ -579,7 +621,7 @@ class _RestaurantBlock extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Р С›РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљРЎРЉ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…',
+                'Открыть ресторан',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -622,9 +664,9 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: _OrderDetailsPageState._green,
                 ),
               ),
-              title: 'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·',
+              title: 'Самовывоз',
               value:
-                  'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В· Р С‘Р В· РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…Р В°',
+                  'Самовывоз из ресторана',
             ),
           if (address != null)
             _InfoTile(
@@ -641,7 +683,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: _OrderDetailsPageState._green,
                 ),
               ),
-              title: 'Р С’Р Т‘РЎР‚Р ВµРЎРѓ Р Т‘Р С•РЎРѓРЎвЂљР В°Р Р†Р С”Р С‘',
+              title: 'Адрес доставки',
               value: address.formatted,
             ),
           if (order.comment != null && order.comment!.trim().isNotEmpty) ...[
@@ -660,7 +702,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: _OrderDetailsPageState._textMuted,
                 ),
               ),
-              title: 'Р С™Р С•Р СР СР ВµР Р…РЎвЂљР В°РЎР‚Р С‘Р в„–',
+              title: 'Комментарий',
               value: order.comment!.trim(),
             ),
           ],
@@ -683,7 +725,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: Color(0xFFF97316),
                 ),
               ),
-              title: 'Р вЂ™РЎР‚Р ВµР СРЎРЏ Р Т‘Р С•РЎРѓРЎвЂљР В°Р Р†Р С”Р С‘',
+              title: 'Время доставки',
               value: _OrderDetailsPageState._formatDateTime(order.promisedAt!),
             ),
           ],
@@ -692,7 +734,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
               (order.comment == null || order.comment!.trim().isEmpty) &&
               order.promisedAt == null)
             const Text(
-              'Р ВР Р…РЎвЂћР С•РЎР‚Р СР В°РЎвЂ Р С‘РЎРЏ Р С• Р Т‘Р С•РЎРѓРЎвЂљР В°Р Р†Р С”Р Вµ Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р Р…Р В°',
+              'Информация о доставке недоступна',
               style: TextStyle(
                 fontSize: 14,
                 color: _OrderDetailsPageState._textMuted,
@@ -716,9 +758,9 @@ class _PickupCodeBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final code = order.pickupCode?.trim() ?? '';
     final value = order.isDelivered
-        ? 'Р вЂ”Р В°Р С”Р В°Р В· Р С—Р С•Р В»РЎС“РЎвЂЎР ВµР Р…'
+        ? 'Заказ получен'
         : code.isEmpty
-            ? 'Р С™Р С•Р Т‘ РЎРѓР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·Р В° Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р…'
+            ? 'Код самовывоза недоступен'
             : code;
 
     return _SectionCard(
@@ -734,7 +776,7 @@ class _PickupCodeBlock extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·',
+                'Самовывоз',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -745,7 +787,7 @@ class _PickupCodeBlock extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Р С™Р С•Р Т‘ РЎРѓР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·Р В°',
+            'Код самовывоза',
             style: TextStyle(
               fontSize: 13,
               color: _OrderDetailsPageState._textLight,
@@ -765,7 +807,7 @@ class _PickupCodeBlock extends StatelessWidget {
           if (code.isNotEmpty) ...[
             const SizedBox(height: 8),
             const Text(
-              'Р СџР С•Р С”Р В°Р В¶Р С‘РЎвЂљР Вµ РЎРЊРЎвЂљР С•РЎвЂљ Р С”Р С•Р Т‘ РЎРѓР С•РЎвЂљРЎР‚РЎС“Р Т‘Р Р…Р С‘Р С”РЎС“ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…Р В°',
+              'Покажите этот код сотруднику ресторана',
               style: TextStyle(
                 fontSize: 13,
                 color: _OrderDetailsPageState._textMuted,
@@ -806,7 +848,7 @@ class _OrderItemsBlock extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                'Р РЋР С•РЎРѓРЎвЂљР В°Р Р† Р В·Р В°Р С”Р В°Р В·Р В°',
+                'Состав заказа',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -818,7 +860,7 @@ class _OrderItemsBlock extends StatelessWidget {
           const SizedBox(height: 16),
           if (items.isEmpty)
             const Text(
-              'Р СџР С•Р В·Р С‘РЎвЂ Р С‘Р С‘ Р В·Р В°Р С”Р В°Р В·Р В° Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р Р…РЎвЂ№',
+              'Позиции заказа недоступны',
               style: TextStyle(
                 fontSize: 14,
                 color: _OrderDetailsPageState._textMuted,
@@ -846,7 +888,7 @@ class _OrderItemsBlock extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Р С™Р С•Р В»Р С‘РЎвЂЎР ВµРЎРѓРЎвЂљР Р†Р С•: ${item.quantity}',
+                        'Количество: ${item.quantity}',
                         style: const TextStyle(
                           fontSize: 13,
                           color: _OrderDetailsPageState._textMuted,
@@ -855,7 +897,7 @@ class _OrderItemsBlock extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        '${item.lineTotal} РІвЂљС‘',
+                        '${item.lineTotal} в‚ё',
                         style: const TextStyle(
                           fontSize: 15,
                           color: _OrderDetailsPageState._textMain,
@@ -900,7 +942,7 @@ class _PriceSummaryBlock extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                'Р вЂќР ВµРЎвЂљР В°Р В»Р С‘ Р С•Р С—Р В»Р В°РЎвЂљРЎвЂ№',
+                'Детали оплаты',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -912,25 +954,25 @@ class _PriceSummaryBlock extends StatelessWidget {
           const SizedBox(height: 16),
           _PriceRow(
             title:
-                'Р РЋРЎвЂљР С•Р С‘Р СР С•РЎРѓРЎвЂљРЎРЉ РЎвЂљР С•Р Р†Р В°РЎР‚Р С•Р Р†',
-            value: '${order.subtotal} РІвЂљС‘',
+                'Стоимость товаров',
+            value: '${order.subtotal} в‚ё',
           ),
           const SizedBox(height: 10),
           _PriceRow(
             title: order.isPickup
-                ? 'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·'
-                : 'Р вЂќР С•РЎРѓРЎвЂљР В°Р Р†Р С”Р В°',
+                ? 'Самовывоз'
+                : 'Доставка',
             value: order.isPickup
-                ? '0 РІвЂљС‘'
+                ? '0 в‚ё'
                 : order.deliveryFee == 0
-                    ? 'Р вЂР ВµРЎРѓР С—Р В»Р В°РЎвЂљР Р…Р С•'
-                    : '${order.deliveryFee} РІвЂљС‘',
+                    ? 'Бесплатно'
+                    : '${order.deliveryFee} в‚ё',
           ),
           if (order.finalDiscount > 0) ...[
             const SizedBox(height: 10),
             _PriceRow(
-              title: 'Р РЋР С”Р С‘Р Т‘Р С”Р В°',
-              value: '-${order.finalDiscount} РІвЂљС‘',
+              title: 'Скидка',
+              value: '-${order.finalDiscount} в‚ё',
               valueColor: _OrderDetailsPageState._green,
               titleColor: _OrderDetailsPageState._green,
             ),
@@ -943,8 +985,8 @@ class _PriceSummaryBlock extends StatelessWidget {
             ),
           ),
           _PriceRow(
-            title: 'Р ВРЎвЂљР С•Р С–Р С•',
-            value: '${order.total} РІвЂљС‘',
+            title: 'Итого',
+            value: '${order.total} в‚ё',
             isTotal: true,
           ),
         ],
@@ -982,7 +1024,7 @@ class _ActionButtonsBlock extends StatelessWidget {
               ),
             ),
             child: const Text(
-              'Р СџР С•Р Р†РЎвЂљР С•РЎР‚Р С‘РЎвЂљРЎРЉ Р В·Р В°Р С”Р В°Р В·',
+              'Повторить заказ',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
@@ -1009,7 +1051,7 @@ class _ActionButtonsBlock extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Р С›РЎРѓРЎвЂљР В°Р Р†Р С‘РЎвЂљРЎРЉ Р С•РЎвЂљР В·РЎвЂ№Р Р†',
+                'Оставить отзыв',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -1276,7 +1318,7 @@ class _OrderDetailsErrorView extends StatelessWidget {
               const SizedBox(height: 14),
               OutlinedButton(
                 onPressed: onRetry,
-                child: const Text('Р СџР С•Р Р†РЎвЂљР С•РЎР‚Р С‘РЎвЂљРЎРЉ'),
+                child: const Text('Повторить'),
               ),
             ],
           ),

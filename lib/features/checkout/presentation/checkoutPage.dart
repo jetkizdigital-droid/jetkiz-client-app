@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -33,10 +34,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
   int? _selectedCardId;
   int _deliveryFee = 0;
   bool _isDeliveryLoading = true;
+  bool _hasDeliveryError = false;
   bool _isSubmitting = false;
   bool _orderPlaced = false;
   OrderFulfillmentType _fulfillmentType = OrderFulfillmentType.delivery;
   _CreatedOrderView? _createdOrder;
+  String? _pendingOrderKey;
+  String? _pendingOrderFingerprint;
 
   bool get _isPickup => _fulfillmentType == OrderFulfillmentType.pickup;
 
@@ -93,13 +97,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
       setState(() {
         _deliveryFee = config.activeDeliveryFee;
         _isDeliveryLoading = false;
+        _hasDeliveryError = false;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _deliveryFee = 0;
         _isDeliveryLoading = false;
+        _hasDeliveryError = true;
       });
     }
   }
@@ -124,6 +129,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cartState = _cartRepository.state;
 
     if (_isSubmitting || _orderPlaced) return;
+
+    if (!_isPickup && _hasDeliveryError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось рассчитать доставку')),
+      );
+      return;
+    }
 
     if (cartState.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -234,7 +246,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
             .toList(),
       );
 
-      final order = await _orderApi.createOrder(payload);
+      final fingerprint = payload.toJson().toString();
+      if (_pendingOrderFingerprint != fingerprint || _pendingOrderKey == null) {
+        final timestamp = DateTime.now().microsecondsSinceEpoch;
+        final random = Random.secure().nextInt(1 << 32);
+        _pendingOrderFingerprint = fingerprint;
+        _pendingOrderKey = 'client-order-$timestamp-$random';
+      }
+
+      final order = await _orderApi.createOrder(
+        payload,
+        idempotencyKey: _pendingOrderKey,
+      );
 
       _cartRepository.clear();
 
@@ -328,6 +351,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final isConfirmDisabled = cartState.isEmpty ||
         (!_isPickup && address == null) ||
+        (!_isPickup && _hasDeliveryError) ||
         _selectedCardId == null ||
         _isDeliveryLoading ||
         _isSubmitting;
@@ -445,6 +469,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     total: total,
                     isDeliveryLoading: _isDeliveryLoading,
                   ),
+                  if (!_isPickup && _hasDeliveryError) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _isDeliveryLoading ? null : _loadDeliveryFee,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Повторить расчёт доставки'),
+                    ),
+                  ],
                 ],
               ),
             ),

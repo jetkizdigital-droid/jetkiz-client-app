@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
@@ -23,6 +24,7 @@ class JetkizApp extends StatefulWidget {
 }
 
 class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
+  static const _languageKey = 'jetkiz.language';
   AppLanguage _language = AppLanguage.ru;
 
   void _setLanguage(AppLanguage language) {
@@ -31,6 +33,9 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
     setState(() {
       _language = language;
     });
+    SharedPreferences.getInstance().then(
+      (preferences) => preferences.setString(_languageKey, language.name),
+    );
   }
 
   @override
@@ -39,6 +44,17 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     AppNavigator.registerPushNavigationHandler(_handlePushNavigation);
     CartRepository.instance.restore();
+    _restoreLanguage();
+  }
+
+  Future<void> _restoreLanguage() async {
+    final preferences = await SharedPreferences.getInstance();
+    final saved = preferences.getString(_languageKey);
+    if (!mounted) return;
+    final language = saved == AppLanguage.kk.name
+        ? AppLanguage.kk
+        : AppLanguage.ru;
+    if (_language != language) setState(() => _language = language);
   }
 
   @override

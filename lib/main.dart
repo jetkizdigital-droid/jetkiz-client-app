@@ -27,16 +27,18 @@ import 'package:jetkiz_mobile/firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
   final apiClient = ApiClient();
   await apiClient.init();
 
-  await PushNotificationService(apiClient).init();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await PushNotificationService(apiClient).init();
+  } catch (error) {
+    debugPrint('Push initialization skipped: $error');
+  }
 
   runApp(const JetkizApp());
 }
