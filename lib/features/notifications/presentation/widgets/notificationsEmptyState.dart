@@ -19,7 +19,7 @@ class NotificationsEmptyState extends StatelessWidget {
         const Icon(
           Icons.notifications_none_rounded,
           size: 68,
-          color: Color(0xFF489F2A),
+          color: Color(0xFF4CAF50),
         ),
         const SizedBox(height: 16),
         Text(
