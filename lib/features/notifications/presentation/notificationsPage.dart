@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
+import 'package:jetkiz_mobile/features/notifications/data/notificationsStateController.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/models/notificationsTab.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationCard.dart';
@@ -152,6 +153,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _items = _sortItems(result.items);
         _unreadCount = result.unreadCount;
       });
+      NotificationsStateController.instance.setUnreadCount(result.unreadCount);
     } catch (_) {
       if (!mounted) return;
 
@@ -180,6 +182,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _unreadCount = result.unreadCount;
         _error = null;
       });
+      NotificationsStateController.instance.setUnreadCount(result.unreadCount);
     } catch (_) {
       if (!mounted) return;
 
@@ -219,6 +222,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
       _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
     });
+    NotificationsStateController.instance.setUnreadCount(_unreadCount);
 
     try {
       await _api.markAsRead(item.id);
@@ -229,6 +233,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _items = previousItems;
         _unreadCount = previousUnreadCount;
       });
+      NotificationsStateController.instance.setUnreadCount(previousUnreadCount);
 
       _showError('Не удалось отметить уведомление как прочитанное');
     }
@@ -258,13 +263,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
           .toList();
       _unreadCount = 0;
     });
+    NotificationsStateController.instance.markAllRead();
 
     try {
       await _api.markAllAsRead();
-
-      if (!mounted) return;
-
-      unawaited(_refresh());
     } catch (_) {
       if (!mounted) return;
 
@@ -272,6 +274,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         _items = previousItems;
         _unreadCount = previousUnreadCount;
       });
+      NotificationsStateController.instance.setUnreadCount(previousUnreadCount);
 
       _showError('Не удалось отметить уведомления как прочитанные');
     } finally {
