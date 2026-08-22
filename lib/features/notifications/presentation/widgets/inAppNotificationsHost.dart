@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
+import 'package:jetkiz_mobile/features/notifications/data/notificationsStateController.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
 
 class InAppNotificationsHost extends StatefulWidget {
@@ -153,6 +154,7 @@ class _InAppNotificationsHostState extends State<InAppNotificationsHost>
                   if (!item.isRead) {
                     try {
                       await _api.markAsRead(item.id);
+                      NotificationsStateController.instance.markOneRead();
                     } catch (_) {
                       // silent
                     }
@@ -202,7 +204,7 @@ class _InAppNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF489F2A);
+    const accent = Color(0xFF4CAF50);
 
     const softBg = Color(0xFFEAF7E5);
 
