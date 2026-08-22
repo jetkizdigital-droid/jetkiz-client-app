@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
+import 'package:jetkiz_mobile/features/auth/data/authPostLoginService.dart';
 
 class SmsCodePage extends StatefulWidget {
   final String phone;
@@ -25,6 +26,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
   final ApiClient _apiClient = ApiClient();
 
   late final AuthApi _authApi;
+  late final AuthPostLoginService _postLoginService;
 
   bool _isSubmitting = false;
   bool _isResending = false;
@@ -37,6 +39,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
   void initState() {
     super.initState();
     _authApi = AuthApi(_apiClient);
+    _postLoginService = AuthPostLoginService(_apiClient);
     _startResendTimer();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -160,6 +163,8 @@ class _SmsCodePageState extends State<SmsCodePage> {
         refreshToken: response.refreshToken,
       );
 
+      await _postLoginService.syncAfterLogin();
+
       if (!mounted) return;
 
       widget.onAuthorized?.call();
@@ -168,7 +173,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
       if (!mounted) return;
 
       setState(() {
-        _errorText = 'Неверный код. Попробуйте ещё раз';
+        _errorText = 'Неверный код. Попробуйте ещё раз.';
         _isSubmitting = false;
       });
 
@@ -195,14 +200,15 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Код отправлен повторно'),
+          content: Text('Код отправлен повторно.'),
         ),
       );
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _errorText = 'Не удалось отправить код повторно';
+        _errorText =
+            'Не удалось отправить код. Проверьте интернет и попробуйте ещё раз.';
       });
     } finally {
       if (mounted) {
@@ -422,7 +428,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                                     ),
                                   )
                                 : const Text(
-                                    'Запросить код повторно',
+                                    'Отправить код повторно',
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,

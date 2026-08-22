@@ -173,7 +173,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       );
     }
 
-    final statusUi = _resolveStatusUi(order.status);
+    final statusUi = _resolveStatusUi(
+      order.status,
+      fulfillmentType: order.fulfillmentType,
+    );
 
     return Scaffold(
       backgroundColor: _bg,
@@ -207,6 +210,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     ],
                     _DeliveryInfoBlock(order: order),
                     const SizedBox(height: 16),
+                    if (order.isPickup) ...[
+                      _PickupCodeBlock(order: order),
+                      const SizedBox(height: 16),
+                    ],
                     _OrderItemsBlock(items: order.items),
                     const SizedBox(height: 16),
                     _PriceSummaryBlock(order: order),
@@ -261,8 +268,30 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
   }
 
-  static _StatusUi _resolveStatusUi(String raw) {
+  static _StatusUi _resolveStatusUi(
+    String raw, {
+    String? fulfillmentType,
+  }) {
     final status = raw.toUpperCase();
+    final isPickup = fulfillmentType?.trim().toUpperCase() == 'PICKUP';
+
+    if (isPickup && status == 'READY') {
+      return const _StatusUi(
+        label: 'Можно забирать',
+        bgColor: Color(0xFFE6F0FF),
+        textColor: Color(0xFF2B6CB0),
+        icon: Icons.shopping_bag_outlined,
+      );
+    }
+
+    if (isPickup && status == 'DELIVERED') {
+      return const _StatusUi(
+        label: 'Получен',
+        bgColor: Color(0xFFF3F4F6),
+        textColor: Color(0xFF4B5563),
+        icon: Icons.check_circle_rounded,
+      );
+    }
 
     if ([
       'CREATED',
@@ -571,6 +600,24 @@ class _DeliveryInfoBlock extends StatelessWidget {
     return _SectionCard(
       child: Column(
         children: [
+          if (order.isPickup)
+            _InfoTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _OrderDetailsPageState._green.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 20,
+                  color: _OrderDetailsPageState._green,
+                ),
+              ),
+              title: 'Самовывоз',
+              value: 'Самовывоз из ресторана',
+            ),
           if (address != null)
             _InfoTile(
               leading: Container(
@@ -590,7 +637,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
               value: address.formatted,
             ),
           if (order.comment != null && order.comment!.trim().isNotEmpty) ...[
-            if (address != null) const _ThinDivider(),
+            if (address != null || order.isPickup) const _ThinDivider(),
             _InfoTile(
               leading: Container(
                 width: 40,
@@ -611,6 +658,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
           ],
           if (order.promisedAt != null) ...[
             if ((address != null) ||
+                order.isPickup ||
                 (order.comment != null && order.comment!.trim().isNotEmpty))
               const _ThinDivider(),
             _InfoTile(
@@ -632,6 +680,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
             ),
           ],
           if (address == null &&
+              !order.isPickup &&
               (order.comment == null || order.comment!.trim().isEmpty) &&
               order.promisedAt == null)
             const Text(
@@ -642,6 +691,80 @@ class _DeliveryInfoBlock extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupCodeBlock extends StatelessWidget {
+  const _PickupCodeBlock({
+    required this.order,
+  });
+
+  final OrderDetailsData order;
+
+  @override
+  Widget build(BuildContext context) {
+    final code = order.pickupCode?.trim() ?? '';
+    final value = order.isDelivered
+        ? 'Заказ получен'
+        : code.isEmpty
+            ? 'Код самовывоза недоступен'
+            : code;
+
+    return _SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(
+                Icons.shopping_bag_outlined,
+                size: 20,
+                color: _OrderDetailsPageState._green,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Самовывоз',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: _OrderDetailsPageState._textMain,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Код самовывоза',
+            style: TextStyle(
+              fontSize: 13,
+              color: _OrderDetailsPageState._textLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: code.isEmpty ? 15 : 28,
+              color: _OrderDetailsPageState._textMain,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0,
+            ),
+          ),
+          if (code.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Покажите этот код сотруднику ресторана',
+              style: TextStyle(
+                fontSize: 13,
+                color: _OrderDetailsPageState._textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -785,8 +908,12 @@ class _PriceSummaryBlock extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _PriceRow(
-            title: 'Доставка',
-            value: order.deliveryFee == 0 ? 'Бесплатно' : '${order.deliveryFee} ₸',
+            title: order.isPickup ? 'Самовывоз' : 'Доставка',
+            value: order.isPickup
+                ? '0 ₸'
+                : order.deliveryFee == 0
+                    ? 'Бесплатно'
+                    : '${order.deliveryFee} ₸',
           ),
           if (order.finalDiscount > 0) ...[
             const SizedBox(height: 10),

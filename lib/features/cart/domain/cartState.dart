@@ -1,11 +1,8 @@
 import 'cartItem.dart';
 
-/// JETKIZ MOBILE CONTEXT:
-/// CartState — агрегированное состояние корзины.
-/// Пока checkout backend contract не подтвержден.
-/// deliveryFee сейчас локальный dev-параметр для UI экрана корзины.
-/// Когда будет подтвержден backend checkout / delivery pricing,
-/// это значение нужно брать из реального backend, а не держать константой.
+/// Aggregated cart state for the client app.
+/// Delivery fee is loaded from backend pricing screens,
+/// so the empty cart keeps it at zero by default.
 class CartState {
   const CartState({
     required this.items,
@@ -38,7 +35,7 @@ class CartState {
   factory CartState.empty() {
     return const CartState(
       items: [],
-      deliveryFee: 100,
+      deliveryFee: 0,
     );
   }
 }

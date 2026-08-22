@@ -28,16 +28,22 @@ class _AddressFormPageState extends State<AddressFormPage> {
   late final AddressesApi _addressesApi;
 
   late final TextEditingController _addressController;
+  late final TextEditingController _entranceController;
   late final TextEditingController _floorController;
   late final TextEditingController _doorController;
+  late final TextEditingController _intercomController;
+  late final TextEditingController _contactPhoneController;
   late final TextEditingController _commentController;
 
   bool _isSaving = false;
   String? _submitError;
 
   String? _addressError;
+  String? _entranceError;
   String? _floorError;
   String? _doorError;
+  String? _intercomError;
+  String? _contactPhoneError;
   String? _commentError;
 
   late String _selectedTitle;
@@ -45,50 +51,68 @@ class _AddressFormPageState extends State<AddressFormPage> {
   @override
   void initState() {
     super.initState();
+
     _addressesApi = AddressesApi(ApiClient());
 
-    _selectedTitle = _resolveInitialTitle(widget.initialAddress?.title);
+    final initial = widget.initialAddress;
 
-    _addressController =
-        TextEditingController(text: widget.initialAddress?.address ?? '');
-    _floorController =
-        TextEditingController(text: widget.initialAddress?.floor ?? '');
-    _doorController =
-        TextEditingController(text: widget.initialAddress?.door ?? '');
-    _commentController =
-        TextEditingController(text: widget.initialAddress?.comment ?? '');
+    _selectedTitle = _resolveInitialTitle(initial?.title);
+    _addressController = TextEditingController(text: initial?.address ?? '');
+    _entranceController = TextEditingController(text: initial?.entrance ?? '');
+    _floorController = TextEditingController(text: initial?.floor ?? '');
+    _doorController = TextEditingController(text: initial?.door ?? '');
+    _intercomController = TextEditingController(text: initial?.intercom ?? '');
+    _contactPhoneController =
+        TextEditingController(text: initial?.contactPhone ?? '');
+    _commentController = TextEditingController(text: initial?.comment ?? '');
   }
 
   String _resolveInitialTitle(String? title) {
     const allowed = ['Дом', 'Работа', 'Другое'];
     final value = (title ?? '').trim();
+
     return allowed.contains(value) ? value : 'Дом';
   }
 
   @override
   void dispose() {
     _addressController.dispose();
+    _entranceController.dispose();
     _floorController.dispose();
     _doorController.dispose();
+    _intercomController.dispose();
+    _contactPhoneController.dispose();
     _commentController.dispose();
     super.dispose();
   }
 
   bool _validateForm() {
     final addressText = _addressController.text.trim();
+    final entranceText = _entranceController.text.trim();
     final floorText = _floorController.text.trim();
     final doorText = _doorController.text.trim();
+    final intercomText = _intercomController.text.trim();
+    final contactPhoneText = _contactPhoneController.text.trim();
     final commentText = _commentController.text.trim();
 
     String? addressError;
+    String? entranceError;
     String? floorError;
     String? doorError;
+    String? intercomError;
+    String? contactPhoneError;
     String? commentError;
 
     if (addressText.isEmpty) {
       addressError = 'Укажите адрес';
+    } else if (addressText.length < 3) {
+      addressError = 'Адрес слишком короткий';
     } else if (addressText.length > 255) {
       addressError = 'Максимум 255 символов';
+    }
+
+    if (entranceText.length > 50) {
+      entranceError = 'Максимум 50 символов';
     }
 
     if (floorText.length > 50) {
@@ -99,20 +123,34 @@ class _AddressFormPageState extends State<AddressFormPage> {
       doorError = 'Максимум 50 символов';
     }
 
+    if (intercomText.length > 50) {
+      intercomError = 'Максимум 50 символов';
+    }
+
+    if (contactPhoneText.length > 30) {
+      contactPhoneError = 'Максимум 30 символов';
+    }
+
     if (commentText.length > 500) {
       commentError = 'Максимум 500 символов';
     }
 
     setState(() {
       _addressError = addressError;
+      _entranceError = entranceError;
       _floorError = floorError;
       _doorError = doorError;
+      _intercomError = intercomError;
+      _contactPhoneError = contactPhoneError;
       _commentError = commentError;
     });
 
     return addressError == null &&
+        entranceError == null &&
         floorError == null &&
         doorError == null &&
+        intercomError == null &&
+        contactPhoneError == null &&
         commentError == null;
   }
 
@@ -130,8 +168,11 @@ class _AddressFormPageState extends State<AddressFormPage> {
     final payload = SaveAddressPayload(
       title: _selectedTitle,
       address: _addressController.text.trim(),
+      entrance: _entranceController.text.trim(),
       floor: _floorController.text.trim(),
       door: _doorController.text.trim(),
+      intercom: _intercomController.text.trim(),
+      contactPhone: _contactPhoneController.text.trim(),
       comment: _commentController.text.trim(),
     );
 
@@ -151,15 +192,23 @@ class _AddressFormPageState extends State<AddressFormPage> {
 
       setState(() {
         _submitError =
-            'Не удалось сохранить адрес. Проверь backend и попробуй ещё раз.';
+            'Не удалось сохранить адрес. Проверь подключение и попробуй ещё раз.';
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
     }
+  }
+
+  void _setTitle(String title) {
+    if (_selectedTitle == title) return;
+
+    setState(() {
+      _selectedTitle = title;
+    });
   }
 
   @override
@@ -230,11 +279,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                               child: _AddressTypeChip(
                                 label: 'Дом',
                                 selected: _selectedTitle == 'Дом',
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTitle = 'Дом';
-                                  });
-                                },
+                                onTap: () => _setTitle('Дом'),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -242,11 +287,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                               child: _AddressTypeChip(
                                 label: 'Работа',
                                 selected: _selectedTitle == 'Работа',
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTitle = 'Работа';
-                                  });
-                                },
+                                onTap: () => _setTitle('Работа'),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -254,11 +295,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                               child: _AddressTypeChip(
                                 label: 'Другое',
                                 selected: _selectedTitle == 'Другое',
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTitle = 'Другое';
-                                  });
-                                },
+                                onTap: () => _setTitle('Другое'),
                               ),
                             ),
                           ],
@@ -275,10 +312,9 @@ class _AddressFormPageState extends State<AddressFormPage> {
                           label: 'Улица, дом',
                           hint: 'Например: ул. Абая, 25',
                           errorText: _addressError,
+                          textInputAction: TextInputAction.next,
                           onChanged: (_) {
-                            if (_addressError != null) {
-                              _validateForm();
-                            }
+                            if (_addressError != null) _validateForm();
                           },
                         ),
                         const SizedBox(height: 14),
@@ -286,32 +322,72 @@ class _AddressFormPageState extends State<AddressFormPage> {
                           children: [
                             Expanded(
                               child: _AppTextField(
-                                controller: _floorController,
-                                label: 'Этаж',
-                                hint: '3',
-                                errorText: _floorError,
+                                controller: _entranceController,
+                                label: 'Подъезд',
+                                hint: '2',
+                                errorText: _entranceError,
+                                textInputAction: TextInputAction.next,
                                 onChanged: (_) {
-                                  if (_floorError != null) {
-                                    _validateForm();
-                                  }
+                                  if (_entranceError != null) _validateForm();
                                 },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: _AppTextField(
-                                controller: _doorController,
-                                label: 'Квартира / офис',
-                                hint: '12',
-                                errorText: _doorError,
+                                controller: _floorController,
+                                label: 'Этаж',
+                                hint: '3',
+                                errorText: _floorError,
+                                textInputAction: TextInputAction.next,
                                 onChanged: (_) {
-                                  if (_doorError != null) {
-                                    _validateForm();
-                                  }
+                                  if (_floorError != null) _validateForm();
                                 },
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _AppTextField(
+                                controller: _doorController,
+                                label: 'Квартира / офис',
+                                hint: '12',
+                                errorText: _doorError,
+                                textInputAction: TextInputAction.next,
+                                onChanged: (_) {
+                                  if (_doorError != null) _validateForm();
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _AppTextField(
+                                controller: _intercomController,
+                                label: 'Домофон',
+                                hint: '1234',
+                                errorText: _intercomError,
+                                textInputAction: TextInputAction.next,
+                                onChanged: (_) {
+                                  if (_intercomError != null) _validateForm();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _AppTextField(
+                          controller: _contactPhoneController,
+                          label: 'Телефон для курьера',
+                          hint: '+7 700 000 00 00',
+                          errorText: _contactPhoneError,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (_) {
+                            if (_contactPhoneError != null) _validateForm();
+                          },
                         ),
                       ],
                     ),
@@ -325,10 +401,9 @@ class _AddressFormPageState extends State<AddressFormPage> {
                       minLines: 3,
                       maxLines: 4,
                       errorText: _commentError,
+                      textInputAction: TextInputAction.done,
                       onChanged: (_) {
-                        if (_commentError != null) {
-                          _validateForm();
-                        }
+                        if (_commentError != null) _validateForm();
                       },
                     ),
                   ),
@@ -336,7 +411,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
-                      'Доставка осуществляется только в черте города Щучинск',
+                      'Доставка осуществляется только в зоне обслуживания JETKIZ',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -486,6 +561,8 @@ class _AppTextField extends StatelessWidget {
     this.errorText,
     this.minLines = 1,
     this.maxLines = 1,
+    this.keyboardType,
+    this.textInputAction,
     this.onChanged,
   });
 
@@ -495,6 +572,8 @@ class _AppTextField extends StatelessWidget {
   final String? errorText;
   final int minLines;
   final int maxLines;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
   final ValueChanged<String>? onChanged;
 
   @override
@@ -520,6 +599,8 @@ class _AppTextField extends StatelessWidget {
           controller: controller,
           minLines: minLines,
           maxLines: maxLines,
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
           onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,

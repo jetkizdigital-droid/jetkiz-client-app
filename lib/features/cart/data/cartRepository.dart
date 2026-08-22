@@ -3,18 +3,13 @@ import 'package:flutter/foundation.dart';
 import '../domain/cartItem.dart';
 import '../domain/cartState.dart';
 
-/// JETKIZ MOBILE CONTEXT:
-/// CartRepository — временный shared cart state для всего приложения.
-/// Это НЕ backend корзина.
-/// На текущем этапе:
-/// - Add to cart работает локально
-/// - CartPage читает state отсюда
-/// - Checkout button пока не отправляет заказ в backend
-///
-/// В будущем:
-/// - сюда можно добавить persistence
-/// - сюда же можно подключить checkout / order flow
-/// - при подтверждении backend контракта логика должна остаться централизованной
+enum CartAddResult {
+  added,
+  updated,
+  rejectedDifferentRestaurant,
+  rejectedInvalidItem,
+}
+
 class CartRepository extends ChangeNotifier {
   CartRepository._();
 
@@ -24,9 +19,11 @@ class CartRepository extends ChangeNotifier {
 
   CartState get state => _state;
 
-  List<CartItem> get items => _state.items;
+  List<CartItem> get items => List.unmodifiable(_state.items);
 
   bool get isEmpty => _state.isEmpty;
+
+  bool get isNotEmpty => !isEmpty;
 
   int get subtotal => _state.subtotal;
 
@@ -38,7 +35,30 @@ class CartRepository extends ChangeNotifier {
 
   String? get restaurantId => _state.restaurantId;
 
-  void addItem({
+  bool get hasRestaurant => restaurantId != null && restaurantId!.isNotEmpty;
+
+  bool belongsToRestaurant(String nextRestaurantId) {
+    final currentRestaurantId = restaurantId?.trim() ?? '';
+    final targetRestaurantId = nextRestaurantId.trim();
+
+    if (targetRestaurantId.isEmpty) return false;
+    if (currentRestaurantId.isEmpty) return true;
+
+    return currentRestaurantId == targetRestaurantId;
+  }
+
+  bool hasDifferentRestaurant(String nextRestaurantId) {
+    final currentRestaurantId = restaurantId?.trim() ?? '';
+    final targetRestaurantId = nextRestaurantId.trim();
+
+    if (currentRestaurantId.isEmpty || targetRestaurantId.isEmpty) {
+      return false;
+    }
+
+    return currentRestaurantId != targetRestaurantId;
+  }
+
+  CartAddResult addItem({
     required String productId,
     required String restaurantId,
     required String title,
@@ -48,40 +68,92 @@ class CartRepository extends ChangeNotifier {
     String? description,
     String? weight,
   }) {
-    if (quantity <= 0) return;
+    final normalizedProductId = productId.trim();
+    final normalizedRestaurantId = restaurantId.trim();
+    final normalizedTitle = title.trim();
 
-    var nextItems = List<CartItem>.from(_state.items);
+    if (normalizedProductId.isEmpty ||
+        normalizedRestaurantId.isEmpty ||
+        normalizedTitle.isEmpty ||
+        price < 0 ||
+        quantity <= 0) {
+      return CartAddResult.rejectedInvalidItem;
+    }
 
-    final existingIndex =
-        nextItems.indexWhere((item) => item.productId == productId);
+    if (hasDifferentRestaurant(normalizedRestaurantId)) {
+      return CartAddResult.rejectedDifferentRestaurant;
+    }
+
+    final nextItems = List<CartItem>.from(_state.items);
+
+    final existingIndex = nextItems.indexWhere(
+      (item) => item.productId == normalizedProductId,
+    );
 
     if (existingIndex >= 0) {
       final existing = nextItems[existingIndex];
+
       nextItems[existingIndex] = existing.copyWith(
         quantity: existing.quantity + quantity,
       );
-    } else {
-      nextItems.add(
-        CartItem(
-          productId: productId,
-          restaurantId: restaurantId,
-          title: title,
-          price: price,
-          quantity: quantity,
-          imageUrl: imageUrl,
-          description: description,
-          weight: weight,
-        ),
-      );
+
+      _state = _state.copyWith(items: nextItems);
+      notifyListeners();
+
+      return CartAddResult.updated;
     }
+
+    nextItems.add(
+      CartItem(
+        productId: normalizedProductId,
+        restaurantId: normalizedRestaurantId,
+        title: normalizedTitle,
+        price: price,
+        quantity: quantity,
+        imageUrl: _normalizeOptional(imageUrl),
+        description: _normalizeOptional(description),
+        weight: _normalizeOptional(weight),
+      ),
+    );
 
     _state = _state.copyWith(items: nextItems);
     notifyListeners();
+
+    return CartAddResult.added;
+  }
+
+  CartAddResult replaceCartWithItem({
+    required String productId,
+    required String restaurantId,
+    required String title,
+    required int price,
+    required int quantity,
+    String? imageUrl,
+    String? description,
+    String? weight,
+  }) {
+    clear();
+
+    return addItem(
+      productId: productId,
+      restaurantId: restaurantId,
+      title: title,
+      price: price,
+      quantity: quantity,
+      imageUrl: imageUrl,
+      description: description,
+      weight: weight,
+    );
   }
 
   void increment(String productId) {
+    final normalizedProductId = productId.trim();
+
+    if (normalizedProductId.isEmpty) return;
+
     final nextItems = _state.items.map((item) {
-      if (item.productId != productId) return item;
+      if (item.productId != normalizedProductId) return item;
+
       return item.copyWith(quantity: item.quantity + 1);
     }).toList();
 
@@ -90,9 +162,14 @@ class CartRepository extends ChangeNotifier {
   }
 
   void decrement(String productId) {
+    final normalizedProductId = productId.trim();
+
+    if (normalizedProductId.isEmpty) return;
+
     final nextItems = _state.items
         .map((item) {
-          if (item.productId != productId) return item;
+          if (item.productId != normalizedProductId) return item;
+
           return item.copyWith(quantity: item.quantity - 1);
         })
         .where((item) => item.quantity > 0)
@@ -103,22 +180,70 @@ class CartRepository extends ChangeNotifier {
   }
 
   void remove(String productId) {
-    _state = _state.copyWith(
-      items: _state.items.where((item) => item.productId != productId).toList(),
-    );
+    final normalizedProductId = productId.trim();
+
+    if (normalizedProductId.isEmpty) return;
+
+    final nextItems = _state.items
+        .where((item) => item.productId != normalizedProductId)
+        .toList();
+
+    _state = _state.copyWith(items: nextItems);
     notifyListeners();
   }
 
   int quantityOf(String productId) {
-    final match = _state.items.cast<CartItem?>().firstWhere(
-          (item) => item?.productId == productId,
-          orElse: () => null,
-        );
-    return match?.quantity ?? 0;
+    final normalizedProductId = productId.trim();
+
+    if (normalizedProductId.isEmpty) return 0;
+
+    for (final item in _state.items) {
+      if (item.productId == normalizedProductId) {
+        return item.quantity;
+      }
+    }
+
+    return 0;
+  }
+
+  CartItem? itemOf(String productId) {
+    final normalizedProductId = productId.trim();
+
+    if (normalizedProductId.isEmpty) return null;
+
+    for (final item in _state.items) {
+      if (item.productId == normalizedProductId) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  List<Map<String, dynamic>> toOrderItemsJson() {
+    return _state.items
+        .where((item) => item.productId.trim().isNotEmpty)
+        .where((item) => item.quantity > 0)
+        .map((item) {
+      return {
+        'productId': item.productId,
+        'quantity': item.quantity,
+      };
+    }).toList();
   }
 
   void clear() {
     _state = CartState.empty();
     notifyListeners();
+  }
+
+  static String? _normalizeOptional(String? value) {
+    final text = value?.trim() ?? '';
+
+    if (text.isEmpty || text.toLowerCase() == 'null') {
+      return null;
+    }
+
+    return text;
   }
 }

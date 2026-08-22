@@ -28,7 +28,10 @@ class OrdersHistoryPage extends StatefulWidget {
 
 class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
   static const int _pageSize = 20;
+  static const Color _green = Color(0xFF489F2A);
+  static const Color _bg = Color(0xFFF8F8F8);
 
+  late final ApiClient _apiClient;
   late final OrdersApi _ordersApi;
   late final ScrollController _scrollController;
 
@@ -39,6 +42,8 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
   bool _refreshing = false;
   bool _hasMore = true;
   bool _initialOrderOpened = false;
+  bool _screenViewTracked = false;
+
   String? _error;
 
   int _page = 1;
@@ -48,9 +53,13 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
   @override
   void initState() {
     super.initState();
-    _ordersApi = OrdersApi(ApiClient());
+
+    _apiClient = ApiClient();
+    _ordersApi = OrdersApi(_apiClient);
     _scrollController = ScrollController()..addListener(_onScroll);
+
     _loadInitial();
+    _trackScreenViewOnce();
   }
 
   @override
@@ -61,36 +70,68 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
     super.dispose();
   }
 
+  Future<void> _trackScreenViewOnce() async {
+    if (_screenViewTracked) return;
+    _screenViewTracked = true;
+
+    try {
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': 'screen_view',
+          'metadata': {
+            'source': 'orders_history_page',
+            'screen': 'orders_history',
+            'initialOrderId': widget.initialOrderId,
+            'initialOrderNumber': widget.initialOrderNumber,
+          },
+        },
+      );
+    } catch (_) {}
+  }
+
   Future<void> _loadInitial() async {
+    if (!mounted) return;
+
     setState(() {
       _loading = true;
       _error = null;
       _page = 1;
       _hasMore = true;
-      _initialOrderOpened = false;
     });
 
     try {
-      final data = await _ordersApi.getMyOrders(page: 1, limit: _pageSize);
+      final data = await _ordersApi.getMyOrders(
+        page: 1,
+        limit: _pageSize,
+      );
 
       if (!mounted) return;
 
       setState(() {
         _items
           ..clear()
-          ..addAll(data.items);
+          ..addAll(_dedupeItems(data.items));
         _total = data.total;
         _hasMore = _items.length < _total;
       });
 
       _tryOpenInitialOrder();
+    } on OrdersApiException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.message;
+      });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _error = 'Не удалось загрузить историю заказов';
       });
     } finally {
       if (!mounted) return;
+
       setState(() {
         _loading = false;
       });
@@ -98,12 +139,17 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
   }
 
   Future<void> _refresh() async {
+    if (_refreshing) return;
+
     setState(() {
       _refreshing = true;
     });
 
     try {
-      final data = await _ordersApi.getMyOrders(page: 1, limit: _pageSize);
+      final data = await _ordersApi.getMyOrders(
+        page: 1,
+        limit: _pageSize,
+      );
 
       if (!mounted) return;
 
@@ -111,22 +157,24 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
         _page = 1;
         _items
           ..clear()
-          ..addAll(data.items);
+          ..addAll(_dedupeItems(data.items));
         _total = data.total;
         _hasMore = _items.length < _total;
         _error = null;
       });
 
       _tryOpenInitialOrder();
+    } on OrdersApiException catch (error) {
+      if (!mounted) return;
+
+      _showSnack(error.message);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('Не удалось обновить историю заказов'),
-        ),
-      );
+
+      _showSnack('Не удалось обновить историю заказов');
     } finally {
       if (!mounted) return;
+
       setState(() {
         _refreshing = false;
       });
@@ -134,7 +182,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
   }
 
   Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore || _loading) return;
+    if (_loadingMore || !_hasMore || _loading || _refreshing) return;
 
     setState(() {
       _loadingMore = true;
@@ -151,24 +199,59 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
 
       setState(() {
         _page = nextPage;
-        _items.addAll(data.items);
+        _mergeItems(data.items);
         _total = data.total;
         _hasMore = _items.length < _total;
       });
 
       _tryOpenInitialOrder();
     } catch (_) {
-      // silent
+      if (!mounted) return;
+
+      _showSnack('Не удалось загрузить ещё заказы');
     } finally {
       if (!mounted) return;
+
       setState(() {
         _loadingMore = false;
       });
     }
   }
 
+  void _mergeItems(List<OrderHistoryItem> nextItems) {
+    final seenIds = _items.map((item) => item.id).toSet();
+
+    for (final item in nextItems) {
+      final id = item.id.trim();
+      if (id.isEmpty || seenIds.contains(id)) {
+        continue;
+      }
+
+      _items.add(item);
+      seenIds.add(id);
+    }
+  }
+
+  List<OrderHistoryItem> _dedupeItems(List<OrderHistoryItem> source) {
+    final seenIds = <String>{};
+    final result = <OrderHistoryItem>[];
+
+    for (final item in source) {
+      final id = item.id.trim();
+      if (id.isEmpty || seenIds.contains(id)) {
+        continue;
+      }
+
+      result.add(item);
+      seenIds.add(id);
+    }
+
+    return result;
+  }
+
   void _onScroll() {
     if (!_scrollController.hasClients) return;
+
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 220) {
       _loadMore();
@@ -180,11 +263,23 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
       case OrderHistoryTab.all:
         return _items;
       case OrderHistoryTab.active:
-        return _items.where((e) => e.isActive).toList();
+        return _items.where((item) => item.isActive).toList();
       case OrderHistoryTab.completed:
-        return _items.where((e) => e.isCompleted).toList();
+        return _items.where((item) => item.isCompleted).toList();
       case OrderHistoryTab.canceled:
-        return _items.where((e) => e.isCanceled).toList();
+        return _items.where((item) => item.isCanceled).toList();
+    }
+  }
+
+  void _changeTab(OrderHistoryTab tab) {
+    if (_tab == tab) return;
+
+    setState(() {
+      _tab = tab;
+    });
+
+    if (_filteredItems.isEmpty && _hasMore && !_loadingMore) {
+      _loadMore();
     }
   }
 
@@ -198,6 +293,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
     if (_items.isEmpty) return;
 
     OrderHistoryItem? match;
+
     for (final item in _items) {
       if (targetId.isNotEmpty && item.id == targetId) {
         match = item;
@@ -219,17 +315,10 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
 
     _initialOrderOpened = true;
 
-    if (_tab != OrderHistoryTab.completed && match.isCompleted) {
+    final targetTab = _tabForItem(match);
+    if (_tab != targetTab) {
       setState(() {
-        _tab = OrderHistoryTab.completed;
-      });
-    } else if (_tab != OrderHistoryTab.active && match.isActive) {
-      setState(() {
-        _tab = OrderHistoryTab.active;
-      });
-    } else if (_tab != OrderHistoryTab.canceled && match.isCanceled) {
-      setState(() {
-        _tab = OrderHistoryTab.canceled;
+        _tab = targetTab;
       });
     }
 
@@ -239,11 +328,41 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
     });
   }
 
+  OrderHistoryTab _tabForItem(OrderHistoryItem item) {
+    if (item.isActive) {
+      return OrderHistoryTab.active;
+    }
+
+    if (item.isCompleted) {
+      return OrderHistoryTab.completed;
+    }
+
+    if (item.isCanceled) {
+      return OrderHistoryTab.canceled;
+    }
+
+    return OrderHistoryTab.all;
+  }
+
   void _openOrderDetails(OrderHistoryItem item) {
+    final orderId = item.id.trim();
+    if (orderId.isEmpty) {
+      _showSnack('Не удалось открыть заказ');
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => OrderDetailsPage(orderId: item.id),
+        builder: (_) => OrderDetailsPage(orderId: orderId),
       ),
+    );
+  }
+
+  void _showSnack(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -252,7 +371,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
     final visibleItems = _filteredItems;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
+      backgroundColor: _bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -261,11 +380,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
             ),
             _Tabs(
               current: _tab,
-              onChanged: (tab) {
-                setState(() {
-                  _tab = tab;
-                });
-              },
+              onChanged: _changeTab,
             ),
             Expanded(
               child: _buildBody(visibleItems),
@@ -295,11 +410,15 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
     }
 
     if (visibleItems.isEmpty) {
-      return const _FilteredEmptyState();
+      return _FilteredEmptyState(
+        onRefresh: _refresh,
+        onLoadMore: _hasMore && !_loadingMore ? _loadMore : null,
+      );
     }
 
     return RefreshIndicator(
       onRefresh: _refresh,
+      color: _green,
       child: ListView.separated(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -311,12 +430,13 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(color: _green),
               ),
             );
           }
 
           final item = visibleItems[index];
+
           return OrderHistoryCard(
             item: item,
             onDetailsTap: () => _openOrderDetails(item),
@@ -328,7 +448,9 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onBackTap});
+  const _Header({
+    required this.onBackTap,
+  });
 
   final VoidCallback onBackTap;
 
@@ -378,11 +500,11 @@ class _Tabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = <(OrderHistoryTab, String)>[
-      (OrderHistoryTab.all, 'Все'),
-      (OrderHistoryTab.active, 'Активные'),
-      (OrderHistoryTab.completed, 'Завершённые'),
-      (OrderHistoryTab.canceled, 'Отменённые'),
+    final items = <_OrderHistoryTabItem>[
+      const _OrderHistoryTabItem(OrderHistoryTab.all, 'Все'),
+      const _OrderHistoryTabItem(OrderHistoryTab.active, 'Активные'),
+      const _OrderHistoryTabItem(OrderHistoryTab.completed, 'Завершённые'),
+      const _OrderHistoryTabItem(OrderHistoryTab.canceled, 'Отменённые'),
     ];
 
     return SizedBox(
@@ -392,20 +514,22 @@ class _Tabs extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         itemBuilder: (context, index) {
           final item = items[index];
-          final active = item.$1 == current;
+          final active = item.tab == current;
 
           return InkWell(
             borderRadius: BorderRadius.circular(14),
-            onTap: () => onChanged(item.$1),
+            onTap: () => onChanged(item.tab),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: active ? const Color(0xFF489F2A) : const Color(0xFFF0F0F0),
+                color: active
+                    ? const Color(0xFF489F2A)
+                    : const Color(0xFFF0F0F0),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(
                 child: Text(
-                  item.$2,
+                  item.label,
                   style: TextStyle(
                     color: active ? Colors.white : Colors.black87,
                     fontSize: 14,
@@ -423,8 +547,20 @@ class _Tabs extends StatelessWidget {
   }
 }
 
+class _OrderHistoryTabItem {
+  const _OrderHistoryTabItem(
+    this.tab,
+    this.label,
+  );
+
+  final OrderHistoryTab tab;
+  final String label;
+}
+
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onRefresh});
+  const _EmptyState({
+    required this.onRefresh,
+  });
 
   final Future<void> Function() onRefresh;
 
@@ -432,6 +568,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: onRefresh,
+      color: const Color(0xFF489F2A),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
@@ -469,18 +606,43 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _FilteredEmptyState extends StatelessWidget {
-  const _FilteredEmptyState();
+  const _FilteredEmptyState({
+    required this.onRefresh,
+    required this.onLoadMore,
+  });
+
+  final Future<void> Function() onRefresh;
+  final VoidCallback? onLoadMore;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        'В этой вкладке пока нет заказов',
-        style: TextStyle(
-          fontSize: 15,
-          color: Color(0xFF7A7A7A),
-          fontWeight: FontWeight.w600,
-        ),
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: const Color(0xFF489F2A),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 140),
+          const Center(
+            child: Text(
+              'В этой вкладке пока нет заказов',
+              style: TextStyle(
+                fontSize: 15,
+                color: Color(0xFF7A7A7A),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (onLoadMore != null) ...[
+            const SizedBox(height: 14),
+            Center(
+              child: OutlinedButton(
+                onPressed: onLoadMore,
+                child: const Text('Загрузить ещё'),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

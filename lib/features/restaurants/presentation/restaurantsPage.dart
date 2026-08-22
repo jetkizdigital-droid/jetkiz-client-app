@@ -3,24 +3,13 @@
 
   Экран полного списка ресторанов Jetkiz mobile.
 
-  Контекст для будущих сессий ChatGPT:
-  - Экран подключён к реальному backend endpoint:
-      GET /restaurants/public/list
-  - Используется backend-first подход.
-  - На этом экране показывается только полный список ресторанов:
-      response.items
-  - pinned рестораны НЕ показываются отдельным блоком,
-    потому что pinned уже используются на HomePage.
-  - Экран поддерживает:
-      - случайный порядок списка
-      - локальный поиск по названию и адресу
-      - pull-to-refresh
-  - При нажатии на карточку открывается RestaurantMenuPage.
-  - Для Android development используется:
-      adb reverse tcp:3001 tcp:3001
+  Backend-first contract:
+  - This screen uses:
+      GET /restaurants/public/all?random=1
+  - HomePage uses:
+      GET /restaurants/public/list?random=1
+  - Do not use GET /restaurants for mobile client.
 */
-
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -37,22 +26,28 @@ class RestaurantsPage extends StatefulWidget {
 }
 
 class _RestaurantsPageState extends State<RestaurantsPage> {
+  static const Color _green = Color(0xFF489F2A);
+  static const Color _bg = Color(0xFFF7FAF5);
+  static const Color _text = Color(0xFF111827);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _border = Color(0xFFE5E7EB);
+
   late final RestaurantsApi _restaurantsApi;
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   String? _errorText;
 
-  List<Restaurant> _allRestaurants = const [];
-  List<Restaurant> _shuffledRestaurants = const [];
-
+  List<Restaurant> _restaurants = const [];
   String _query = '';
 
   @override
   void initState() {
     super.initState();
+
     _restaurantsApi = RestaurantsApi(ApiClient());
     _searchController.addListener(_handleSearchChanged);
+
     _loadRestaurants();
   }
 
@@ -61,11 +56,13 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
+
     super.dispose();
   }
 
   void _handleSearchChanged() {
     final nextQuery = _searchController.text.trim();
+
     if (nextQuery == _query) return;
 
     setState(() {
@@ -80,16 +77,12 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     });
 
     try {
-      final response = await _restaurantsApi.getPublicRestaurants();
+      final items = await _restaurantsApi.getAllPublicRestaurants();
 
       if (!mounted) return;
 
-      final items = List<Restaurant>.from(response.items);
-      final shuffled = List<Restaurant>.from(items)..shuffle(Random());
-
       setState(() {
-        _allRestaurants = items;
-        _shuffledRestaurants = shuffled;
+        _restaurants = items;
         _isLoading = false;
       });
     } catch (_) {
@@ -104,14 +97,19 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
   List<Restaurant> get _filteredRestaurants {
     final q = _query.trim().toLowerCase();
+
     if (q.isEmpty) {
-      return _shuffledRestaurants;
+      return _restaurants;
     }
 
-    return _shuffledRestaurants.where((restaurant) {
+    return _restaurants.where((restaurant) {
       final name = restaurant.displayName.toLowerCase();
       final address = (restaurant.address ?? '').toLowerCase();
-      return name.contains(q) || address.contains(q);
+      final description = restaurant.displayDescription.toLowerCase();
+
+      return name.contains(q) ||
+          address.contains(q) ||
+          description.contains(q);
     }).toList();
   }
 
@@ -133,8 +131,18 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     final restaurants = _filteredRestaurants;
 
     return Scaffold(
+      backgroundColor: _bg,
       appBar: AppBar(
-        title: const Text('Все рестораны'),
+        backgroundColor: _green,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+        title: const Text(
+          'Все рестораны',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadRestaurants,
@@ -159,14 +167,24 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
                   controller: _searchController,
                   query: _query,
                 ),
-                const SizedBox(height: 16),
-                if (_allRestaurants.isEmpty)
+                const SizedBox(height: 14),
+                _ResultHeader(
+                  totalCount: _restaurants.length,
+                  visibleCount: restaurants.length,
+                  query: _query,
+                ),
+                const SizedBox(height: 14),
+                if (_restaurants.isEmpty)
                   const _PageEmpty(
-                    text: 'Список ресторанов пока пуст',
+                    icon: Icons.restaurant_menu_outlined,
+                    title: 'Рестораны пока не добавлены',
+                    text: 'Список ресторанов появится здесь после публикации.',
                   )
                 else if (restaurants.isEmpty)
                   const _PageEmpty(
-                    text: 'По вашему запросу рестораны не найдены',
+                    icon: Icons.search_off_rounded,
+                    title: 'Ничего не найдено',
+                    text: 'Попробуйте изменить запрос.',
                   )
                 else
                   ...restaurants.map(
@@ -181,6 +199,131 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class RestaurantCard extends StatelessWidget {
+  const RestaurantCard({
+    super.key,
+    required this.restaurant,
+    required this.onTap,
+  });
+
+  final Restaurant restaurant;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = restaurant.fullCoverImageUrl;
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 14,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  _RestaurantImage(imageUrl: imageUrl),
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: _StatusBadge(
+                      isOpen: restaurant.isOpen,
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Material(
+                      color: Colors.white.withOpacity(0.94),
+                      shape: const CircleBorder(),
+                      elevation: 1,
+                      child: FavoriteRestaurantButton(
+                        restaurantId: restaurant.id,
+                        iconSize: 22,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      restaurant.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      restaurant.displayDescription,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _InfoChip(
+                          icon: Icons.access_time_rounded,
+                          text: restaurant.subtitle,
+                        ),
+                        _InfoChip(
+                          icon: Icons.star_rounded,
+                          text: restaurant.hasRating
+                              ? '${restaurant.ratingText} · ${restaurant.ratingCount}'
+                              : 'Нет рейтинга',
+                        ),
+                        if (restaurant.formattedDeliveryFee != null)
+                          _InfoChip(
+                            icon: Icons.delivery_dining_rounded,
+                            text: restaurant.formattedDeliveryFee!,
+                          ),
+                        if (restaurant.formattedMinOrderAmount != null)
+                          _InfoChip(
+                            icon: Icons.receipt_long_outlined,
+                            text: restaurant.formattedMinOrderAmount!,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -203,14 +346,14 @@ class _SearchBox extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFDADDE2)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Row(
         children: [
           const Icon(
-            Icons.search,
-            color: Color(0xFF7B7F87),
+            Icons.search_rounded,
+            color: Color(0xFF6B7280),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -222,6 +365,10 @@ class _SearchBox extends StatelessWidget {
                 border: InputBorder.none,
                 isCollapsed: true,
               ),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           if (query.isNotEmpty)
@@ -232,7 +379,7 @@ class _SearchBox extends StatelessWidget {
                 padding: EdgeInsets.all(4),
                 child: Icon(
                   Icons.close_rounded,
-                  color: Color(0xFF7B7F87),
+                  color: Color(0xFF6B7280),
                 ),
               ),
             ),
@@ -242,102 +389,47 @@ class _SearchBox extends StatelessWidget {
   }
 }
 
-class RestaurantCard extends StatelessWidget {
-  const RestaurantCard({
-    super.key,
-    required this.restaurant,
-    required this.onTap,
+class _ResultHeader extends StatelessWidget {
+  const _ResultHeader({
+    required this.totalCount,
+    required this.visibleCount,
+    required this.query,
   });
 
-  final Restaurant restaurant;
-  final VoidCallback onTap;
+  final int totalCount;
+  final int visibleCount;
+  final String query;
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = restaurant.fullCoverImageUrl;
+    final hasQuery = query.trim().isNotEmpty;
 
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEAEAEA)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  _RestaurantImage(imageUrl: imageUrl),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Material(
-                      color: Colors.white.withOpacity(0.92),
-                      shape: const CircleBorder(),
-                      elevation: 1,
-                      child: FavoriteRestaurantButton(
-                        restaurantId: restaurant.id,
-                        iconSize: 22,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      restaurant.displayName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      restaurant.subtitle,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _InfoChip(
-                          text: restaurant.isOpen ? 'Открыто' : 'Закрыто',
-                        ),
-                        const SizedBox(width: 8),
-                        _InfoChip(
-                          text:
-                              'Рейтинг ${restaurant.ratingAvg.toStringAsFixed(1)}',
-                        ),
-                      ],
-                    ),
-                    if ((restaurant.workingHours ?? '').trim().isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        'Часы работы: ${restaurant.workingHours}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF777777),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            hasQuery
+                ? 'Найдено: $visibleCount'
+                : 'Ресторанов: $totalCount',
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
-      ),
+        if (hasQuery)
+          Text(
+            'по запросу “${query.trim()}”',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -351,41 +443,25 @@ class _RestaurantImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null || imageUrl!.isEmpty) {
-      return Container(
-        height: 180,
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF4F4F4),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        alignment: Alignment.center,
-        child: const Icon(
-          Icons.restaurant,
-          size: 40,
-          color: Color(0xFF9E9E9E),
-        ),
-      );
+    if (imageUrl == null || imageUrl!.trim().isEmpty) {
+      return const _RestaurantImagePlaceholder();
     }
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       child: Image.network(
         imageUrl!,
         height: 180,
         width: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Container(
-            height: 180,
-            width: double.infinity,
-            color: const Color(0xFFF4F4F4),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.broken_image_outlined,
-              size: 40,
-              color: Color(0xFF9E9E9E),
-            ),
+          return const _RestaurantImagePlaceholder();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+
+          return const _RestaurantImagePlaceholder(
+            showLoader: true,
           );
         },
       ),
@@ -393,27 +469,113 @@ class _RestaurantImage extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.text,
+class _RestaurantImagePlaceholder extends StatelessWidget {
+  const _RestaurantImagePlaceholder({
+    this.showLoader = false,
   });
 
-  final String text;
+  final bool showLoader;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      height: 180,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      alignment: Alignment.center,
+      child: showLoader
+          ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(
+              Icons.restaurant_rounded,
+              size: 42,
+              color: Color(0xFF9CA3AF),
+            ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.isOpen,
+  });
+
+  final bool isOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final text = isOpen ? 'Открыто' : 'Закрыто';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F6F6),
+        color: color.withOpacity(0.95),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         style: const TextStyle(
+          color: Colors.white,
           fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w800,
         ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = text.trim();
+
+    if (value.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 15,
+            color: const Color(0xFF6B7280),
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF374151),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -449,25 +611,33 @@ class _PageError extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(24),
       children: [
-        const SizedBox(height: 180),
+        const SizedBox(height: 120),
+        const Icon(
+          Icons.wifi_off_rounded,
+          size: 54,
+          color: Color(0xFFDC2626),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 18),
         Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: onRetry,
-                  child: const Text('Повторить'),
-                ),
-              ],
+          child: FilledButton(
+            onPressed: onRetry,
+            style: FilledButton.styleFrom(
+              backgroundColor: Color(0xFF489F2A),
+              foregroundColor: Colors.white,
             ),
+            child: const Text('Повторить'),
           ),
         ),
       ],
@@ -477,24 +647,48 @@ class _PageError extends StatelessWidget {
 
 class _PageEmpty extends StatelessWidget {
   const _PageEmpty({
+    required this.icon,
+    required this.title,
     required this.text,
   });
 
+  final IconData icon;
+  final String title;
   final String text;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-      child: Center(
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Color(0xFF666666),
+      padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 58,
+            color: const Color(0xFF9CA3AF),
           ),
-        ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 1.35,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -4,25 +4,56 @@ class OrderHistoryItem {
     required this.number,
     required this.createdAt,
     required this.status,
+    this.fulfillmentType = 'DELIVERY',
     required this.total,
     required this.paymentStatus,
     required this.restaurant,
     required this.itemsCount,
     required this.previewItems,
+    this.pickupCode,
+    this.pickupCodeExpiresAt,
+    this.pickupCodeVerifiedAt,
   });
 
   final String id;
   final int number;
   final DateTime createdAt;
   final String status;
+  final String fulfillmentType;
   final int total;
   final String paymentStatus;
   final OrderHistoryRestaurant restaurant;
   final int itemsCount;
   final List<OrderPreviewItem> previewItems;
+  final String? pickupCode;
+  final DateTime? pickupCodeExpiresAt;
+  final DateTime? pickupCodeVerifiedAt;
+
+  String get statusUpper => status.trim().toUpperCase();
+
+  String get fulfillmentTypeUpper => fulfillmentType.trim().toUpperCase();
+
+  bool get isPickup => fulfillmentTypeUpper == 'PICKUP';
+
+  bool get canShowPickupCode {
+    final code = pickupCode?.trim() ?? '';
+    if (!isPickup || code.isEmpty || pickupCodeVerifiedAt != null) {
+      return false;
+    }
+
+    switch (statusUpper) {
+      case 'DELIVERED':
+      case 'CANCELED':
+      case 'CANCELLED':
+      case 'REJECTED':
+        return false;
+      default:
+        return true;
+    }
+  }
 
   bool get isActive {
-    switch (status.toUpperCase()) {
+    switch (statusUpper) {
       case 'CREATED':
       case 'ACCEPTED':
       case 'COOKING':
@@ -35,7 +66,7 @@ class OrderHistoryItem {
   }
 
   bool get isCompleted {
-    switch (status.toUpperCase()) {
+    switch (statusUpper) {
       case 'DELIVERED':
       case 'PAID':
         return true;
@@ -44,7 +75,7 @@ class OrderHistoryItem {
     }
   }
 
-  bool get isCanceled => status.toUpperCase() == 'CANCELED';
+  bool get isCanceled => statusUpper == 'CANCELED' || statusUpper == 'CANCELLED';
 
   factory OrderHistoryItem.fromJson(Map<String, dynamic> json) {
     return OrderHistoryItem(
@@ -52,6 +83,7 @@ class OrderHistoryItem {
       number: _parseInt(json['number']),
       createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
       status: (json['status'] ?? '').toString(),
+      fulfillmentType: (json['fulfillmentType'] ?? 'DELIVERY').toString(),
       total: _parseInt(json['total']),
       paymentStatus: (json['paymentStatus'] ?? '').toString(),
       restaurant: OrderHistoryRestaurant.fromJson(
@@ -62,6 +94,9 @@ class OrderHistoryItem {
           .whereType<Map>()
           .map((e) => OrderPreviewItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
+      pickupCode: _nullableString(json['pickupCode']),
+      pickupCodeExpiresAt: _parseDateTime(json['pickupCodeExpiresAt']),
+      pickupCodeVerifiedAt: _parseDateTime(json['pickupCodeVerifiedAt']),
     );
   }
 
@@ -76,6 +111,11 @@ class OrderHistoryItem {
     if (value == null) return null;
     if (value is DateTime) return value;
     return DateTime.tryParse(value.toString());
+  }
+
+  static String? _nullableString(dynamic value) {
+    final raw = (value ?? '').toString().trim();
+    return raw.isEmpty || raw.toLowerCase() == 'null' ? null : raw;
   }
 
   static Map<String, dynamic>? _readMap(dynamic value) {
@@ -107,6 +147,13 @@ class OrderHistoryRestaurant {
   final double? ratingAvg;
   final int? ratingCount;
   final String? status;
+
+  String get displayName {
+    final name = nameRu.trim();
+    return name.isEmpty ? 'Ресторан' : name;
+  }
+
+  String? get fullCoverImageUrl => _normalizeImageUrl(coverImageUrl);
 
   factory OrderHistoryRestaurant.fromJson(Map<String, dynamic> json) {
     return OrderHistoryRestaurant(

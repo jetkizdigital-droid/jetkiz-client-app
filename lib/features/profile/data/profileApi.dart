@@ -5,65 +5,115 @@ import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
 import 'package:jetkiz_mobile/features/profile/domain/updateProfileDto.dart';
 
-/// ProfileApi
-///
-/// ВАЖНО:
-/// - Токен НЕ передаётся вручную
-/// - Он уже установлен в ApiClient
-class ProfileApi {
-  final ApiClient _apiClient;
+class ProfileApiException implements Exception {
+  const ProfileApiException(
+    this.message, {
+    this.statusCode,
+  });
 
+  final String message;
+  final int? statusCode;
+
+  @override
+  String toString() => message;
+}
+
+class ProfileApi {
   ProfileApi(this._apiClient);
 
+  final ApiClient _apiClient;
+
   Future<ProfileData> getMe() async {
-    final response = await _apiClient.dio.get('/users/me');
-    return _extractProfile(response.data);
+    try {
+      final response = await _apiClient.dio.get('/users/me');
+      return _extractProfile(response.data);
+    } on DioException catch (error) {
+      throw _mapDioError(error, fallback: 'Не удалось загрузить профиль');
+    } catch (_) {
+      throw const ProfileApiException('Не удалось загрузить профиль');
+    }
   }
 
   Future<ProfileData> updateMe(UpdateProfileDto dto) async {
-    final response = await _apiClient.dio.patch(
-      '/users/me',
-      data: dto.toJson(),
-    );
+    try {
+      final response = await _apiClient.dio.patch(
+        '/users/me',
+        data: dto.toJson(),
+      );
 
-    return _extractProfile(response.data);
+      return _extractProfile(response.data);
+    } on DioException catch (error) {
+      throw _mapDioError(error, fallback: 'Не удалось сохранить профиль');
+    } catch (_) {
+      throw const ProfileApiException('Не удалось сохранить профиль');
+    }
   }
 
   Future<ProfileData> uploadMyAvatar(File file) async {
-    final fileName = file.path.split(Platform.pathSeparator).last;
+    try {
+      final fileName = file.path.split(Platform.pathSeparator).last;
 
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(
-        file.path,
-        filename: fileName,
-      ),
-    });
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        ),
+      });
 
-    final response = await _apiClient.dio.post(
-      '/users/me/avatar',
-      data: formData,
-      options: Options(
-        contentType: 'multipart/form-data',
-      ),
-    );
+      final response = await _apiClient.dio.post(
+        '/users/me/avatar',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
 
-    final data = _asMap(response.data);
-    final avatarUrl = _extractAvatarUrl(data);
+      final responseMap = _tryAsMap(response.data);
+      final avatarUrl = responseMap == null ? null : _extractAvatarUrl(responseMap);
 
-    final current = await getMe();
-    if (avatarUrl == null || avatarUrl.trim().isEmpty) {
-      return current;
+      final current = await getMe();
+
+      if (avatarUrl == null || avatarUrl.trim().isEmpty) {
+        return current;
+      }
+
+      return current.copyWith(avatarUrl: avatarUrl);
+    } on DioException catch (error) {
+      throw _mapDioError(error, fallback: 'Не удалось загрузить фото');
+    } catch (_) {
+      throw const ProfileApiException('Не удалось загрузить фото');
     }
+  }
 
-    return current.copyWith(avatarUrl: avatarUrl);
+  Future<void> logout() async {
+    try {
+      await _apiClient.dio.post('/auth/logout');
+    } on DioException {
+      // Даже если backend logout не прошёл, UI всё равно очистит локальную сессию.
+      return;
+    } catch (_) {
+      return;
+    }
   }
 
   ProfileData _extractProfile(dynamic raw) {
     final data = _asMap(raw);
 
-    final directUserKeys = ['id', 'phone', 'firstName', 'lastName', 'email', 'avatarUrl'];
-    final hasDirectUser = directUserKeys.any(data.containsKey);
+    final directUserKeys = <String>[
+      'id',
+      'phone',
+      'role',
+      'isActive',
+      'firstName',
+      'lastName',
+      'email',
+      'avatarUrl',
+      'name',
+      'createdAt',
+      'updatedAt',
+    ];
 
+    final hasDirectUser = directUserKeys.any(data.containsKey);
     if (hasDirectUser) {
       return ProfileData.fromJson(data);
     }
@@ -77,13 +127,13 @@ class ProfileApi {
       return ProfileData.fromJson(nestedUser);
     }
 
-    throw Exception('Invalid profile response format');
+    throw const ProfileApiException('Некорректный ответ профиля');
   }
 
   String? _extractAvatarUrl(Map<String, dynamic> data) {
     final direct = data['avatarUrl']?.toString();
     if (direct != null && direct.trim().isNotEmpty) {
-      return direct;
+      return direct.trim();
     }
 
     final nested = _tryNestedMap(data, ['user']) ??
@@ -93,7 +143,7 @@ class ProfileApi {
 
     final nestedAvatar = nested?['avatarUrl']?.toString();
     if (nestedAvatar != null && nestedAvatar.trim().isNotEmpty) {
-      return nestedAvatar;
+      return nestedAvatar.trim();
     }
 
     return null;
@@ -115,20 +165,19 @@ class ProfileApi {
       }
     }
 
-    if (current is Map<String, dynamic>) {
-      return current;
-    }
-
-    if (current is Map) {
-      return current.map(
-        (key, value) => MapEntry(key.toString(), value),
-      );
-    }
-
-    return null;
+    return _tryAsMap(current);
   }
 
   Map<String, dynamic> _asMap(dynamic value) {
+    final result = _tryAsMap(value);
+    if (result == null) {
+      throw const ProfileApiException('Некорректный ответ сервера');
+    }
+
+    return result;
+  }
+
+  Map<String, dynamic>? _tryAsMap(dynamic value) {
     if (value is Map<String, dynamic>) {
       return value;
     }
@@ -139,6 +188,62 @@ class ProfileApi {
       );
     }
 
-    throw Exception('Invalid profile response format');
+    return null;
+  }
+
+  ProfileApiException _mapDioError(
+    DioException error, {
+    required String fallback,
+  }) {
+    final statusCode = error.response?.statusCode;
+    final data = error.response?.data;
+    final serverMessage = _readServerMessage(data);
+
+    if (statusCode == 401) {
+      return ProfileApiException(
+        'Сессия истекла. Войдите заново',
+        statusCode: statusCode,
+      );
+    }
+
+    if (statusCode == 413) {
+      return ProfileApiException(
+        'Файл слишком большой',
+        statusCode: statusCode,
+      );
+    }
+
+    if (statusCode != null && statusCode >= 500) {
+      return ProfileApiException(
+        'Сервер временно недоступен',
+        statusCode: statusCode,
+      );
+    }
+
+    return ProfileApiException(
+      serverMessage ?? fallback,
+      statusCode: statusCode,
+    );
+  }
+
+  String? _readServerMessage(dynamic data) {
+    final map = _tryAsMap(data);
+    if (map == null) return null;
+
+    final message = map['message'];
+    if (message is String && message.trim().isNotEmpty) {
+      return message.trim();
+    }
+
+    if (message is List && message.isNotEmpty) {
+      return message.first.toString();
+    }
+
+    final error = map['error'];
+    if (error is String && error.trim().isNotEmpty) {
+      return error.trim();
+    }
+
+    return null;
   }
 }

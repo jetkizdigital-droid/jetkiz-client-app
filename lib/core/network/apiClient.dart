@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
@@ -20,41 +22,39 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = _accessToken ?? await _authStorage.getAccessToken();
+          await _applyBaseHeaders(options);
 
-          if (token != null && token.trim().isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
-          } else {
+          final skipRefresh =
+              options.headers['x-skip-auth-refresh'] == 'true';
+
+          if (skipRefresh) {
             options.headers.remove('Authorization');
+          } else {
+            final token = _accessToken ?? await _authStorage.getAccessToken();
+
+            if (token != null && token.trim().isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer ${token.trim()}';
+            } else {
+              options.headers.remove('Authorization');
+            }
           }
 
           if (kDebugMode) {
-            debugPrint('*** Request ***');
-            debugPrint('uri: ${options.uri}');
-            debugPrint('method: ${options.method}');
-            debugPrint('headers: ${options.headers}');
-            debugPrint('data: ${options.data}');
+            _logRequest(options);
           }
 
           handler.next(options);
         },
         onResponse: (response, handler) {
           if (kDebugMode) {
-            debugPrint('*** Response ***');
-            debugPrint('uri: ${response.requestOptions.uri}');
-            debugPrint('statusCode: ${response.statusCode}');
-            debugPrint('data: ${response.data}');
+            _logResponse(response);
           }
 
           handler.next(response);
         },
         onError: (error, handler) async {
           if (kDebugMode) {
-            debugPrint('*** DioException ***');
-            debugPrint('uri: ${error.requestOptions.uri}');
-            debugPrint('statusCode: ${error.response?.statusCode}');
-            debugPrint('data: ${error.response?.data}');
-            debugPrint('message: ${error.message}');
+            _logError(error);
           }
 
           final requestOptions = error.requestOptions;
@@ -66,38 +66,53 @@ class ApiClient {
           if (isUnauthorized && !skipRefresh && !alreadyRetried) {
             final refreshed = await _tryRefreshToken();
 
-            if (refreshed) {
-              final retryHeaders = Map<String, dynamic>.from(
-                requestOptions.headers,
-              )..remove('x-skip-auth-refresh');
+            if (!refreshed) {
+              await clearTokens();
+              return handler.next(error);
+            }
 
-              final retryOptions = Options(
-                method: requestOptions.method,
-                headers: retryHeaders,
-                responseType: requestOptions.responseType,
-                contentType: requestOptions.contentType,
-                sendTimeout: requestOptions.sendTimeout,
-                receiveTimeout: requestOptions.receiveTimeout,
-                extra: {
-                  ...requestOptions.extra,
-                  'retried': true,
-                },
+            final retryHeaders = Map<String, dynamic>.from(
+              requestOptions.headers,
+            )..remove('x-skip-auth-refresh');
+
+            final newAccessToken =
+                _accessToken ?? await _authStorage.getAccessToken();
+
+            if (newAccessToken != null && newAccessToken.trim().isNotEmpty) {
+              retryHeaders['Authorization'] =
+                  'Bearer ${newAccessToken.trim()}';
+            } else {
+              retryHeaders.remove('Authorization');
+            }
+
+            final retryOptions = Options(
+              method: requestOptions.method,
+              headers: retryHeaders,
+              responseType: requestOptions.responseType,
+              contentType: requestOptions.contentType,
+              sendTimeout: requestOptions.sendTimeout,
+              receiveTimeout: requestOptions.receiveTimeout,
+              extra: {
+                ...requestOptions.extra,
+                'retried': true,
+              },
+            );
+
+            try {
+              final response = await _dio.request(
+                requestOptions.path,
+                data: requestOptions.data,
+                queryParameters: requestOptions.queryParameters,
+                options: retryOptions,
               );
 
-              try {
-                final response = await _dio.request(
-                  requestOptions.path,
-                  data: requestOptions.data,
-                  queryParameters: requestOptions.queryParameters,
-                  options: retryOptions,
-                );
-
-                return handler.resolve(response);
-              } catch (_) {
-                await clearTokens();
+              return handler.resolve(response);
+            } catch (retryError) {
+              if (retryError is DioException) {
+                return handler.next(retryError);
               }
-            } else {
-              await clearTokens();
+
+              return handler.next(error);
             }
           }
 
@@ -126,6 +141,9 @@ class ApiClient {
 
     _accessToken = await _authStorage.getAccessToken();
     _refreshToken = await _authStorage.getRefreshToken();
+
+    await _authStorage.getOrCreateDeviceId();
+
     _isInitialized = true;
   }
 
@@ -143,10 +161,13 @@ class ApiClient {
     required String accessToken,
     required String refreshToken,
   }) async {
-    _accessToken = accessToken;
-    _refreshToken = refreshToken;
-    await _authStorage.saveAccessToken(accessToken);
-    await _authStorage.saveRefreshToken(refreshToken);
+    _accessToken = accessToken.trim();
+    _refreshToken = refreshToken.trim();
+
+    await _authStorage.saveTokens(
+      accessToken.trim(),
+      refreshToken.trim(),
+    );
   }
 
   Future<void> loadTokensFromStorage() async {
@@ -172,6 +193,10 @@ class ApiClient {
     return _refreshToken;
   }
 
+  Future<String> getDeviceId() async {
+    return _authStorage.getOrCreateDeviceId();
+  }
+
   Future<void> clearTokens() async {
     _accessToken = null;
     _refreshToken = null;
@@ -188,9 +213,12 @@ class ApiClient {
     }
 
     _refreshFuture = _performRefreshToken();
-    final result = await _refreshFuture!;
-    _refreshFuture = null;
-    return result;
+
+    try {
+      return await _refreshFuture!;
+    } finally {
+      _refreshFuture = null;
+    }
   }
 
   Future<bool> _performRefreshToken() async {
@@ -204,7 +232,7 @@ class ApiClient {
       final response = await _dio.post(
         '/auth/refresh',
         data: {
-          'refreshToken': refreshToken,
+          'refreshToken': refreshToken.trim(),
         },
         options: Options(
           headers: const {
@@ -213,23 +241,140 @@ class ApiClient {
         ),
       );
 
+      if (response.data is! Map) {
+        return false;
+      }
+
       final data = Map<String, dynamic>.from(response.data as Map);
 
       final newAccessToken = data['accessToken']?.toString() ?? '';
       final newRefreshToken = data['refreshToken']?.toString() ?? refreshToken;
 
-      if (newAccessToken.isEmpty) {
+      if (newAccessToken.trim().isEmpty) {
         return false;
       }
 
       await setTokens(
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
+        accessToken: newAccessToken.trim(),
+        refreshToken: newRefreshToken.trim(),
       );
 
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  Future<void> _applyBaseHeaders(RequestOptions options) async {
+    final deviceId = await _authStorage.getOrCreateDeviceId();
+
+    options.headers['X-Request-Id'] = _generateRequestId();
+    options.headers['X-App'] = 'client';
+    options.headers['X-Platform'] = _platformName();
+    options.headers['X-App-Version'] = '1.0.0';
+    options.headers['X-Device-Id'] = deviceId;
+    options.headers['X-Locale'] = 'ru';
+    options.headers['X-Timezone'] = 'Asia/Almaty';
+    options.headers['User-Agent'] = 'JetkizApp/1.0';
+  }
+
+  String _platformName() {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.macOS:
+        return 'macos';
+      case TargetPlatform.windows:
+        return 'windows';
+      case TargetPlatform.linux:
+        return 'linux';
+      case TargetPlatform.fuchsia:
+        return 'fuchsia';
+    }
+  }
+
+  String _generateRequestId() {
+    final random = Random.secure();
+    final timestamp = DateTime.now().microsecondsSinceEpoch.toRadixString(16);
+
+    final randomPart = List<int>.generate(
+      8,
+      (_) => random.nextInt(256),
+    ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
+
+    return 'req-$timestamp-$randomPart';
+  }
+
+  void _logRequest(RequestOptions options) {
+    debugPrint('*** Request ***');
+    debugPrint('uri: ${options.uri}');
+    debugPrint('method: ${options.method}');
+    debugPrint('headers: ${_sanitizeHeaders(options.headers)}');
+    debugPrint('data: ${_sanitizeData(options.data)}');
+  }
+
+  void _logResponse(Response<dynamic> response) {
+    debugPrint('*** Response ***');
+    debugPrint('uri: ${response.requestOptions.uri}');
+    debugPrint('statusCode: ${response.statusCode}');
+    debugPrint('data: ${_sanitizeData(response.data)}');
+  }
+
+  void _logError(DioException error) {
+    debugPrint('*** DioException ***');
+    debugPrint('uri: ${error.requestOptions.uri}');
+    debugPrint('statusCode: ${error.response?.statusCode}');
+    debugPrint('data: ${_sanitizeData(error.response?.data)}');
+    debugPrint('message: ${error.message}');
+  }
+
+  Map<String, dynamic> _sanitizeHeaders(Map<String, dynamic> headers) {
+    final result = <String, dynamic>{};
+
+    for (final entry in headers.entries) {
+      final key = entry.key;
+      final lowerKey = key.toLowerCase();
+
+      if (lowerKey == 'authorization' ||
+          lowerKey == 'cookie' ||
+          lowerKey == 'set-cookie') {
+        result[key] = '***';
+      } else {
+        result[key] = entry.value;
+      }
+    }
+
+    return result;
+  }
+
+  dynamic _sanitizeData(dynamic data) {
+    if (data is Map) {
+      final result = <String, dynamic>{};
+
+      for (final entry in data.entries) {
+        final key = entry.key.toString();
+        final lowerKey = key.toLowerCase();
+
+        if (lowerKey.contains('token') ||
+            lowerKey.contains('password') ||
+            lowerKey == 'code' ||
+            lowerKey == 'otp' ||
+            lowerKey == 'smscode') {
+          result[key] = '***';
+        } else {
+          result[key] = _sanitizeData(entry.value);
+        }
+      }
+
+      return result;
+    }
+
+    if (data is List) {
+      return data.map(_sanitizeData).toList();
+    }
+
+    return data;
   }
 }

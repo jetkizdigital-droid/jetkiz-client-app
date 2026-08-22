@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressesApi.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressFormPage.dart';
@@ -23,9 +24,10 @@ class _AddressesPageState extends State<AddressesPage> {
   static const Color _bg = Color(0xFFF7FAF5);
 
   late final AddressesApi _addressesApi;
+  late final AddressRepository _addressRepository;
 
   bool _isLoading = true;
-  bool _isDeleting = false;
+  String? _deletingAddressId;
   String? _error;
   List<Address> _addresses = [];
   String? _selectedAddressId;
@@ -33,8 +35,13 @@ class _AddressesPageState extends State<AddressesPage> {
   @override
   void initState() {
     super.initState();
+
     _addressesApi = AddressesApi(ApiClient());
-    _selectedAddressId = widget.initialSelectedAddressId;
+    _addressRepository = AddressRepository.instance;
+
+    _selectedAddressId =
+        widget.initialSelectedAddressId ?? _addressRepository.selectedAddressId;
+
     _loadAddresses();
   }
 
@@ -49,22 +56,26 @@ class _AddressesPageState extends State<AddressesPage> {
 
       if (!mounted) return;
 
+      _addressRepository.syncSelectedFromList(items);
+
       setState(() {
         _addresses = items;
+        _selectedAddressId =
+            _addressRepository.selectedAddressId ?? _selectedAddressId;
       });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
         _error =
-            'Не удалось загрузить адреса. Проверь backend и попробуй ещё раз.';
+            'Не удалось загрузить адреса. Проверь подключение и попробуй ещё раз.';
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -80,10 +91,7 @@ class _AddressesPageState extends State<AddressesPage> {
     await _loadAddresses();
 
     if (widget.selectionMode && mounted) {
-      setState(() {
-        _selectedAddressId = result.id;
-      });
-      Navigator.of(context).pop(result);
+      _selectAddress(result);
     }
   }
 
@@ -96,7 +104,13 @@ class _AddressesPageState extends State<AddressesPage> {
 
     if (!mounted || result == null) return;
 
+    if (_addressRepository.selectedAddressId == address.id) {
+      _addressRepository.setSelectedAddress(result);
+    }
+
     await _loadAddresses();
+
+    if (!mounted) return;
 
     if (_selectedAddressId == address.id) {
       setState(() {
@@ -111,14 +125,19 @@ class _AddressesPageState extends State<AddressesPage> {
           builder: (context) {
             return AlertDialog(
               title: const Text('Удалить адрес?'),
-              content:
-                  Text('Адрес "${address.title}" будет удалён из сохранённых.'),
+              content: Text(
+                'Адрес "${address.displayTitle}" будет удалён из сохранённых.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
                   child: const Text('Отмена'),
                 ),
                 FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFE53935),
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: () => Navigator.of(context).pop(true),
                   child: const Text('Удалить'),
                 ),
@@ -128,10 +147,11 @@ class _AddressesPageState extends State<AddressesPage> {
         ) ??
         false;
 
-    if (!confirmed || _isDeleting) return;
+    if (!confirmed) return;
+    if (_deletingAddressId != null) return;
 
     setState(() {
-      _isDeleting = true;
+      _deletingAddressId = address.id;
     });
 
     try {
@@ -143,6 +163,8 @@ class _AddressesPageState extends State<AddressesPage> {
         _selectedAddressId = null;
       }
 
+      _addressRepository.clearIfSelected(address.id);
+
       await _loadAddresses();
     } catch (_) {
       if (!mounted) return;
@@ -153,16 +175,18 @@ class _AddressesPageState extends State<AddressesPage> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isDeleting = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _deletingAddressId = null;
+      });
     }
   }
 
   void _selectAddress(Address address) {
     if (!widget.selectionMode) return;
+
+    _addressRepository.setSelectedAddress(address);
 
     setState(() {
       _selectedAddressId = address.id;
@@ -255,14 +279,30 @@ class _AddressesPageState extends State<AddressesPage> {
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 80),
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 54,
+            color: Color(0xFFE53935),
+          ),
+          const SizedBox(height: 16),
           Text(
             _error!,
             textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           Center(
             child: FilledButton(
               onPressed: _loadAddresses,
+              style: FilledButton.styleFrom(
+                backgroundColor: _green,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Повторить'),
             ),
           ),
@@ -298,6 +338,7 @@ class _AddressesPageState extends State<AddressesPage> {
             style: TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7280),
+              height: 1.35,
             ),
           ),
           const SizedBox(height: 20),
@@ -321,18 +362,20 @@ class _AddressesPageState extends State<AddressesPage> {
       itemBuilder: (context, index) {
         final address = _addresses[index];
         final isSelected = address.id == _selectedAddressId;
+        final isDeleting = _deletingAddressId == address.id;
 
         return _AddressCard(
           address: address,
           isSelected: isSelected,
+          isDeleting: isDeleting,
           selectionMode: widget.selectionMode,
           onTap: () {
             if (widget.selectionMode) {
               _selectAddress(address);
             }
           },
-          onEditTap: () => _openEditAddress(address),
-          onDeleteTap: () => _deleteAddress(address),
+          onEditTap: isDeleting ? null : () => _openEditAddress(address),
+          onDeleteTap: isDeleting ? null : () => _deleteAddress(address),
         );
       },
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -345,6 +388,7 @@ class _AddressCard extends StatelessWidget {
   const _AddressCard({
     required this.address,
     required this.isSelected,
+    required this.isDeleting,
     required this.selectionMode,
     required this.onTap,
     required this.onEditTap,
@@ -353,10 +397,11 @@ class _AddressCard extends StatelessWidget {
 
   final Address address;
   final bool isSelected;
+  final bool isDeleting;
   final bool selectionMode;
   final VoidCallback onTap;
-  final VoidCallback onEditTap;
-  final VoidCallback onDeleteTap;
+  final VoidCallback? onEditTap;
+  final VoidCallback? onDeleteTap;
 
   @override
   Widget build(BuildContext context) {
@@ -367,7 +412,7 @@ class _AddressCard extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        onTap: selectionMode ? onTap : null,
+        onTap: selectionMode && !isDeleting ? onTap : null,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -388,89 +433,178 @@ class _AddressCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFEAF7E4)
-                      : const Color(0xFFF3F4F6),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isSelected ? Icons.check_circle : Icons.location_on_outlined,
-                  color: isSelected
-                      ? const Color(0xFF489F2A)
-                      : const Color(0xFF6B7280),
-                ),
+              _AddressIcon(
+                isSelected: isSelected,
+                isDeleting: isDeleting,
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: InkWell(
-                  onTap: selectionMode ? onTap : null,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        address.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        address.address,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      if (address.shortDetails.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          address.shortDetails,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ],
-                      if ((address.comment ?? '').trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          address.comment!.trim(),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                child: _AddressInfo(address: address),
               ),
               const SizedBox(width: 8),
-              Column(
-                children: [
-                  IconButton(
-                    onPressed: onEditTap,
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Редактировать',
-                  ),
-                  IconButton(
-                    onPressed: onDeleteTap,
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Удалить',
-                  ),
-                ],
+              _AddressActions(
+                isDeleting: isDeleting,
+                onEditTap: onEditTap,
+                onDeleteTap: onDeleteTap,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AddressIcon extends StatelessWidget {
+  const _AddressIcon({
+    required this.isSelected,
+    required this.isDeleting,
+  });
+
+  final bool isSelected;
+  final bool isDeleting;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isDeleting) {
+      return const SizedBox(
+        width: 42,
+        height: 42,
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFEAF7E4) : const Color(0xFFF3F4F6),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        isSelected ? Icons.check_circle : Icons.location_on_outlined,
+        color: isSelected ? const Color(0xFF489F2A) : const Color(0xFF6B7280),
+      ),
+    );
+  }
+}
+
+class _AddressInfo extends StatelessWidget {
+  const _AddressInfo({
+    required this.address,
+  });
+
+  final Address address;
+
+  @override
+  Widget build(BuildContext context) {
+    final details = address.shortDetails;
+    final comment = address.comment?.trim() ?? '';
+    final intercom = address.intercom?.trim() ?? '';
+    final contactPhone = address.contactPhone?.trim() ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          address.displayTitle,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          address.address,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+            height: 1.25,
+          ),
+        ),
+        if (details.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            details,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7280),
+              height: 1.25,
+            ),
+          ),
+        ],
+        if (intercom.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Домофон: $intercom',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7280),
+              height: 1.25,
+            ),
+          ),
+        ],
+        if (contactPhone.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Телефон: $contactPhone',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7280),
+              height: 1.25,
+            ),
+          ),
+        ],
+        if (comment.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            comment,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7280),
+              height: 1.25,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AddressActions extends StatelessWidget {
+  const _AddressActions({
+    required this.isDeleting,
+    required this.onEditTap,
+    required this.onDeleteTap,
+  });
+
+  final bool isDeleting;
+  final VoidCallback? onEditTap;
+  final VoidCallback? onDeleteTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        IconButton(
+          onPressed: isDeleting ? null : onEditTap,
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: 'Редактировать',
+        ),
+        IconButton(
+          onPressed: isDeleting ? null : onDeleteTap,
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Удалить',
+        ),
+      ],
     );
   }
 }

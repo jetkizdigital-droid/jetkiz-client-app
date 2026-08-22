@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderHistoryItem.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/orderDetailsPage.dart';
+import 'package:jetkiz_mobile/features/orders/presentation/widgets/orderHistoryCard.dart';
 
 enum OrderHistoryTab {
   all,
@@ -22,7 +22,7 @@ class OrdersPage extends StatefulWidget {
 class _OrdersPageState extends State<OrdersPage> {
   static const Color _green = Color(0xFF489F2A);
   static const Color _bg = Color(0xFFF9FAFB);
-  static const Color _cardBorder = Color(0xFFF0F1F3);
+  static const int _pageLimit = 20;
 
   late final OrdersApi _ordersApi;
   late final ScrollController _scrollController;
@@ -44,8 +44,10 @@ class _OrdersPageState extends State<OrdersPage> {
   @override
   void initState() {
     super.initState();
+
     _ordersApi = OrdersApi(ApiClient());
     _scrollController = ScrollController()..addListener(_onScroll);
+
     _loadInitial();
   }
 
@@ -54,19 +56,25 @@ class _OrdersPageState extends State<OrdersPage> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+
     super.dispose();
   }
 
   Future<void> _loadInitial() async {
     setState(() {
       _isLoading = true;
+      _isLoadingMore = false;
       _errorText = null;
       _page = 1;
+      _total = 0;
       _hasMore = true;
     });
 
     try {
-      final data = await _ordersApi.getMyOrders(page: 1, limit: 20);
+      final data = await _ordersApi.getMyOrders(
+        page: 1,
+        limit: _pageLimit,
+      );
 
       if (!mounted) return;
 
@@ -74,22 +82,21 @@ class _OrdersPageState extends State<OrdersPage> {
         _orders
           ..clear()
           ..addAll(data.items);
+
         _total = data.total;
         _hasMore = _orders.length < _total;
 
-        if (_selectedRestaurantId != null &&
-            !_orders.any((e) => e.restaurant.id == _selectedRestaurantId)) {
-          _selectedRestaurantId = null;
-          _selectedRestaurantName = null;
-        }
+        _resetRestaurantFilterIfMissing();
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+
       setState(() {
-        _errorText = 'Не удалось загрузить историю заказов';
+        _errorText = error.toString();
       });
     } finally {
       if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
@@ -98,7 +105,10 @@ class _OrdersPageState extends State<OrdersPage> {
 
   Future<void> _refresh() async {
     try {
-      final data = await _ordersApi.getMyOrders(page: 1, limit: 20);
+      final data = await _ordersApi.getMyOrders(
+        page: 1,
+        limit: _pageLimit,
+      );
 
       if (!mounted) return;
 
@@ -107,23 +117,17 @@ class _OrdersPageState extends State<OrdersPage> {
         _orders
           ..clear()
           ..addAll(data.items);
+
         _total = data.total;
         _hasMore = _orders.length < _total;
         _errorText = null;
 
-        if (_selectedRestaurantId != null &&
-            !_orders.any((e) => e.restaurant.id == _selectedRestaurantId)) {
-          _selectedRestaurantId = null;
-          _selectedRestaurantName = null;
-        }
+        _resetRestaurantFilterIfMissing();
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('Не удалось обновить историю заказов'),
-        ),
-      );
+
+      _showSnackBar(error.toString());
     }
   }
 
@@ -136,7 +140,11 @@ class _OrdersPageState extends State<OrdersPage> {
 
     try {
       final nextPage = _page + 1;
-      final data = await _ordersApi.getMyOrders(page: nextPage, limit: 20);
+
+      final data = await _ordersApi.getMyOrders(
+        page: nextPage,
+        limit: _pageLimit,
+      );
 
       if (!mounted) return;
 
@@ -146,16 +154,13 @@ class _OrdersPageState extends State<OrdersPage> {
         _total = data.total;
         _hasMore = _orders.length < _total;
 
-        if (_selectedRestaurantId != null &&
-            !_orders.any((e) => e.restaurant.id == _selectedRestaurantId)) {
-          _selectedRestaurantId = null;
-          _selectedRestaurantName = null;
-        }
+        _resetRestaurantFilterIfMissing();
       });
     } catch (_) {
-      // silent
+      // Не блокируем экран из-за ошибки догрузки.
     } finally {
       if (!mounted) return;
+
       setState(() {
         _isLoadingMore = false;
       });
@@ -164,9 +169,25 @@ class _OrdersPageState extends State<OrdersPage> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
+
     final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 220) {
+    final shouldLoadMore = position.pixels >= position.maxScrollExtent - 260;
+
+    if (shouldLoadMore) {
       _loadMore();
+    }
+  }
+
+  void _resetRestaurantFilterIfMissing() {
+    final selectedId = _selectedRestaurantId?.trim() ?? '';
+
+    if (selectedId.isEmpty) return;
+
+    final exists = _orders.any((order) => order.restaurant.id == selectedId);
+
+    if (!exists) {
+      _selectedRestaurantId = null;
+      _selectedRestaurantName = null;
     }
   }
 
@@ -175,7 +196,7 @@ class _OrdersPageState extends State<OrdersPage> {
 
     for (final order in _orders) {
       final id = order.restaurant.id.trim();
-      final name = order.restaurant.nameRu.trim();
+      final name = order.restaurant.displayName.trim();
 
       if (id.isEmpty || name.isEmpty) continue;
 
@@ -184,13 +205,17 @@ class _OrdersPageState extends State<OrdersPage> {
         () => _RestaurantFilterOption(
           id: id,
           name: name,
-          imageUrl: order.restaurant.coverImageUrl,
+          imageUrl: order.restaurant.fullCoverImageUrl,
         ),
       );
     }
 
     final items = map.values.toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      ..sort(
+        (a, b) => a.name.toLowerCase().compareTo(
+              b.name.toLowerCase(),
+            ),
+      );
 
     return items;
   }
@@ -201,19 +226,23 @@ class _OrdersPageState extends State<OrdersPage> {
     switch (_activeTab) {
       case OrderHistoryTab.all:
         break;
+
       case OrderHistoryTab.active:
-        items = items.where((e) => e.isActive);
-        break;
+        items = items.where((order) => order.isActive);
+
       case OrderHistoryTab.delivered:
-        items = items.where((e) => e.isCompleted);
-        break;
+        items = items.where((order) => order.isCompleted);
+
       case OrderHistoryTab.canceled:
-        items = items.where((e) => e.isCanceled);
-        break;
+        items = items.where((order) => order.isCanceled);
     }
 
-    if ((_selectedRestaurantId ?? '').isNotEmpty) {
-      items = items.where((e) => e.restaurant.id == _selectedRestaurantId);
+    final selectedRestaurantId = _selectedRestaurantId?.trim() ?? '';
+
+    if (selectedRestaurantId.isNotEmpty) {
+      items = items.where(
+        (order) => order.restaurant.id == selectedRestaurantId,
+      );
     }
 
     return items.toList();
@@ -222,7 +251,9 @@ class _OrdersPageState extends State<OrdersPage> {
   void _openOrderDetails(OrderHistoryItem item) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => OrderDetailsPage(orderId: item.id),
+        builder: (_) => OrderDetailsPage(
+          orderId: item.id,
+        ),
       ),
     );
   }
@@ -234,23 +265,26 @@ class _OrdersPageState extends State<OrdersPage> {
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
       ),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Выбрать ресторан',
+                  'Фильтр по ресторану',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1F2937),
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF111827),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -262,19 +296,20 @@ class _OrdersPageState extends State<OrdersPage> {
                       _selectedRestaurantId = null;
                       _selectedRestaurantName = null;
                     });
+
                     Navigator.of(context).pop();
                   },
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 if (options.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.only(top: 8, bottom: 8),
+                    padding: EdgeInsets.symmetric(vertical: 14),
                     child: Text(
-                      'Рестораны пока недоступны',
+                      'Рестораны пока не найдены',
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF6B7280),
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   )
@@ -283,9 +318,10 @@ class _OrdersPageState extends State<OrdersPage> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: options.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final option = options[index];
+
                         return _RestaurantFilterTile(
                           title: option.name,
                           imageUrl: option.imageUrl,
@@ -295,6 +331,7 @@ class _OrdersPageState extends State<OrdersPage> {
                               _selectedRestaurantId = option.id;
                               _selectedRestaurantName = option.name;
                             });
+
                             Navigator.of(context).pop();
                           },
                         );
@@ -306,6 +343,25 @@ class _OrdersPageState extends State<OrdersPage> {
           ),
         );
       },
+    );
+  }
+
+  void _clearRestaurantFilter() {
+    setState(() {
+      _selectedRestaurantId = null;
+      _selectedRestaurantName = null;
+    });
+  }
+
+  void _showSnackBar(String message) {
+    final text = message.trim().isEmpty
+        ? 'Не удалось загрузить заказы'
+        : message.trim();
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      SnackBar(content: Text(text)),
     );
   }
 
@@ -326,12 +382,7 @@ class _OrdersPageState extends State<OrdersPage> {
             if ((_selectedRestaurantName ?? '').isNotEmpty)
               _ActiveRestaurantFilterBar(
                 title: _selectedRestaurantName!,
-                onClear: () {
-                  setState(() {
-                    _selectedRestaurantId = null;
-                    _selectedRestaurantName = null;
-                  });
-                },
+                onClear: _clearRestaurantFilter,
               ),
             _TabsBar(
               current: _activeTab,
@@ -365,10 +416,8 @@ class _OrdersPageState extends State<OrdersPage> {
     if (_orders.isEmpty) {
       return _EmptyState(
         tab: _activeTab,
-        isRestaurantFilterApplied: (_selectedRestaurantId ?? '').isNotEmpty,
-        onPrimaryTap: _activeTab == OrderHistoryTab.all
-            ? () => Navigator.of(context).maybePop()
-            : null,
+        isRestaurantFilterApplied: false,
+        onPrimaryTap: () => Navigator.of(context).maybePop(),
       );
     }
 
@@ -377,12 +426,7 @@ class _OrdersPageState extends State<OrdersPage> {
         tab: _activeTab,
         isRestaurantFilterApplied: (_selectedRestaurantId ?? '').isNotEmpty,
         onClearRestaurantFilter: (_selectedRestaurantId ?? '').isNotEmpty
-            ? () {
-                setState(() {
-                  _selectedRestaurantId = null;
-                  _selectedRestaurantName = null;
-                });
-              }
+            ? _clearRestaurantFilter
             : null,
       );
     }
@@ -392,14 +436,14 @@ class _OrdersPageState extends State<OrdersPage> {
       onRefresh: _refresh,
       child: ListView.separated(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: filtered.length + (_isLoadingMore ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(height: 16),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           if (index >= filtered.length) {
             return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+              padding: EdgeInsets.symmetric(vertical: 14),
               child: Center(
                 child: CircularProgressIndicator(color: _green),
               ),
@@ -407,7 +451,8 @@ class _OrdersPageState extends State<OrdersPage> {
           }
 
           final item = filtered[index];
-          return _OrderCard(
+
+          return OrderHistoryCard(
             item: item,
             onDetailsTap: () => _openOrderDetails(item),
           );
@@ -444,7 +489,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -467,13 +512,13 @@ class _Header extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 56),
             child: Text(
-              'История заказов',
+              'Мои заказы',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF1F2937),
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF111827),
               ),
             ),
           ),
@@ -499,17 +544,12 @@ class _CircleIconButton extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Colors.transparent,
-          shape: BoxShape.circle,
-        ),
+      child: SizedBox(
+        width: 42,
+        height: 42,
         child: Icon(
           icon,
-          size: 22,
+          size: 23,
           color: iconColor ?? const Color(0xFF374151),
         ),
       ),
@@ -530,7 +570,7 @@ class _ActiveRestaurantFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Container(
@@ -548,12 +588,16 @@ class _ActiveRestaurantFilterBar extends StatelessWidget {
                 color: Color(0xFF489F2A),
               ),
               const SizedBox(width: 6),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF489F2A),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF489F2A),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const SizedBox(width: 6),
@@ -589,43 +633,33 @@ class _RestaurantFilterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final img = imageUrl?.trim() ?? '';
+
     return Material(
       color: selected ? const Color(0xFFEAF7E5) : const Color(0xFFF9FAFB),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              if ((imageUrl ?? '').trim().isNotEmpty) ...[
-                _RestaurantThumb(url: imageUrl),
-                const SizedBox(width: 10),
-              ] else ...[
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.storefront_rounded,
-                    color: Color(0xFF489F2A),
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
+              _RestaurantThumb(
+                url: img.isEmpty ? null : img,
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: selected
                         ? const Color(0xFF489F2A)
-                        : const Color(0xFF1F2937),
+                        : const Color(0xFF111827),
                   ),
                 ),
               ),
@@ -651,21 +685,10 @@ class _RestaurantThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _normalizeImageUrl(url);
+    final imageUrl = url?.trim() ?? '';
 
-    if (imageUrl == null) {
-      return Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(
-          Icons.storefront_rounded,
-          color: Color(0xFF489F2A),
-        ),
-      );
+    if (imageUrl.isEmpty) {
+      return _placeholder();
     }
 
     return ClipRRect(
@@ -675,34 +698,24 @@ class _RestaurantThumb extends StatelessWidget {
         width: 42,
         height: 42,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) {
-          return Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.storefront_rounded,
-              color: Color(0xFF489F2A),
-            ),
-          );
-        },
+        errorBuilder: (_, __, ___) => _placeholder(),
       ),
     );
   }
 
-  String? _normalizeImageUrl(String? raw) {
-    final value = (raw ?? '').trim();
-    if (value.isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    if (value.startsWith('/')) {
-      return '${AppConfig.baseUrl}$value';
-    }
-    return '${AppConfig.baseUrl}/$value';
+  Widget _placeholder() {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(
+        Icons.storefront_rounded,
+        color: Color(0xFF489F2A),
+      ),
+    );
   }
 }
 
@@ -717,16 +730,16 @@ class _TabsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = <(OrderHistoryTab, String)>[
-      (OrderHistoryTab.all, 'Все'),
-      (OrderHistoryTab.active, 'Активные'),
-      (OrderHistoryTab.delivered, 'Завершённые'),
-      (OrderHistoryTab.canceled, 'Отменённые'),
+    final items = <_TabOption>[
+      const _TabOption(OrderHistoryTab.all, 'Все'),
+      const _TabOption(OrderHistoryTab.active, 'Активные'),
+      const _TabOption(OrderHistoryTab.delivered, 'Доставлены'),
+      const _TabOption(OrderHistoryTab.canceled, 'Отменены'),
     ];
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: SizedBox(
         height: 42,
         child: ListView.separated(
@@ -735,12 +748,13 @@ class _TabsBar extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final item = items[index];
-            final selected = item.$1 == current;
+            final selected = item.tab == current;
 
             return GestureDetector(
-              onTap: () => onChanged(item.$1),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+              onTap: () => onChanged(item.tab),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: selected
@@ -758,11 +772,11 @@ class _TabsBar extends StatelessWidget {
                       : null,
                 ),
                 child: Text(
-                  item.$2,
+                  item.label,
                   style: TextStyle(
                     color: selected ? Colors.white : const Color(0xFF374151),
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -774,349 +788,11 @@ class _TabsBar extends StatelessWidget {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({
-    required this.item,
-    required this.onDetailsTap,
-  });
+class _TabOption {
+  const _TabOption(this.tab, this.label);
 
-  final OrderHistoryItem item;
-  final VoidCallback onDetailsTap;
-
-  static const Color _green = Color(0xFF489F2A);
-
-  @override
-  Widget build(BuildContext context) {
-    final status = _resolveStatus(item.status);
-    final previewText = _buildPreviewText(item.previewItems);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFF0F1F3)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 12,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Заказ №${item.number}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                ),
-                _StatusChip(
-                  label: status.label,
-                  backgroundColor: status.backgroundColor,
-                  textColor: status.textColor,
-                  icon: status.icon,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _RestaurantImage(url: item.restaurant.coverImageUrl),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.restaurant.nameRu.isEmpty
-                            ? 'Ресторан'
-                            : item.restaurant.nameRu,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatDateTime(item.createdAt),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                previewText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Сумма заказа',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF9CA3AF),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${item.total} ₸',
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: onDetailsTap,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _green,
-                    side: const BorderSide(color: _green, width: 2),
-                    backgroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'Подробнее',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _buildPreviewText(List<OrderPreviewItem> items) {
-    if (items.isEmpty) return 'Состав заказа недоступен';
-    return items.take(2).map((e) => '${e.title} x${e.quantity}').join(', ');
-  }
-
-  String _formatDateTime(DateTime value) {
-    const months = <int, String>{
-      1: 'января',
-      2: 'февраля',
-      3: 'марта',
-      4: 'апреля',
-      5: 'мая',
-      6: 'июня',
-      7: 'июля',
-      8: 'августа',
-      9: 'сентября',
-      10: 'октября',
-      11: 'ноября',
-      12: 'декабря',
-    };
-
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${value.day} ${months[value.month] ?? ''} ${value.year} в ${two(value.hour)}:${two(value.minute)}';
-  }
-
-  _StatusUi _resolveStatus(String raw) {
-    final status = raw.toUpperCase();
-
-    if ([
-      'CREATED',
-      'ACCEPTED',
-      'COOKING',
-      'READY',
-      'ON_THE_WAY',
-    ].contains(status)) {
-      return const _StatusUi(
-        label: 'В пути',
-        backgroundColor: Color(0xFF489F2A),
-        textColor: Colors.white,
-        icon: Icons.access_time_rounded,
-      );
-    }
-
-    if (status == 'DELIVERED' || status == 'PAID') {
-      return const _StatusUi(
-        label: 'Доставлен',
-        backgroundColor: Color(0xFFF3F4F6),
-        textColor: Color(0xFF4B5563),
-        icon: Icons.check_circle_rounded,
-      );
-    }
-
-    if (status == 'CANCELED') {
-      return const _StatusUi(
-        label: 'Отменён',
-        backgroundColor: Color(0xFFFDE8E8),
-        textColor: Color(0xFFC53030),
-        icon: Icons.cancel_rounded,
-      );
-    }
-
-    return const _StatusUi(
-      label: 'Статус',
-      backgroundColor: Color(0xFFF3F4F6),
-      textColor: Color(0xFF4B5563),
-      icon: Icons.info_outline_rounded,
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.label,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.icon,
-  });
-
+  final OrderHistoryTab tab;
   final String label;
-  final Color backgroundColor;
-  final Color textColor;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: textColor),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusUi {
-  const _StatusUi({
-    required this.label,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.icon,
-  });
-
-  final String label;
-  final Color backgroundColor;
-  final Color textColor;
-  final IconData icon;
-}
-
-class _RestaurantImage extends StatelessWidget {
-  const _RestaurantImage({
-    required this.url,
-  });
-
-  final String? url;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = _normalizeImageUrl(url);
-
-    if (imageUrl == null) {
-      return _placeholder();
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        imageUrl,
-        width: 64,
-        height: 64,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _placeholder(),
-      ),
-    );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE5E7EB),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Icon(
-        Icons.restaurant_rounded,
-        color: Color(0xFF9CA3AF),
-        size: 28,
-      ),
-    );
-  }
-
-  String? _normalizeImageUrl(String? raw) {
-    final value = (raw ?? '').trim();
-    if (value.isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    if (value.startsWith('/')) {
-      return '${AppConfig.baseUrl}$value';
-    }
-    return '${AppConfig.baseUrl}/$value';
-  }
 }
 
 class _LoadingState extends StatelessWidget {
@@ -1125,110 +801,81 @@ class _LoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, __) {
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFF0F1F3)),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
           child: Column(
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 110,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  _SkeletonBox(width: 120, height: 18),
                   const Spacer(),
-                  Container(
-                    width: 90,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
+                  _SkeletonBox(width: 90, height: 28, radius: 999),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  _SkeletonBox(width: 58, height: 58, radius: 14),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE5E7EB),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                        _SkeletonBox(width: double.infinity, height: 16),
                         const SizedBox(height: 8),
-                        Container(
-                          height: 14,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE5E7EB),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
+                        _SkeletonBox(width: 140, height: 12),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              const SizedBox(height: 14),
+              _SkeletonBox(width: double.infinity, height: 36, radius: 12),
               const SizedBox(height: 14),
               Row(
                 children: [
-                  Container(
-                    width: 90,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  _SkeletonBox(width: 90, height: 24),
                   const Spacer(),
-                  Container(
-                    width: 110,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                  _SkeletonBox(width: 110, height: 40, radius: 14),
                 ],
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width.isInfinite ? double.infinity : width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.circular(radius),
+      ),
     );
   }
 }
@@ -1249,46 +896,48 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = isRestaurantFilterApplied
-        ? 'Нет заказов по выбранному ресторану'
+        ? 'По этому ресторану заказов нет'
         : switch (tab) {
             OrderHistoryTab.all => 'У вас пока нет заказов',
             OrderHistoryTab.active => 'Нет активных заказов',
-            OrderHistoryTab.delivered => 'Нет завершённых заказов',
+            OrderHistoryTab.delivered => 'Нет доставленных заказов',
             OrderHistoryTab.canceled => 'Нет отменённых заказов',
           };
 
     final subtitle = isRestaurantFilterApplied
-        ? 'Попробуйте выбрать другой ресторан'
+        ? 'Попробуйте убрать фильтр по ресторану.'
         : tab == OrderHistoryTab.all
-            ? 'Сделайте первый заказ в любимом ресторане'
-            : null;
+            ? 'Добавьте блюда в корзину и оформите первый заказ.'
+            : 'Здесь появятся заказы после изменения статуса.';
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        const Center(
-          child: CircleAvatar(
-            radius: 64,
-            backgroundColor: Color(0xFFF3F4F6),
-            child: Icon(
-              Icons.access_time_rounded,
-              size: 54,
-              color: Color(0xFFD1D5DB),
+    return RefreshIndicator(
+      color: const Color(0xFF489F2A),
+      onRefresh: () async {},
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 64, 20, 24),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const Center(
+            child: CircleAvatar(
+              radius: 64,
+              backgroundColor: Color(0xFFF3F4F6),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 54,
+                color: Color(0xFFD1D5DB),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1F2937),
+          const SizedBox(height: 24),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+            ),
           ),
-        ),
-        if (subtitle != null) ...[
           const SizedBox(height: 10),
           Text(
             subtitle,
@@ -1296,45 +945,46 @@ class _EmptyState extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF6B7280),
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
             ),
           ),
-        ],
-        if (onClearRestaurantFilter != null) ...[
-          const SizedBox(height: 24),
-          Center(
-            child: OutlinedButton(
-              onPressed: onClearRestaurantFilter,
-              child: const Text('Сбросить фильтр'),
-            ),
-          ),
-        ] else if (onPrimaryTap != null) ...[
-          const SizedBox(height: 24),
-          Center(
-            child: ElevatedButton(
-              onPressed: onPrimaryTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF489F2A),
-                foregroundColor: Colors.white,
-                elevation: 2,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: const Text(
-                'Перейти к ресторанам',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
+          if (onClearRestaurantFilter != null) ...[
+            const SizedBox(height: 24),
+            Center(
+              child: OutlinedButton(
+                onPressed: onClearRestaurantFilter,
+                child: const Text('Убрать фильтр'),
               ),
             ),
-          ),
+          ] else if (onPrimaryTap != null) ...[
+            const SizedBox(height: 24),
+            Center(
+              child: ElevatedButton(
+                onPressed: onPrimaryTap,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF489F2A),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: const Text(
+                  'Перейти к ресторанам',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -1350,6 +1000,10 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = message.trim().isEmpty
+        ? 'Не удалось загрузить заказы'
+        : message.trim();
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -1358,20 +1012,20 @@ class _ErrorState extends StatelessWidget {
           children: [
             const Icon(
               Icons.error_outline_rounded,
-              size: 44,
+              size: 48,
               color: Colors.redAccent,
             ),
             const SizedBox(height: 12),
             Text(
-              message,
+              text,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF374151),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             OutlinedButton(
               onPressed: onRetry,
               child: const Text('Повторить'),

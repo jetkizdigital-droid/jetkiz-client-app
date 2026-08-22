@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
+import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/profileEntryPage.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartPage.dart';
 import 'package:jetkiz_mobile/features/favorites/presentation/favoritesPage.dart';
@@ -9,6 +10,7 @@ import 'package:jetkiz_mobile/features/home/presentation/homePage.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/notificationsPage.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/widgets/inAppNotificationsHost.dart';
+import 'package:jetkiz_mobile/features/orders/presentation/orderDetailsPage.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersHistoryPage.dart';
 
 class JetkizApp extends StatefulWidget {
@@ -21,8 +23,6 @@ class JetkizApp extends StatefulWidget {
 class _JetkizAppState extends State<JetkizApp> {
   AppLanguage _language = AppLanguage.ru;
 
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
   void _setLanguage(AppLanguage language) {
     if (_language == language) return;
 
@@ -31,27 +31,240 @@ class _JetkizAppState extends State<JetkizApp> {
     });
   }
 
-  /// ЕДИНСТВЕННЫЙ обработчик уведомлений во всём приложении
-  Future<void> _handleNotificationTap(NotificationItem item) async {
-    final navigator = _navigatorKey.currentState;
-    if (navigator == null) return;
+  @override
+  void initState() {
+    super.initState();
+    AppNavigator.registerPushNavigationHandler(_handlePushNavigation);
+  }
 
+  @override
+  void dispose() {
+    AppNavigator.clearPushNavigationHandler();
+    super.dispose();
+  }
+
+  Future<void> _handleNotificationTap(NotificationItem item) async {
     final orderId = (item.orderId ?? '').trim();
     final orderNumber = item.orderNumber;
 
     if (orderId.isNotEmpty || orderNumber != null) {
-      await navigator.push(
-        MaterialPageRoute(
-          builder: (_) => OrdersHistoryPage(
-            initialOrderId: orderId.isEmpty ? null : orderId,
-            initialOrderNumber: orderNumber,
-          ),
-        ),
+      await _openOrderFromNotification(
+        orderId.isEmpty ? null : orderId,
+        orderNumber,
       );
       return;
     }
 
-    navigator.pushNamed('/notifications');
+    await _openNotificationsPage();
+  }
+
+  Future<void> _handlePushNavigation(Map<String, String> data) async {
+    final app = _readStringFromData(
+      data,
+      const ['app', 'targetApp', 'application'],
+    ).toLowerCase();
+
+    if (app.isNotEmpty && app != 'client' && app != 'auto') {
+      return;
+    }
+
+    final screen = _readStringFromData(
+      data,
+      const ['screen', 'route', 'target', 'type'],
+    ).toLowerCase();
+
+    final orderId = _readStringFromData(
+      data,
+      const ['orderId', 'order_id', 'orderID'],
+    );
+
+    if (screen.isEmpty && orderId.isNotEmpty) {
+      await _openOrderFromPush(data);
+      return;
+    }
+
+    switch (screen) {
+      case 'home':
+      case 'main':
+        _openMainTab(0);
+        return;
+
+      case 'favorites':
+      case 'favourites':
+        _openMainTab(1);
+        return;
+
+      case 'cart':
+      case 'basket':
+        _openMainTab(2);
+        return;
+
+      case 'profile':
+      case 'account':
+        _openMainTab(3);
+        return;
+
+      case 'order':
+      case 'orders':
+      case 'order_details':
+      case 'orderDetails':
+      case 'order-detail':
+        await _openOrderFromPush(data);
+        return;
+
+      case 'orders_history':
+      case 'ordersHistory':
+      case 'order_history':
+      case 'orderHistory':
+        await _openOrdersHistoryFromPush(data);
+        return;
+
+      case 'notifications':
+      case 'notification':
+        await _openNotificationsPage();
+        return;
+
+      default:
+        await _openNotificationsPage();
+        return;
+    }
+  }
+
+  void _openMainTab(int index) {
+    final navigator = AppNavigator.navigatorKey.currentState;
+    if (navigator == null) return;
+
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => MainNavigationPage(initialIndex: index),
+      ),
+      (route) => false,
+    );
+  }
+
+  Future<void> _openNotificationsPage() async {
+    final navigator = AppNavigator.navigatorKey.currentState;
+    if (navigator == null) return;
+
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => NotificationsPage(
+          onOpenOrder: _openOrderFromNotification,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openOrdersHistoryFromPush(Map<String, String> data) async {
+    final orderId = _readStringFromData(
+      data,
+      const ['orderId', 'order_id', 'orderID'],
+    );
+
+    final orderNumber = _readIntFromData(
+      data,
+      const ['orderNumber', 'order_number', 'number'],
+    );
+
+    await _openOrdersHistory(
+      orderId: orderId.isEmpty ? null : orderId,
+      orderNumber: orderNumber,
+    );
+  }
+
+  Future<void> _openOrderFromPush(Map<String, String> data) async {
+    final orderId = _readStringFromData(
+      data,
+      const ['orderId', 'order_id', 'orderID'],
+    );
+
+    final orderNumber = _readIntFromData(
+      data,
+      const ['orderNumber', 'order_number', 'number'],
+    );
+
+    await _openOrderFromNotification(
+      orderId.isEmpty ? null : orderId,
+      orderNumber,
+    );
+  }
+
+  Future<void> _openOrderFromNotification(
+    String? orderId,
+    int? orderNumber,
+  ) async {
+    final normalizedOrderId = orderId?.trim() ?? '';
+
+    if (normalizedOrderId.isNotEmpty) {
+      await _openOrderDetails(normalizedOrderId);
+      return;
+    }
+
+    if (orderNumber != null) {
+      await _openOrdersHistory(orderNumber: orderNumber);
+      return;
+    }
+
+    await _openNotificationsPage();
+  }
+
+  Future<void> _openOrderDetails(String orderId) async {
+    final navigator = AppNavigator.navigatorKey.currentState;
+    if (navigator == null) return;
+
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => OrderDetailsPage(orderId: orderId),
+      ),
+    );
+  }
+
+  Future<void> _openOrdersHistory({
+    String? orderId,
+    int? orderNumber,
+  }) async {
+    final navigator = AppNavigator.navigatorKey.currentState;
+    if (navigator == null) return;
+
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => OrdersHistoryPage(
+          initialOrderId: orderId,
+          initialOrderNumber: orderNumber,
+        ),
+      ),
+    );
+  }
+
+  String _readStringFromData(
+    Map<String, String> data,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = data[key]?.trim() ?? '';
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    return '';
+  }
+
+  int? _readIntFromData(
+    Map<String, String> data,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final raw = data[key]?.trim() ?? '';
+      if (raw.isEmpty) continue;
+
+      final parsed = int.tryParse(raw);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    return null;
   }
 
   @override
@@ -62,7 +275,7 @@ class _JetkizAppState extends State<JetkizApp> {
       child: InAppNotificationsHost(
         onTapNotification: _handleNotificationTap,
         child: MaterialApp(
-          navigatorKey: _navigatorKey,
+          navigatorKey: AppNavigator.navigatorKey,
           title: AppConfig.appName,
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
@@ -80,22 +293,8 @@ class _JetkizAppState extends State<JetkizApp> {
           ),
           routes: {
             '/cart': (_) => const MainNavigationPage(initialIndex: 2),
-
-            /// ВАЖНО: убрали лишнюю логику, оставили чистый переход
             '/notifications': (_) => NotificationsPage(
-                  onOpenOrder: (orderId, orderNumber) {
-                    final nav = _navigatorKey.currentState;
-                    if (nav == null) return;
-
-                    nav.push(
-                      MaterialPageRoute(
-                        builder: (_) => OrdersHistoryPage(
-                          initialOrderId: orderId,
-                          initialOrderNumber: orderNumber,
-                        ),
-                      ),
-                    );
-                  },
+                  onOpenOrder: _openOrderFromNotification,
                 ),
           },
           home: const MainNavigationPage(),

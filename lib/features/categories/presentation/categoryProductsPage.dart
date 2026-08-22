@@ -4,6 +4,7 @@ import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
 import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
+import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
@@ -21,21 +22,45 @@ class CategoryProductsPage extends StatefulWidget {
 }
 
 class _CategoryProductsPageState extends State<CategoryProductsPage> {
-  static const int _temporaryDeliveryFee = 1000;
-
   late final FavoritesApi _favoritesApi;
+  late final FinanceConfigApi _financeConfigApi;
 
   final Set<String> _favoriteProductIds = <String>{};
   final Set<String> _favoritePendingProductIds = <String>{};
 
   String? _selectedRestaurantId;
   bool _favoritesLoading = false;
+  int _deliveryFee = 0;
 
   @override
   void initState() {
     super.initState();
-    _favoritesApi = FavoritesApi(ApiClient());
+
+    final apiClient = ApiClient();
+
+    _favoritesApi = FavoritesApi(apiClient);
+    _financeConfigApi = FinanceConfigApi(apiClient);
+
     _loadFavoriteIdsSilently();
+    _loadDeliveryFeeSilently();
+  }
+
+  Future<void> _loadDeliveryFeeSilently() async {
+    try {
+      final config = await _financeConfigApi.getFinanceConfig();
+
+      if (!mounted) return;
+
+      setState(() {
+        _deliveryFee = config.activeDeliveryFee;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _deliveryFee = 0;
+      });
+    }
   }
 
   Future<void> _loadFavoriteIdsSilently() async {
@@ -55,15 +80,21 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _favoriteProductIds.clear();
       });
     } finally {
       if (!mounted) return;
+
       setState(() {
         _favoritesLoading = false;
       });
     }
+  }
+
+  bool _isProductOrderable(HomeCategoryProductData product) {
+    return product.isAvailable && product.restaurant.isOpenForOrders;
   }
 
   int _getQuantity(String productId) {
@@ -71,6 +102,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   void _incrementProduct(HomeCategoryProductData product) {
+    if (!_isProductOrderable(product)) {
+      _showMessage(
+        product.restaurant.isOpenForOrders
+            ? 'Товар сейчас недоступен'
+            : 'Ресторан сейчас закрыт',
+      );
+      return;
+    }
+
     CartRepository.instance.addItem(
       productId: product.id,
       restaurantId: product.restaurant.id,
@@ -97,6 +137,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
     setState(() {
       _favoritePendingProductIds.add(productId);
+
       if (wasFavorite) {
         _favoriteProductIds.remove(productId);
       } else {
@@ -121,20 +162,21 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         }
       });
 
-      _showFavoriteError(
+      _showMessage(
         wasFavorite
-            ? 'Не удалось удалить блюдо из избранного'
-            : 'Не удалось добавить блюдо в избранное',
+            ? 'Не удалось удалить товар из избранного'
+            : 'Не удалось добавить товар в избранное',
       );
     } finally {
       if (!mounted) return;
+
       setState(() {
         _favoritePendingProductIds.remove(productId);
       });
     }
   }
 
-  void _showFavoriteError(String message) {
+  void _showMessage(String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
@@ -166,6 +208,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   void _openProductDetails(HomeCategoryProductData product) {
+    if (!_isProductOrderable(product)) {
+      _showMessage(
+        product.restaurant.isOpenForOrders
+            ? 'Товар сейчас недоступен'
+            : 'Ресторан сейчас закрыт',
+      );
+      return;
+    }
+
     final mapped = _mapHomeProductToMenuItem(product);
 
     Navigator.of(context).push(
@@ -181,17 +232,18 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   List<HomeCategoryProductData> _getValidProducts() {
     return widget.category.products
+        .where((link) => link.isActive)
         .where((link) => link.product != null)
         .map((link) => link.product!)
+        .where(_isProductOrderable)
         .toList();
   }
 
   List<_RestaurantGroup> _buildRestaurantGroups() {
     final validProducts = _getValidProducts();
-    final Map<String, List<HomeCategoryProductData>> grouped =
-        <String, List<HomeCategoryProductData>>{};
-    final Map<String, HomeCategoryProductRestaurant> restaurantsById =
-        <String, HomeCategoryProductRestaurant>{};
+
+    final grouped = <String, List<HomeCategoryProductData>>{};
+    final restaurantsById = <String, HomeCategoryProductRestaurant>{};
 
     for (final product in validProducts) {
       if (_selectedRestaurantId != null &&
@@ -203,14 +255,16 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         product.restaurant.id,
         () => <HomeCategoryProductData>[],
       );
+
       grouped[product.restaurant.id]!.add(product);
       restaurantsById[product.restaurant.id] = product.restaurant;
     }
 
-    final List<_RestaurantGroup> groups = <_RestaurantGroup>[];
+    final groups = <_RestaurantGroup>[];
 
     for (final entry in grouped.entries) {
       final restaurant = restaurantsById[entry.key];
+
       if (restaurant == null) {
         continue;
       }
@@ -228,8 +282,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   Future<void> _openRestaurantPicker() async {
     final validProducts = _getValidProducts();
-    final Map<String, HomeCategoryProductRestaurant> uniqueRestaurants =
-        <String, HomeCategoryProductRestaurant>{};
+    final uniqueRestaurants = <String, HomeCategoryProductRestaurant>{};
 
     for (final product in validProducts) {
       uniqueRestaurants[product.restaurant.id] = product.restaurant;
@@ -252,7 +305,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Выбрать ресторан',
+                  'Выберите ресторан',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -278,26 +331,39 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                       : null,
                   onTap: () => Navigator.of(context).pop(null),
                 ),
-                ...restaurants.map(
-                  (restaurant) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      restaurant.name,
-                      style: const TextStyle(
-                        fontSize: 16,
+                if (restaurants.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      'Нет доступных ресторанов',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF777777),
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
                       ),
                     ),
-                    trailing: _selectedRestaurantId == restaurant.id
-                        ? const Icon(
-                            Icons.check_rounded,
-                            color: Color(0xFF489F2A),
-                          )
-                        : null,
-                    onTap: () => Navigator.of(context).pop(restaurant.id),
+                  )
+                else
+                  ...restaurants.map(
+                    (restaurant) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        restaurant.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      trailing: _selectedRestaurantId == restaurant.id
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: Color(0xFF489F2A),
+                            )
+                          : null,
+                      onTap: () => Navigator.of(context).pop(restaurant.id),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -305,9 +371,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       },
     );
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _selectedRestaurantId = selectedId;
@@ -403,7 +467,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
           ? CartSummaryBar(
               itemsCount: _basketItemsCount,
               itemsTotal: _basketTotal,
-              deliveryFee: _temporaryDeliveryFee,
+              deliveryFee: _deliveryFee,
               onNextTap: () {
                 Navigator.of(context).pushNamed('/cart');
               },
@@ -492,7 +556,7 @@ class _CategoryHeader extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'Выбрать по ресторану',
+                        'Фильтр по ресторану',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 10,
@@ -583,8 +647,7 @@ class _RestaurantSection extends StatelessWidget {
               product: product,
               quantity: getQuantity(productId),
               isFavorite: favoriteProductIds.contains(productId),
-              isFavoriteBusy:
-                  favoritesLoading ||
+              isFavoriteBusy: favoritesLoading ||
                   favoritePendingProductIds.contains(productId),
               onProductTap: () => onProductTap(product),
               onFavoriteTap: () => onFavoriteTap(productId),
@@ -693,7 +756,7 @@ class _CategoryProductCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${product.price}₸',
+                      '${product.price} ₸',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -895,7 +958,7 @@ class _EmptyCategoryState extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'В этой категории пока нет товаров',
+          'В этой категории пока нет доступных товаров',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 17,

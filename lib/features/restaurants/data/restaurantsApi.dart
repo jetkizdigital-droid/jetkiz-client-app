@@ -1,20 +1,22 @@
 /*
   Restaurants API for Jetkiz mobile.
 
-  Контекст для будущих сессий ChatGPT:
-  - Использует реальный backend endpoint:
-      GET /restaurants/public/list
-  - Этот endpoint предназначен именно для клиентского приложения.
-  - Не использовать GET /restaurants для мобильного клиента,
-    потому что это admin list.
-  - Ответ backend:
+  Backend public endpoints:
+  - GET /restaurants/public/list
+      Home page contract:
       {
         "pinned": [ ... ],
         "items": [ ... ]
       }
-  - На главный экран сейчас загружаем pinned + items по их назначению.
-  - Для отдельной страницы всех ресторанов использовать items.
-  - pinned сохранён для отдельного блока "Популярное / Закреплённое".
+
+  - GET /restaurants/public/all
+      All restaurants page contract:
+      {
+        "items": [ ... ]
+      }
+
+  Do not use GET /restaurants for mobile client.
+  It is an admin/backend management endpoint.
 */
 
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -25,52 +27,67 @@ class RestaurantsApi {
 
   final ApiClient _apiClient;
 
-  Future<RestaurantsResponse> getPublicRestaurants() async {
-    final response = await _apiClient.dio.get<Map<String, dynamic>>(
+  Future<RestaurantsResponse> getPublicRestaurants({
+    bool random = true,
+  }) async {
+    final response = await _apiClient.dio.get(
       '/restaurants/public/list',
+      queryParameters: {
+        if (random) 'random': '1',
+      },
     );
 
-    final data = response.data ?? const <String, dynamic>{};
-
-    final pinnedJson = _extractList(data, const ['pinned']) ?? const [];
-    final itemsJson = _extractList(data, const ['items']) ?? const [];
-
-    final pinned = pinnedJson
-        .whereType<Map>()
-        .map((item) => Restaurant.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-
-    final items = itemsJson
-        .whereType<Map>()
-        .map((item) => Restaurant.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
+    final data = _asMap(response.data);
 
     return RestaurantsResponse(
-      pinned: pinned,
-      items: items,
+      pinned: _parseRestaurants(data['pinned']),
+      items: _parseRestaurants(data['items']),
     );
   }
 
-  Future<List<Restaurant>> getAllPublicRestaurants() async {
-    final result = await getPublicRestaurants();
-    return result.items;
+  Future<List<Restaurant>> getAllPublicRestaurants({
+    bool random = true,
+  }) async {
+    final response = await _apiClient.dio.get(
+      '/restaurants/public/all',
+      queryParameters: {
+        if (random) 'random': '1',
+      },
+    );
+
+    final data = _asMap(response.data);
+
+    return _parseRestaurants(data['items']);
   }
 
-  List<dynamic>? _extractList(
-    Map<String, dynamic> json,
-    List<String> path,
-  ) {
-    dynamic current = json;
+  List<Restaurant> _parseRestaurants(dynamic value) {
+    final rawItems = _asList(value);
 
-    for (final part in path) {
-      if (current is Map<String, dynamic> && current.containsKey(part)) {
-        current = current[part];
-      } else {
-        return null;
-      }
+    return rawItems
+        .whereType<Map>()
+        .map((item) => Restaurant.fromJson(Map<String, dynamic>.from(item)))
+        .where((restaurant) => restaurant.id.trim().isNotEmpty)
+        .toList();
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
     }
 
-    return current is List ? current : null;
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+
+    return <String, dynamic>{};
+  }
+
+  List<dynamic> _asList(dynamic value) {
+    if (value is List) {
+      return value;
+    }
+
+    return const [];
   }
 }
 
@@ -84,4 +101,18 @@ class RestaurantsResponse {
   final List<Restaurant> items;
 
   bool get isEmpty => pinned.isEmpty && items.isEmpty;
+
+  List<Restaurant> get combined {
+    final byId = <String, Restaurant>{};
+
+    for (final restaurant in pinned) {
+      byId[restaurant.id] = restaurant;
+    }
+
+    for (final restaurant in items) {
+      byId[restaurant.id] = restaurant;
+    }
+
+    return byId.values.toList();
+  }
 }

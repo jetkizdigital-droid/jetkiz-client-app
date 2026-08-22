@@ -35,6 +35,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   bool _isDeliveryLoading = true;
   bool _isSubmitting = false;
   bool _orderPlaced = false;
+  OrderFulfillmentType _fulfillmentType = OrderFulfillmentType.delivery;
+  _CreatedOrderView? _createdOrder;
+
+  bool get _isPickup => _fulfillmentType == OrderFulfillmentType.pickup;
+
+  int get _effectiveDeliveryFee => _isPickup ? 0 : _deliveryFee;
 
   final List<_CheckoutCard> _savedCards = const [
     _CheckoutCard(
@@ -126,7 +132,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
-    if (address == null) {
+    if (!_isPickup && address == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Выберите адрес доставки')),
       );
@@ -149,7 +155,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
 
     final addressId = _addressRepository.selectedAddressId;
-    if (addressId == null || addressId.trim().isEmpty) {
+    if (!_isPickup && (addressId == null || addressId.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Не удалось определить адрес доставки')),
       );
@@ -182,7 +188,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
       final payload = CreateOrderPayload(
         restaurantId: restaurantId,
-        addressId: addressId,
+        fulfillmentType: _fulfillmentType,
+        addressId: _isPickup ? null : addressId,
         phone: phone,
         leaveAtDoor: false,
         comment: null,
@@ -197,13 +204,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
             .toList(),
       );
 
-      await _orderApi.createOrder(payload);
+      final order = await _orderApi.createOrder(payload);
 
       _cartRepository.clear();
 
       if (!mounted) return;
 
       setState(() {
+        _createdOrder = _CreatedOrderView.fromJson(order);
         _orderPlaced = true;
       });
     } catch (_) {
@@ -231,6 +239,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget build(BuildContext context) {
     if (_orderPlaced) {
       return _CheckoutSuccessScreen(
+        order: _createdOrder,
         onGoHome: _goHome,
       );
     }
@@ -240,10 +249,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final address = _addressRepository.selectedAddress;
 
     final subtotal = cartState.subtotal;
-    final total = subtotal + _deliveryFee;
+    final deliveryFee = _effectiveDeliveryFee;
+    final total = subtotal + deliveryFee;
 
     final isConfirmDisabled = cartState.isEmpty ||
-        address == null ||
+        (!_isPickup && address == null) ||
         _selectedCardId == null ||
         _isDeliveryLoading ||
         _isSubmitting;
@@ -297,12 +307,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 140),
                 children: [
-                  _CheckoutSectionTitle(title: 'Адрес доставки'),
+                  _CheckoutSectionTitle(title: 'Способ получения'),
                   const SizedBox(height: 10),
-                  _CheckoutAddressCard(
-                    address: address,
-                    onTap: _changeAddress,
+                  _FulfillmentSelector(
+                    value: _fulfillmentType,
+                    enabled: !_isSubmitting,
+                    onChanged: (value) {
+                      setState(() {
+                        _fulfillmentType = value;
+                      });
+                    },
                   ),
+                  const SizedBox(height: 18),
+                  if (_isPickup) ...[
+                    const _PickupInfoCard(),
+                  ] else ...[
+                    _CheckoutSectionTitle(title: 'Адрес доставки'),
+                    const SizedBox(height: 10),
+                    _CheckoutAddressCard(
+                      address: address,
+                      onTap: _changeAddress,
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   _CheckoutSectionTitle(title: 'Ваш заказ'),
                   const SizedBox(height: 10),
@@ -341,7 +367,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   const SizedBox(height: 10),
                   _CheckoutSummaryCard(
                     subtotal: subtotal,
-                    deliveryFee: _deliveryFee,
+                    deliveryFee: deliveryFee,
                     total: total,
                     isDeliveryLoading: _isDeliveryLoading,
                   ),
@@ -376,6 +402,77 @@ class _CheckoutSectionTitle extends StatelessWidget {
         fontSize: 17,
         fontWeight: FontWeight.w800,
         color: Color(0xFF111827),
+      ),
+    );
+  }
+}
+
+class _FulfillmentSelector extends StatelessWidget {
+  const _FulfillmentSelector({
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final OrderFulfillmentType value;
+  final bool enabled;
+  final ValueChanged<OrderFulfillmentType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<OrderFulfillmentType>(
+      segments: const [
+        ButtonSegment(
+          value: OrderFulfillmentType.delivery,
+          icon: Icon(Icons.delivery_dining_rounded),
+          label: Text('Доставка'),
+        ),
+        ButtonSegment(
+          value: OrderFulfillmentType.pickup,
+          icon: Icon(Icons.shopping_bag_outlined),
+          label: Text('Самовывоз'),
+        ),
+      ],
+      selected: {value},
+      onSelectionChanged: enabled ? (selected) => onChanged(selected.first) : null,
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: const Color(0xFFEAF7E4),
+        selectedForegroundColor: const Color(0xFF489F2A),
+      ),
+    );
+  }
+}
+
+class _PickupInfoCard extends StatelessWidget {
+  const _PickupInfoCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.shopping_bag_outlined,
+            color: Color(0xFF489F2A),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Вы заберёте заказ из ресторана',
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF111827),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -920,9 +1017,11 @@ class _CheckoutBottomBar extends StatelessWidget {
 
 class _CheckoutSuccessScreen extends StatefulWidget {
   const _CheckoutSuccessScreen({
+    required this.order,
     required this.onGoHome,
   });
 
+  final _CreatedOrderView? order;
   final VoidCallback onGoHome;
 
   @override
@@ -949,6 +1048,9 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pickupCode = widget.order?.pickupCode?.trim();
+    final hasPickupCode = pickupCode != null && pickupCode.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAF5),
       body: Center(
@@ -991,6 +1093,40 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
                   height: 1.35,
                 ),
               ),
+              if (hasPickupCode) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFD7EFD0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Код самовывоза: $pickupCode',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Покажите этот код сотруднику ресторана',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: widget.onGoHome,
@@ -1014,6 +1150,22 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CreatedOrderView {
+  const _CreatedOrderView({
+    required this.pickupCode,
+  });
+
+  final String? pickupCode;
+
+  factory _CreatedOrderView.fromJson(Map<String, dynamic> json) {
+    final raw = json['pickupCode']?.toString().trim() ?? '';
+
+    return _CreatedOrderView(
+      pickupCode: raw.isEmpty || raw.toLowerCase() == 'null' ? null : raw,
     );
   }
 }

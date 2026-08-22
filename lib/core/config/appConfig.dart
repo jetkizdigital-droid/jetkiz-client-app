@@ -9,7 +9,10 @@
 
 class AppConfig {
   static const String appName = 'Jetkiz';
- static const String baseUrl = 'http://192.168.0.16:3000';
+ static const String baseUrl = String.fromEnvironment(
+   'JETKIZ_API_BASE_URL',
+   defaultValue: 'http://127.0.0.1:3000',
+ );
 
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);

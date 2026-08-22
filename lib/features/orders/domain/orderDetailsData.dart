@@ -20,6 +20,10 @@ class OrderDetailsData {
     this.leaveAtDoor = false,
     this.deliveredAt,
     this.promisedAt,
+    this.fulfillmentType = 'DELIVERY',
+    this.pickupCode,
+    this.pickupCodeExpiresAt,
+    this.pickupCodeVerifiedAt,
     this.restaurant,
     this.address,
     this.items = const [],
@@ -43,12 +47,24 @@ class OrderDetailsData {
   final DateTime updatedAt;
   final DateTime? deliveredAt;
   final DateTime? promisedAt;
+  final String fulfillmentType;
+  final String? pickupCode;
+  final DateTime? pickupCodeExpiresAt;
+  final DateTime? pickupCodeVerifiedAt;
   final OrderDetailsRestaurant? restaurant;
   final OrderDetailsAddress? address;
   final List<OrderDetailsItem> items;
 
+  String get statusUpper => status.trim().toUpperCase();
+
+  String get fulfillmentTypeUpper => fulfillmentType.trim().toUpperCase();
+
+  bool get isPickup => fulfillmentTypeUpper == 'PICKUP';
+
+  bool get isDelivered => statusUpper == 'DELIVERED';
+
   bool get canLeaveReview {
-    final statusValue = status.toUpperCase();
+    final statusValue = statusUpper;
     return (statusValue == 'DELIVERED' || statusValue == 'PAID') && !ratingGiven;
   }
 
@@ -76,6 +92,10 @@ class OrderDetailsData {
       updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now(),
       deliveredAt: _parseDateTime(json['deliveredAt']),
       promisedAt: _parseDateTime(json['promisedAt']),
+      fulfillmentType: (json['fulfillmentType'] ?? 'DELIVERY').toString(),
+      pickupCode: _nullableString(json['pickupCode']),
+      pickupCodeExpiresAt: _parseDateTime(json['pickupCodeExpiresAt']),
+      pickupCodeVerifiedAt: _parseDateTime(json['pickupCodeVerifiedAt']),
       restaurant: _readMap(json['restaurant']) == null
           ? null
           : OrderDetailsRestaurant.fromJson(

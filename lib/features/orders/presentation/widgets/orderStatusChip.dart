@@ -4,13 +4,15 @@ class OrderStatusChip extends StatelessWidget {
   const OrderStatusChip({
     super.key,
     required this.status,
+    this.fulfillmentType,
   });
 
   final String status;
+  final String? fulfillmentType;
 
   @override
   Widget build(BuildContext context) {
-    final ui = _mapStatus(status);
+    final ui = _mapStatus(status, fulfillmentType: fulfillmentType);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -29,8 +31,27 @@ class OrderStatusChip extends StatelessWidget {
     );
   }
 
-  _OrderStatusUi _mapStatus(String raw) {
-    switch (raw.toUpperCase()) {
+  _OrderStatusUi _mapStatus(String raw, {String? fulfillmentType}) {
+    final status = raw.trim().toUpperCase();
+    final isPickup = fulfillmentType?.trim().toUpperCase() == 'PICKUP';
+
+    if (isPickup && status == 'READY') {
+      return const _OrderStatusUi(
+        label: 'Можно забирать',
+        backgroundColor: Color(0xFFE6F0FF),
+        textColor: Color(0xFF2B6CB0),
+      );
+    }
+
+    if (isPickup && status == 'DELIVERED') {
+      return const _OrderStatusUi(
+        label: 'Получен',
+        backgroundColor: Color(0xFFF0F0F0),
+        textColor: Color(0xFF4A5568),
+      );
+    }
+
+    switch (status) {
       case 'CREATED':
         return const _OrderStatusUi(
           label: 'Создан',
@@ -73,7 +94,14 @@ class OrderStatusChip extends StatelessWidget {
           backgroundColor: Color(0xFFF0F0F0),
           textColor: Color(0xFF4A5568),
         );
+      case 'REJECTED':
+        return const _OrderStatusUi(
+          label: 'Отклонён',
+          backgroundColor: Color(0xFFFDE8E8),
+          textColor: Color(0xFFC53030),
+        );
       case 'CANCELED':
+      case 'CANCELLED':
         return const _OrderStatusUi(
           label: 'Отменён',
           backgroundColor: Color(0xFFFDE8E8),
@@ -81,7 +109,7 @@ class OrderStatusChip extends StatelessWidget {
         );
       default:
         return _OrderStatusUi(
-          label: raw,
+          label: raw.trim().isEmpty ? 'Статус неизвестен' : raw.trim(),
           backgroundColor: const Color(0xFFF0F0F0),
           textColor: Colors.black87,
         );

@@ -16,12 +16,27 @@
   - каждый экран строится только после проверки реального backend ответа
 */
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
+import 'package:jetkiz_mobile/app/app.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
-import 'app/app.dart';
+import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
+import 'package:jetkiz_mobile/firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ApiClient().init();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  final apiClient = ApiClient();
+  await apiClient.init();
+
+  await PushNotificationService(apiClient).init();
+
   runApp(const JetkizApp());
 }

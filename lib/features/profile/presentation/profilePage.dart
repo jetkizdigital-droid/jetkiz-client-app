@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
@@ -13,12 +12,12 @@ import 'package:jetkiz_mobile/features/profile/presentation/widgets/editProfileS
 import 'package:jetkiz_mobile/features/settings/presentation/settingsPage.dart';
 
 class ProfilePage extends StatefulWidget {
-  final VoidCallback? onLoggedOut;
-
   const ProfilePage({
     super.key,
     this.onLoggedOut,
   });
+
+  final VoidCallback? onLoggedOut;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -27,26 +26,30 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   static const _green = Color(0xFF4CAF50);
   static const _background = Color(0xFFF9FAFB);
-  static const _cardBorder = Color(0xFFF0F1F3);
   static const _textLight = Color(0xFF9CA3AF);
 
+  late final ApiClient _apiClient;
   late final ProfileApi _profileApi;
+
   final ImagePicker _imagePicker = ImagePicker();
-  final ApiClient _apiClient = ApiClient();
 
   ProfileData? _profile;
   bool _isLoading = true;
   bool _isUploadingAvatar = false;
+  bool _isLoggingOut = false;
   String? _errorText;
 
   @override
   void initState() {
     super.initState();
+    _apiClient = ApiClient();
     _profileApi = ProfileApi(_apiClient);
     _loadProfile();
   }
 
   Future<void> _loadProfile() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorText = null;
@@ -60,12 +63,16 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         _profile = profile;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
 
-      final strings = AppLocalizationScope.of(context).strings;
+      if (error is ProfileApiException && error.statusCode == 401) {
+        await _clearLocalSessionAndExit();
+        return;
+      }
+
       setState(() {
-        _errorText = strings.profileLoadError;
+        _errorText = 'Не удалось загрузить профиль. Попробуйте ещё раз.';
       });
     } finally {
       if (mounted) {
@@ -78,8 +85,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _pickAndUploadAvatar() async {
     if (_isUploadingAvatar) return;
-
-    final strings = AppLocalizationScope.of(context).strings;
 
     try {
       final picked = await _imagePicker.pickImage(
@@ -104,19 +109,10 @@ class _ProfilePageState extends State<ProfilePage> {
         _profile = updatedProfile;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.avatarUpdated),
-        ),
-      );
+      _showSnack('Фото профиля обновлено');
     } catch (error) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.avatarUploadFailed(error.toString())),
-        ),
-      );
+      _showSnack('Не удалось загрузить фото. Попробуйте ещё раз.');
     } finally {
       if (mounted) {
         setState(() {
@@ -139,79 +135,64 @@ class _ProfilePageState extends State<ProfilePage> {
       _profile = updated;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Данные профиля сохранены'),
-      ),
-    );
+    _showSnack('Данные профиля сохранены');
   }
 
   Future<void> _logout() async {
-    final strings = AppLocalizationScope.of(context).strings;
+    if (_isLoggingOut) return;
+
+    setState(() {
+      _isLoggingOut = true;
+    });
+
+    try {
+      await _profileApi.logout();
+    } finally {
+      await _clearLocalSessionAndExit();
+    }
+  }
+
+  Future<void> _clearLocalSessionAndExit() async {
     final authStorage = AuthStorage();
 
     await authStorage.clear();
     _apiClient.clearAccessToken();
-    widget.onLoggedOut?.call();
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(strings.loggedOutMessage),
-      ),
-    );
+    widget.onLoggedOut?.call();
   }
 
   void _showComingSoon(String title) {
-    final strings = AppLocalizationScope.of(context).strings;
+    _showSnack('$title скоро будет доступно.');
+  }
 
+  void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(strings.comingSoon(title)),
+        content: Text(message),
       ),
     );
-  }
-
-  String _resolveDisplayName(dynamic strings) {
-    final firstName = (_profile?.firstName ?? '').trim();
-    final lastName = (_profile?.lastName ?? '').trim();
-
-    final fullName = [firstName, lastName]
-        .where((e) => e.isNotEmpty)
-        .join(' ')
-        .trim();
-
-    if (fullName.isNotEmpty) return fullName;
-
-    return strings.profileDefaultName;
-  }
-
-  String _resolvePhone(dynamic strings) {
-    final phone = (_profile?.phone ?? '').trim();
-    return phone.isNotEmpty ? phone : strings.profileDefaultSubtitle;
   }
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizationScope.of(context).strings;
-
     final menuItems = <_ProfileMenuItem>[
       _ProfileMenuItem(
         icon: Icons.badge_outlined,
-        label: strings.profileMyData,
+        label: 'Мои данные',
         iconColor: const Color(0xFF3B82F6),
         onTap: _openEditProfile,
       ),
       _ProfileMenuItem(
         icon: Icons.credit_card_outlined,
-        label: strings.profileAddCard,
+        label: 'Добавить карту',
         iconColor: const Color(0xFF8B5CF6),
-        onTap: () => _showComingSoon(strings.profileAddCard),
+        onTap: () => _showComingSoon('Добавить карту'),
       ),
       _ProfileMenuItem(
         icon: Icons.settings_outlined,
-        label: strings.profileSettings,
+        label: 'Настройки',
         iconColor: const Color(0xFF4B5563),
         onTap: () {
           Navigator.push(
@@ -224,7 +205,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       _ProfileMenuItem(
         icon: Icons.location_on_outlined,
-        label: strings.profileAddress,
+        label: 'Адреса',
         iconColor: const Color(0xFF22C55E),
         onTap: () {
           Navigator.push(
@@ -237,7 +218,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       _ProfileMenuItem(
         icon: Icons.history_rounded,
-        label: strings.profileOrdersHistory,
+        label: 'История заказов',
         iconColor: const Color(0xFFF59E0B),
         onTap: () {
           Navigator.push(
@@ -250,15 +231,15 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       _ProfileMenuItem(
         icon: Icons.support_agent_outlined,
-        label: strings.profileSupport,
+        label: 'Поддержка',
         iconColor: const Color(0xFF06B6D4),
-        onTap: () => _showComingSoon(strings.profileSupport),
+        onTap: () => _showComingSoon('Поддержка'),
       ),
       _ProfileMenuItem(
         icon: Icons.description_outlined,
-        label: strings.profileOffer,
+        label: 'Публичная оферта',
         iconColor: const Color(0xFF6366F1),
-        onTap: () => _showComingSoon(strings.profileOffer),
+        onTap: () => _showComingSoon('Публичная оферта'),
       ),
     ];
 
@@ -271,10 +252,10 @@ class _ProfilePageState extends State<ProfilePage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             children: [
-              Center(
+              const Center(
                 child: Text(
-                  strings.profileTitle,
-                  style: const TextStyle(
+                  'Профиль',
+                  style: TextStyle(
                     color: Colors.black,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -292,15 +273,12 @@ class _ProfilePageState extends State<ProfilePage> {
               else if (_errorText != null)
                 _ProfileErrorCard(
                   message: _errorText!,
-                  retryText: strings.retry,
+                  retryText: 'Повторить',
                   onRetry: _loadProfile,
                 )
               else ...[
-                _NewProfileHeaderCard(
+                _ProfileHeaderCard(
                   profile: _profile,
-                  displayName: _resolveDisplayName(strings),
-                  phone: _resolvePhone(strings),
-                  avatarHint: strings.profileAvatarHint,
                   isUploadingAvatar: _isUploadingAvatar,
                   onAvatarTap: _pickAndUploadAvatar,
                 ),
@@ -308,17 +286,26 @@ class _ProfilePageState extends State<ProfilePage> {
                 ...menuItems.map(
                   (item) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
-                    child: _NewProfileMenuTile(item: item),
+                    child: _ProfileMenuTile(item: item),
                   ),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: _logout,
-                    icon: const Icon(Icons.logout_rounded, size: 24),
+                    onPressed: _isLoggingOut ? null : _logout,
+                    icon: _isLoggingOut
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _green,
+                            ),
+                          )
+                        : const Icon(Icons.logout_rounded, size: 24),
                     label: Text(
-                      strings.logout,
+                      _isLoggingOut ? 'Выход...' : 'Выйти',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -370,20 +357,14 @@ class _ProfileMenuItem {
   final VoidCallback onTap;
 }
 
-class _NewProfileHeaderCard extends StatelessWidget {
-  const _NewProfileHeaderCard({
+class _ProfileHeaderCard extends StatelessWidget {
+  const _ProfileHeaderCard({
     required this.profile,
-    required this.displayName,
-    required this.phone,
-    required this.avatarHint,
     required this.isUploadingAvatar,
     required this.onAvatarTap,
   });
 
   final ProfileData? profile;
-  final String displayName;
-  final String phone;
-  final String avatarHint;
   final bool isUploadingAvatar;
   final VoidCallback onAvatarTap;
 
@@ -486,12 +467,12 @@ class _NewProfileHeaderCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              SizedBox(
+              const SizedBox(
                 width: 96,
                 child: Text(
-                  avatarHint,
+                  'Нажмите, чтобы изменить фото',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _textLight,
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
@@ -509,7 +490,7 @@ class _NewProfileHeaderCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    displayName,
+                    profile?.displayTitle ?? 'Клиент Jetkiz',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -530,7 +511,7 @@ class _NewProfileHeaderCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          phone,
+                          profile?.displaySubtitle ?? 'Профиль клиента',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -578,8 +559,8 @@ class _NewProfileHeaderCard extends StatelessWidget {
   }
 }
 
-class _NewProfileMenuTile extends StatelessWidget {
-  const _NewProfileMenuTile({
+class _ProfileMenuTile extends StatelessWidget {
+  const _ProfileMenuTile({
     required this.item,
   });
 

@@ -1,29 +1,52 @@
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 
-/// Jetkiz mobile
 /// Restaurant menu API layer.
 ///
-/// Backend:
+/// Backend public endpoint:
 /// - GET /restaurants/:id/menu
 ///
-/// Notes for future GPT sessions:
-/// - Use this API from presentation.
-/// - Do not call Dio directly from restaurantMenuPage.
-/// - Current mobile menu source of truth is items[] from backend response.
+/// Expected response:
+/// {
+///   "restaurant": { ... },
+///   "categories": [ ... ],
+///   "items": [ ... ],
+///   "products": [ ... ] // optional/duplicate
+/// }
+///
+/// Do not call Dio directly from presentation.
 class RestaurantMenuApi {
-  final ApiClient _apiClient;
-
   RestaurantMenuApi(this._apiClient);
+
+  final ApiClient _apiClient;
 
   Future<RestaurantMenuData> getRestaurantMenu({
     required String restaurantId,
   }) async {
+    final id = restaurantId.trim();
+
+    if (id.isEmpty) {
+      throw ArgumentError('restaurantId is required');
+    }
+
     final response = await _apiClient.dio.get(
-      '/restaurants/$restaurantId/menu',
+      '/restaurants/$id/menu',
     );
 
-    final json = Map<String, dynamic>.from(response.data as Map);
-    return RestaurantMenuData.fromJson(json);
+    final data = _asMap(response.data);
+
+    return RestaurantMenuData.fromJson(data);
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+
+    throw Exception('Invalid restaurant menu response');
   }
 }

@@ -10,6 +10,8 @@
 /// - each category may contain products[]
 /// - pinned restaurants come from restaurants/public/list -> pinned
 /// - image urls can be relative (/uploads/...) and must be resolved with AppConfig.baseUrl
+/// - product.restaurant must include status/isInApp/isAcceptingOrders/runtimeStatus when possible,
+///   so Flutter can hide products from closed restaurants before checkout.
 
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 
@@ -28,23 +30,16 @@ class HomePromo {
 
   factory HomePromo.fromJson(Map<String, dynamic> json) {
     return HomePromo(
-      titleRu: (json['titleRu'] ?? '').toString(),
-      titleKk: (json['titleKk'] ?? '').toString(),
-      imageUrl: json['imageUrl']?.toString(),
-      isActive: json['isActive'] == true,
+      titleRu: _readString(json['titleRu']),
+      titleKk: _readString(json['titleKk']),
+      imageUrl: _readNullableString(json['imageUrl']),
+      isActive: _readBool(json['isActive']),
     );
   }
 
   String get title => titleRu.isNotEmpty ? titleRu : titleKk;
 
-  String? get fullImageUrl {
-    final value = imageUrl;
-    if (value == null || value.isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    return '${AppConfig.baseUrl}$value';
-  }
+  String? get fullImageUrl => _resolveImageUrl(imageUrl);
 }
 
 class HomeCategoryProductRestaurant {
@@ -52,21 +47,79 @@ class HomeCategoryProductRestaurant {
   final String nameRu;
   final String nameKk;
 
+  /// Admin status:
+  /// OPEN / CLOSED / BLOCKED / ARCHIVED / HIDDEN.
+  final String status;
+
+  /// Runtime status calculated by backend using workingHours:
+  /// OPEN / CLOSED.
+  ///
+  /// If backend does not send runtimeStatus, Flutter falls back to admin status
+  /// to avoid hiding all products by mistake.
+  final String runtimeStatus;
+
+  final bool isInApp;
+  final bool isAcceptingOrders;
+  final String? blockedAt;
+  final String? workingHours;
+
   const HomeCategoryProductRestaurant({
     required this.id,
     required this.nameRu,
     required this.nameKk,
+    required this.status,
+    required this.runtimeStatus,
+    required this.isInApp,
+    required this.isAcceptingOrders,
+    required this.blockedAt,
+    required this.workingHours,
   });
 
   factory HomeCategoryProductRestaurant.fromJson(Map<String, dynamic> json) {
     return HomeCategoryProductRestaurant(
-      id: (json['id'] ?? '').toString(),
-      nameRu: (json['nameRu'] ?? '').toString(),
-      nameKk: (json['nameKk'] ?? '').toString(),
+      id: _readString(json['id']),
+      nameRu: _readString(json['nameRu'] ?? json['name']),
+      nameKk: _readString(json['nameKk']),
+      status: _readString(json['status']),
+      runtimeStatus: _readString(json['runtimeStatus']),
+      isInApp: json.containsKey('isInApp') ? _readBool(json['isInApp']) : true,
+      isAcceptingOrders: json.containsKey('isAcceptingOrders')
+          ? _readBool(json['isAcceptingOrders'])
+          : true,
+      blockedAt: _readNullableString(json['blockedAt']),
+      workingHours: _readNullableString(json['workingHours']),
     );
   }
 
   String get name => nameRu.isNotEmpty ? nameRu : nameKk;
+
+  String get statusUpper => status.trim().toUpperCase();
+
+  String get runtimeStatusUpper => runtimeStatus.trim().toUpperCase();
+
+  bool get isAdminClosed {
+    return statusUpper == 'CLOSED' ||
+        statusUpper == 'BLOCKED' ||
+        statusUpper == 'ARCHIVED' ||
+        statusUpper == 'HIDDEN';
+  }
+
+  bool get isRuntimeClosed {
+    return runtimeStatusUpper == 'CLOSED';
+  }
+
+  bool get isOpenForOrders {
+    if (!isInApp) return false;
+    if (!isAcceptingOrders) return false;
+    if (blockedAt != null && blockedAt!.trim().isNotEmpty) return false;
+    if (isAdminClosed) return false;
+
+    if (runtimeStatusUpper.isNotEmpty && isRuntimeClosed) {
+      return false;
+    }
+
+    return true;
+  }
 }
 
 class HomeCategoryProductData {
@@ -92,29 +145,28 @@ class HomeCategoryProductData {
 
   factory HomeCategoryProductData.fromJson(Map<String, dynamic> json) {
     return HomeCategoryProductData(
-      id: (json['id'] ?? '').toString(),
-      titleRu: (json['titleRu'] ?? '').toString(),
-      titleKk: (json['titleKk'] ?? '').toString(),
-      price: (json['price'] as num?)?.toInt() ?? 0,
-      imageUrl: json['imageUrl']?.toString(),
-      isAvailable: json['isAvailable'] == true,
-      restaurantId: (json['restaurantId'] ?? '').toString(),
+      id: _readString(json['id']),
+      titleRu: _readString(json['titleRu'] ?? json['title'] ?? json['name']),
+      titleKk: _readString(json['titleKk']),
+      price: _readInt(json['price']),
+      imageUrl: _readNullableString(json['imageUrl']),
+      isAvailable: json.containsKey('isAvailable')
+          ? _readBool(json['isAvailable'])
+          : true,
+      restaurantId: _readString(json['restaurantId']),
       restaurant: HomeCategoryProductRestaurant.fromJson(
-        (json['restaurant'] as Map<String, dynamic>?) ?? const {},
+        _readMap(json['restaurant']) ?? const <String, dynamic>{},
       ),
     );
   }
 
   String get title => titleRu.isNotEmpty ? titleRu : titleKk;
 
-  String? get fullImageUrl {
-    final value = imageUrl;
-    if (value == null || value.isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    return '${AppConfig.baseUrl}$value';
+  bool get isOrderable {
+    return isAvailable && restaurant.isOpenForOrders;
   }
+
+  String? get fullImageUrl => _resolveImageUrl(imageUrl);
 }
 
 class HomeCategoryProductLink {
@@ -134,13 +186,13 @@ class HomeCategoryProductLink {
 
   factory HomeCategoryProductLink.fromJson(Map<String, dynamic> json) {
     return HomeCategoryProductLink(
-      id: (json['id'] ?? '').toString(),
-      productId: (json['productId'] ?? '').toString(),
-      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
-      isActive: json['isActive'] == true,
-      product: json['product'] is Map<String, dynamic>
+      id: _readString(json['id']),
+      productId: _readString(json['productId']),
+      sortOrder: _readInt(json['sortOrder']),
+      isActive: json.containsKey('isActive') ? _readBool(json['isActive']) : true,
+      product: json['product'] is Map
           ? HomeCategoryProductData.fromJson(
-              json['product'] as Map<String, dynamic>,
+              Map<String, dynamic>.from(json['product'] as Map),
             )
           : null,
     );
@@ -170,29 +222,26 @@ class HomeCategoryData {
     final rawProducts = (json['products'] as List?) ?? const [];
 
     return HomeCategoryData(
-      id: (json['id'] ?? '').toString(),
-      titleRu: (json['titleRu'] ?? '').toString(),
-      titleKk: (json['titleKk'] ?? '').toString(),
-      imageUrl: json['imageUrl']?.toString(),
-      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
-      isActive: json['isActive'] == true,
+      id: _readString(json['id']),
+      titleRu: _readString(json['titleRu'] ?? json['title'] ?? json['name']),
+      titleKk: _readString(json['titleKk']),
+      imageUrl: _readNullableString(json['imageUrl']),
+      sortOrder: _readInt(json['sortOrder']),
+      isActive: json.containsKey('isActive') ? _readBool(json['isActive']) : true,
       products: rawProducts
-          .whereType<Map<String, dynamic>>()
-          .map(HomeCategoryProductLink.fromJson)
+          .whereType<Map>()
+          .map(
+            (item) => HomeCategoryProductLink.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList(),
     );
   }
 
   String get title => titleRu.isNotEmpty ? titleRu : titleKk;
 
-  String? get fullImageUrl {
-    final value = imageUrl;
-    if (value == null || value.isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    return '${AppConfig.baseUrl}$value';
-  }
+  String? get fullImageUrl => _resolveImageUrl(imageUrl);
 }
 
 class HomeRestaurantData {
@@ -208,7 +257,10 @@ class HomeRestaurantData {
   final double ratingAvg;
   final int ratingCount;
   final String status;
+  final String runtimeStatus;
   final bool isInApp;
+  final bool isAcceptingOrders;
+  final String? blockedAt;
   final bool isPinned;
   final int sortOrder;
   final bool useRandom;
@@ -226,7 +278,10 @@ class HomeRestaurantData {
     required this.ratingAvg,
     required this.ratingCount,
     required this.status,
+    required this.runtimeStatus,
     required this.isInApp,
+    required this.isAcceptingOrders,
+    required this.blockedAt,
     required this.isPinned,
     required this.sortOrder,
     required this.useRandom,
@@ -234,35 +289,56 @@ class HomeRestaurantData {
 
   factory HomeRestaurantData.fromJson(Map<String, dynamic> json) {
     return HomeRestaurantData(
-      id: (json['id'] ?? '').toString(),
-      number: (json['number'] as num?)?.toInt() ?? 0,
-      slug: (json['slug'] ?? '').toString(),
-      nameRu: (json['nameRu'] ?? '').toString(),
-      nameKk: (json['nameKk'] ?? '').toString(),
-      phone: json['phone']?.toString(),
-      address: json['address']?.toString(),
-      workingHours: json['workingHours']?.toString(),
-      coverImageUrl: json['coverImageUrl']?.toString(),
-      ratingAvg: (json['ratingAvg'] as num?)?.toDouble() ?? 0,
-      ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
-      status: (json['status'] ?? '').toString(),
-      isInApp: json['isInApp'] == true,
-      isPinned: json['isPinned'] == true,
-      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
-      useRandom: json['useRandom'] == true,
+      id: _readString(json['id']),
+      number: _readInt(json['number']),
+      slug: _readString(json['slug']),
+      nameRu: _readString(json['nameRu'] ?? json['name']),
+      nameKk: _readString(json['nameKk']),
+      phone: _readNullableString(json['phone']),
+      address: _readNullableString(json['address']),
+      workingHours: _readNullableString(json['workingHours']),
+      coverImageUrl: _readNullableString(json['coverImageUrl']),
+      ratingAvg: _readDouble(json['ratingAvg']),
+      ratingCount: _readInt(json['ratingCount']),
+      status: _readString(json['status']),
+      runtimeStatus: _readString(json['runtimeStatus']),
+      isInApp: json.containsKey('isInApp') ? _readBool(json['isInApp']) : true,
+      isAcceptingOrders: json.containsKey('isAcceptingOrders')
+          ? _readBool(json['isAcceptingOrders'])
+          : true,
+      blockedAt: _readNullableString(json['blockedAt']),
+      isPinned: _readBool(json['isPinned']),
+      sortOrder: _readInt(json['sortOrder']),
+      useRandom: _readBool(json['useRandom']),
     );
   }
 
   String get name => nameRu.isNotEmpty ? nameRu : nameKk;
 
-  String? get fullCoverImageUrl {
-    final value = coverImageUrl;
-    if (value == null || value.isEmpty) return null;
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
+  String get statusUpper => status.trim().toUpperCase();
+
+  String get runtimeStatusUpper => runtimeStatus.trim().toUpperCase();
+
+  bool get isOpenForOrders {
+    if (!isInApp) return false;
+    if (!isAcceptingOrders) return false;
+    if (blockedAt != null && blockedAt!.trim().isNotEmpty) return false;
+
+    if (statusUpper == 'CLOSED' ||
+        statusUpper == 'BLOCKED' ||
+        statusUpper == 'ARCHIVED' ||
+        statusUpper == 'HIDDEN') {
+      return false;
     }
-    return '${AppConfig.baseUrl}$value';
+
+    if (runtimeStatusUpper == 'CLOSED') {
+      return false;
+    }
+
+    return true;
   }
+
+  String? get fullCoverImageUrl => _resolveImageUrl(coverImageUrl);
 }
 
 class HomeData {
@@ -275,4 +351,92 @@ class HomeData {
     required this.categories,
     required this.pinnedRestaurants,
   });
+}
+
+String _readString(dynamic value) {
+  final text = value?.toString().trim() ?? '';
+
+  if (text.isEmpty || text.toLowerCase() == 'null') {
+    return '';
+  }
+
+  return text;
+}
+
+String? _readNullableString(dynamic value) {
+  final text = value?.toString().trim() ?? '';
+
+  if (text.isEmpty || text.toLowerCase() == 'null') {
+    return null;
+  }
+
+  return text;
+}
+
+int _readInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.round();
+
+  final text = value?.toString().trim() ?? '';
+
+  if (text.isEmpty || text.toLowerCase() == 'null') {
+    return 0;
+  }
+
+  return int.tryParse(text) ?? double.tryParse(text)?.round() ?? 0;
+}
+
+double _readDouble(dynamic value) {
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+
+  final text = value?.toString().trim() ?? '';
+
+  if (text.isEmpty || text.toLowerCase() == 'null') {
+    return 0;
+  }
+
+  return double.tryParse(text.replaceAll(',', '.')) ?? 0;
+}
+
+bool _readBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+
+  final text = value?.toString().trim().toLowerCase() ?? '';
+
+  return text == 'true' || text == '1' || text == 'yes';
+}
+
+Map<String, dynamic>? _readMap(dynamic value) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return Map<String, dynamic>.from(value);
+
+  return null;
+}
+
+String? _resolveImageUrl(String? value) {
+  final raw = value?.trim() ?? '';
+
+  if (raw.isEmpty) {
+    return null;
+  }
+
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw;
+  }
+
+  final baseUrl = AppConfig.baseUrl.trim();
+
+  if (baseUrl.isEmpty) {
+    return raw;
+  }
+
+  final normalizedBase = baseUrl.endsWith('/')
+      ? baseUrl.substring(0, baseUrl.length - 1)
+      : baseUrl;
+
+  final normalizedPath = raw.startsWith('/') ? raw : '/$raw';
+
+  return '$normalizedBase$normalizedPath';
 }

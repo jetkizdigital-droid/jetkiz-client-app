@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 
-/// Jetkiz mobile context:
 /// API layer for saved client addresses.
 ///
 /// Endpoints:
@@ -11,10 +10,8 @@ import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 /// - PUT /addresses/:id
 /// - DELETE /addresses/:id
 ///
-/// Important:
-/// - Do not call Dio directly from UI.
-/// - All requests for addresses must go through this API layer.
-/// - When auth becomes enabled, token injection must stay centralized in ApiClient.
+/// Do not call Dio directly from UI.
+/// All address requests must go through this API layer.
 class AddressesApi {
   AddressesApi(this._apiClient);
 
@@ -24,13 +21,12 @@ class AddressesApi {
     final response = await _client.get('/addresses/my');
     final data = response.data;
 
-    if (data is! List) {
-      throw Exception('Invalid addresses response: expected list');
-    }
+    final rawItems = _extractList(data);
 
-    return data
-        .whereType<Map<String, dynamic>>()
-        .map(Address.fromJson)
+    return rawItems
+        .whereType<Map>()
+        .map((item) => Address.fromJson(Map<String, dynamic>.from(item)))
+        .where((address) => address.isValid)
         .toList();
   }
 
@@ -40,37 +36,72 @@ class AddressesApi {
       data: payload.toJson(),
     );
 
-    final data = response.data;
-    if (data is! Map<String, dynamic>) {
-      throw Exception('Invalid create address response');
-    }
-
-    return Address.fromJson(data);
+    return _parseAddressResponse(response.data);
   }
 
   Future<Address> updateAddress(
-      String addressId, SaveAddressPayload payload) async {
+    String addressId,
+    SaveAddressPayload payload,
+  ) async {
+    final id = addressId.trim();
+
+    if (id.isEmpty) {
+      throw ArgumentError('addressId is required');
+    }
+
     final response = await _client.put(
-      '/addresses/$addressId',
+      '/addresses/$id',
       data: payload.toJson(),
     );
 
-    final data = response.data;
-    if (data is! Map<String, dynamic>) {
-      throw Exception('Invalid update address response');
-    }
-
-    return Address.fromJson(data);
+    return _parseAddressResponse(response.data);
   }
 
   Future<void> deleteAddress(String addressId) async {
-    await _client.delete('/addresses/$addressId');
+    final id = addressId.trim();
+
+    if (id.isEmpty) {
+      throw ArgumentError('addressId is required');
+    }
+
+    await _client.delete('/addresses/$id');
   }
 
-  Dio get _client {
-    // If your ApiClient exposes dio via another property name, replace only this getter.
-    return _apiClient.dio;
+  List<dynamic> _extractList(dynamic data) {
+    if (data is List) {
+      return data;
+    }
+
+    if (data is Map) {
+      final items = data['items'] ?? data['addresses'] ?? data['data'];
+
+      if (items is List) {
+        return items;
+      }
+    }
+
+    throw Exception('Invalid addresses response: expected list');
   }
+
+  Address _parseAddressResponse(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      return Address.fromJson(data);
+    }
+
+    if (data is Map) {
+      final address = data['address'] ?? data['item'] ?? data['data'];
+
+      if (address is Map) {
+        return Address.fromJson(Map<String, dynamic>.from(address));
+      }
+
+      return Address.fromJson(Map<String, dynamic>.from(data));
+    }
+
+    throw Exception('Invalid address response');
+  }
+
+  Dio get _client => _apiClient.dio;
 }
 
 class SaveAddressPayload {
@@ -79,6 +110,9 @@ class SaveAddressPayload {
     required this.address,
     this.floor,
     this.door,
+    this.entrance,
+    this.intercom,
+    this.contactPhone,
     this.comment,
   });
 
@@ -86,6 +120,9 @@ class SaveAddressPayload {
   final String address;
   final String? floor;
   final String? door;
+  final String? entrance;
+  final String? intercom;
+  final String? contactPhone;
   final String? comment;
 
   Map<String, dynamic> toJson() {
@@ -94,6 +131,9 @@ class SaveAddressPayload {
       'address': address.trim(),
       'floor': _normalizeOptional(floor),
       'door': _normalizeOptional(door),
+      'entrance': _normalizeOptional(entrance),
+      'intercom': _normalizeOptional(intercom),
+      'contactPhone': normalizeKazakhstanPhoneOrNull(contactPhone),
       'comment': _normalizeOptional(comment),
     };
   }
@@ -102,4 +142,36 @@ class SaveAddressPayload {
     final text = value?.trim() ?? '';
     return text.isEmpty ? null : text;
   }
+}
+
+String? normalizeKazakhstanPhoneOrNull(String? value) {
+  final raw = value?.trim() ?? '';
+
+  if (raw.isEmpty) {
+    return null;
+  }
+
+  final digits = raw.replaceAll(RegExp(r'\D'), '');
+
+  if (digits.isEmpty) {
+    return null;
+  }
+
+  if (digits.length == 10) {
+    return '+7$digits';
+  }
+
+  if (digits.length == 11 && digits.startsWith('8')) {
+    return '+7${digits.substring(1)}';
+  }
+
+  if (digits.length == 11 && digits.startsWith('7')) {
+    return '+$digits';
+  }
+
+  if (digits.length == 12 && digits.startsWith('77')) {
+    return '+${digits.substring(1)}';
+  }
+
+  return '+$digits';
 }

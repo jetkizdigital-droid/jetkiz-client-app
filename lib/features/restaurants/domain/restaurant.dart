@@ -1,22 +1,17 @@
 /*
   Restaurant domain model for Jetkiz mobile.
 
-  Контекст для будущих сессий ChatGPT:
-  - Модель построена по реальному backend ответу:
-      GET /restaurants/public/list
-  - Ответ backend имеет структуру:
-      {
-        "pinned": [ ...restaurants ],
-        "items": [ ...restaurants ]
-      }
-  - restaurant.id приходит как UUID string
-  - coverImageUrl приходит как относительный путь, например:
-      /uploads/restaurants/1773049462082-991858577.jpg
-  - Для отображения изображения на клиенте нужен полный URL:
-      AppConfig.baseUrl + coverImageUrl
-  - address может быть null
-  - workingHours может быть null
-  - ratingAvg может быть int или double, поэтому приводим к double
+  Backend public contract:
+  - GET /restaurants/public/list
+  - GET /restaurants/public/all
+
+  Real backend fields:
+  id, number, slug, nameRu, nameKk, phone, address, workingHours,
+  coverImageUrl, ratingAvg, ratingCount, status, isInApp,
+  restaurantCommissionPctOverride, isPinned, sortOrder, useRandom.
+
+  Do not require logo/banner/deliveryFee/minOrderAmount.
+  They are optional/future fields.
 */
 
 import 'package:equatable/equatable.dart';
@@ -32,36 +27,70 @@ class Restaurant extends Equatable {
     required this.phone,
     required this.address,
     required this.workingHours,
+    required this.descriptionRu,
+    required this.descriptionKk,
     required this.coverImageUrl,
     required this.ratingAvg,
     required this.ratingCount,
     required this.status,
     required this.isInApp,
-    required this.restaurantCommissionPctOverride,
+    required this.isAcceptingOrders,
     required this.isPinned,
     required this.sortOrder,
     required this.useRandom,
+    required this.restaurantCommissionPctOverride,
+    required this.deliveryFee,
+    required this.minOrderAmount,
+    required this.isPickupEnabled,
+    required this.pickupPreparationMinutes,
   });
 
   final String id;
   final int number;
   final String slug;
+
   final String nameRu;
   final String nameKk;
-  final String phone;
+
+  final String? phone;
   final String? address;
   final String? workingHours;
+
+  final String? descriptionRu;
+  final String? descriptionKk;
+
   final String? coverImageUrl;
+
   final double ratingAvg;
   final int ratingCount;
+
   final String status;
   final bool isInApp;
-  final num? restaurantCommissionPctOverride;
+  final bool isAcceptingOrders;
+
   final bool isPinned;
   final int sortOrder;
   final bool useRandom;
 
-  bool get isOpen => status.trim().toUpperCase() == 'OPEN';
+  final num? restaurantCommissionPctOverride;
+
+  /// Future-safe optional fields. Current backend may not return them.
+  final int? deliveryFee;
+  final int? minOrderAmount;
+  final bool isPickupEnabled;
+  final int? pickupPreparationMinutes;
+
+  bool get isOpen {
+    return status.trim().toUpperCase() == 'OPEN' && isAcceptingOrders;
+  }
+
+  bool get canOrder {
+    return isInApp && isOpen;
+  }
+
+  bool get hasRating {
+    return ratingAvg > 0 && ratingCount > 0;
+  }
 
   String get displayName {
     final ru = nameRu.trim();
@@ -70,10 +99,39 @@ class Restaurant extends Equatable {
     final kk = nameKk.trim();
     if (kk.isNotEmpty) return kk;
 
+    final slugValue = slug.trim();
+    if (slugValue.isNotEmpty) return slugValue;
+
     return 'Ресторан';
   }
 
-  String? get fullCoverImageUrl => _normalizeImageUrl(coverImageUrl);
+  String get displayDescription {
+    final ru = descriptionRu?.trim() ?? '';
+    if (ru.isNotEmpty) return ru;
+
+    final kk = descriptionKk?.trim() ?? '';
+    if (kk.isNotEmpty) return kk;
+
+    final addr = address?.trim() ?? '';
+    if (addr.isNotEmpty) return addr;
+
+    return 'Доставка еды';
+  }
+
+  String get statusText {
+    if (isOpen) return 'Открыто';
+    return 'Закрыто';
+  }
+
+  String get ratingText {
+    if (!hasRating) return '—';
+    return ratingAvg.toStringAsFixed(ratingAvg % 1 == 0 ? 0 : 1);
+  }
+
+  String get reviewsText {
+    if (ratingCount <= 0) return 'Нет отзывов';
+    return '$ratingCount отзывов';
+  }
 
   String get subtitle {
     final hours = workingHours?.trim();
@@ -86,60 +144,163 @@ class Restaurant extends Equatable {
       return addr;
     }
 
-    return 'Доставка 30–35 мин';
+    return isOpen ? 'Доставка 30–35 мин' : 'Сейчас закрыто';
+  }
+
+  String? get fullCoverImageUrl => normalizeImageUrl(coverImageUrl);
+
+  String? get formattedDeliveryFee {
+    final fee = deliveryFee;
+
+    if (fee == null) return null;
+    if (fee <= 0) return 'Бесплатно';
+
+    return '$fee ₸';
+  }
+
+  String? get formattedMinOrderAmount {
+    final amount = minOrderAmount;
+
+    if (amount == null || amount <= 0) return null;
+
+    return 'Мин. заказ $amount ₸';
   }
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
-      id: (json['id'] ?? '').toString(),
+      id: _readString(json['id']),
       number: _readInt(json['number']),
-      slug: (json['slug'] ?? '').toString(),
-      nameRu: (json['nameRu'] ?? '').toString(),
-      nameKk: (json['nameKk'] ?? '').toString(),
-      phone: (json['phone'] ?? '').toString(),
+      slug: _readString(json['slug']),
+      nameRu: _readString(json['nameRu'] ?? json['name']),
+      nameKk: _readString(json['nameKk']),
+      phone: _readNullableString(json['phone']),
       address: _readNullableString(json['address']),
       workingHours: _readNullableString(json['workingHours']),
-      coverImageUrl: _readNullableString(json['coverImageUrl']),
+      descriptionRu: _readNullableString(json['descriptionRu']),
+      descriptionKk: _readNullableString(json['descriptionKk']),
+      coverImageUrl: _readNullableString(
+        json['coverImageUrl'] ??
+            json['imageUrl'] ??
+            json['image'] ??
+            json['banner'] ??
+            json['logo'],
+      ),
       ratingAvg: _readDouble(json['ratingAvg']),
       ratingCount: _readInt(json['ratingCount']),
-      status: (json['status'] ?? '').toString(),
-      isInApp: json['isInApp'] == true,
-      restaurantCommissionPctOverride:
-          json['restaurantCommissionPctOverride'] as num?,
-      isPinned: json['isPinned'] == true,
+      status: _readString(json['status'], fallback: 'CLOSED'),
+      isInApp: _readBool(json['isInApp'], fallback: true),
+      isAcceptingOrders: _readBool(
+        json['isAcceptingOrders'],
+        fallback: true,
+      ),
+      isPinned: _readBool(json['isPinned']),
       sortOrder: _readInt(json['sortOrder']),
-      useRandom: json['useRandom'] == true,
+      useRandom: _readBool(json['useRandom']),
+      restaurantCommissionPctOverride:
+          _readNullableNum(json['restaurantCommissionPctOverride']),
+      deliveryFee: _readNullableInt(
+        json['deliveryFee'] ??
+            json['deliveryBaseFee'] ??
+            json['baseDeliveryFee'],
+      ),
+      minOrderAmount: _readNullableInt(json['minOrderAmount']),
+      isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: true),
+      pickupPreparationMinutes:
+          _readNullableInt(json['pickupPreparationMinutes']),
     );
   }
 
-  static int _readInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'number': number,
+      'slug': slug,
+      'nameRu': nameRu,
+      'nameKk': nameKk,
+      'phone': phone,
+      'address': address,
+      'workingHours': workingHours,
+      'descriptionRu': descriptionRu,
+      'descriptionKk': descriptionKk,
+      'coverImageUrl': coverImageUrl,
+      'ratingAvg': ratingAvg,
+      'ratingCount': ratingCount,
+      'status': status,
+      'isInApp': isInApp,
+      'isAcceptingOrders': isAcceptingOrders,
+      'isPinned': isPinned,
+      'sortOrder': sortOrder,
+      'useRandom': useRandom,
+      'restaurantCommissionPctOverride': restaurantCommissionPctOverride,
+      'deliveryFee': deliveryFee,
+      'minOrderAmount': minOrderAmount,
+      'isPickupEnabled': isPickupEnabled,
+      'pickupPreparationMinutes': pickupPreparationMinutes,
+    };
   }
 
-  static double _readDouble(dynamic value) {
-    if (value is double) return value;
-    if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0;
-    return 0;
+  Restaurant copyWith({
+    String? id,
+    int? number,
+    String? slug,
+    String? nameRu,
+    String? nameKk,
+    String? phone,
+    String? address,
+    String? workingHours,
+    String? descriptionRu,
+    String? descriptionKk,
+    String? coverImageUrl,
+    double? ratingAvg,
+    int? ratingCount,
+    String? status,
+    bool? isInApp,
+    bool? isAcceptingOrders,
+    bool? isPinned,
+    int? sortOrder,
+    bool? useRandom,
+    num? restaurantCommissionPctOverride,
+    int? deliveryFee,
+    int? minOrderAmount,
+    bool? isPickupEnabled,
+    int? pickupPreparationMinutes,
+  }) {
+    return Restaurant(
+      id: id ?? this.id,
+      number: number ?? this.number,
+      slug: slug ?? this.slug,
+      nameRu: nameRu ?? this.nameRu,
+      nameKk: nameKk ?? this.nameKk,
+      phone: phone ?? this.phone,
+      address: address ?? this.address,
+      workingHours: workingHours ?? this.workingHours,
+      descriptionRu: descriptionRu ?? this.descriptionRu,
+      descriptionKk: descriptionKk ?? this.descriptionKk,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      ratingAvg: ratingAvg ?? this.ratingAvg,
+      ratingCount: ratingCount ?? this.ratingCount,
+      status: status ?? this.status,
+      isInApp: isInApp ?? this.isInApp,
+      isAcceptingOrders: isAcceptingOrders ?? this.isAcceptingOrders,
+      isPinned: isPinned ?? this.isPinned,
+      sortOrder: sortOrder ?? this.sortOrder,
+      useRandom: useRandom ?? this.useRandom,
+      restaurantCommissionPctOverride: restaurantCommissionPctOverride ??
+          this.restaurantCommissionPctOverride,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      minOrderAmount: minOrderAmount ?? this.minOrderAmount,
+      isPickupEnabled: isPickupEnabled ?? this.isPickupEnabled,
+      pickupPreparationMinutes:
+          pickupPreparationMinutes ?? this.pickupPreparationMinutes,
+    );
   }
 
-  static String? _readNullableString(dynamic value) {
-    if (value == null) return null;
+  static String? normalizeImageUrl(String? value) {
+    final raw = value?.trim() ?? '';
 
-    final text = value.toString().trim();
-    if (text.isEmpty || text.toLowerCase() == 'null') {
+    if (raw.isEmpty || raw.toLowerCase() == 'null') {
       return null;
     }
-
-    return text;
-  }
-
-  static String? _normalizeImageUrl(String? value) {
-    final raw = (value ?? '').trim();
-    if (raw.isEmpty) return null;
 
     if (raw.startsWith('http://') || raw.startsWith('https://')) {
       return raw;
@@ -152,6 +313,83 @@ class Restaurant extends Equatable {
     return '${AppConfig.baseUrl}/$raw';
   }
 
+  static String _readString(dynamic value, {String fallback = ''}) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty || text.toLowerCase() == 'null' ? fallback : text;
+  }
+
+  static String? _readNullableString(dynamic value) {
+    final text = value?.toString().trim() ?? '';
+
+    if (text.isEmpty || text.toLowerCase() == 'null') {
+      return null;
+    }
+
+    return text;
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty) return 0;
+
+    return int.tryParse(text) ?? double.tryParse(text)?.round() ?? 0;
+  }
+
+  static int? _readNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.round();
+
+    final text = value.toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') {
+      return null;
+    }
+
+    return int.tryParse(text) ?? double.tryParse(text)?.round();
+  }
+
+  static double _readDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+
+    final text = value?.toString().trim() ?? '';
+    if (text.isEmpty) return 0;
+
+    return double.tryParse(text) ?? 0;
+  }
+
+  static num? _readNullableNum(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value;
+
+    final text = value.toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') {
+      return null;
+    }
+
+    return num.tryParse(text);
+  }
+
+  static bool _readBool(dynamic value, {bool fallback = false}) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+
+    final text = value?.toString().trim().toLowerCase() ?? '';
+
+    if (text == 'true' || text == '1' || text == 'yes') {
+      return true;
+    }
+
+    if (text == 'false' || text == '0' || text == 'no') {
+      return false;
+    }
+
+    return fallback;
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -162,14 +400,21 @@ class Restaurant extends Equatable {
         phone,
         address,
         workingHours,
+        descriptionRu,
+        descriptionKk,
         coverImageUrl,
         ratingAvg,
         ratingCount,
         status,
         isInApp,
-        restaurantCommissionPctOverride,
+        isAcceptingOrders,
         isPinned,
         sortOrder,
         useRandom,
+        restaurantCommissionPctOverride,
+        deliveryFee,
+        minOrderAmount,
+        isPickupEnabled,
+        pickupPreparationMinutes,
       ];
 }

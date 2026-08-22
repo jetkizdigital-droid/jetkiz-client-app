@@ -17,21 +17,36 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
+  static const Color _green = Color(0xFF489F2A);
+  static const Color _bg = Color(0xFFF9FAFB);
+  static const Color _text = Color(0xFF111827);
+  static const Color _muted = Color(0xFF6B7280);
+  static const Color _border = Color(0xFFE5E7EB);
+
   final CartRepository _cart = CartRepository.instance;
   final AddressRepository _addressRepository = AddressRepository.instance;
 
+  late final ApiClient _apiClient;
   late final FinanceConfigApi _financeConfigApi;
 
   int _deliveryFee = 0;
   bool _isDeliveryLoading = true;
+  bool _isCheckoutStarting = false;
+
+  bool get _requiresAddressBeforeCheckout => false;
 
   @override
   void initState() {
     super.initState();
-    _financeConfigApi = FinanceConfigApi(ApiClient());
+
+    _apiClient = ApiClient();
+    _financeConfigApi = FinanceConfigApi(_apiClient);
+
     _cart.addListener(_handleCartChanged);
     _addressRepository.addListener(_handleAddressChanged);
+
     _loadDeliveryFee();
+    _trackCartView();
   }
 
   @override
@@ -42,20 +57,23 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _handleCartChanged() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _handleAddressChanged() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _loadDeliveryFee() async {
+    setState(() {
+      _isDeliveryLoading = true;
+    });
+
     try {
       final config = await _financeConfigApi.getFinanceConfig();
+
       if (!mounted) return;
 
       setState(() {
@@ -69,7 +87,52 @@ class _CartPageState extends State<CartPage> {
         _deliveryFee = 0;
         _isDeliveryLoading = false;
       });
+
+      _showSnackBar('Не удалось загрузить стоимость доставки');
     }
+  }
+
+  Future<void> _trackCartView() async {
+    try {
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': 'screen_view',
+          'metadata': {
+            'source': 'cart_page',
+            'screen': 'cart',
+            'restaurantId': _cart.restaurantId,
+            'itemsCount': _cart.totalQuantity,
+            'subtotal': _cart.subtotal,
+          },
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _trackCheckoutStart({
+    Address? address,
+    required int subtotal,
+    required int deliveryFee,
+    required int total,
+  }) async {
+    try {
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': 'checkout_start',
+          'metadata': {
+            'source': 'cart_page',
+            'restaurantId': _cart.restaurantId,
+            if (address != null) 'addressId': address.id,
+            'itemsCount': _cart.totalQuantity,
+            'subtotal': subtotal,
+            'deliveryFee': deliveryFee,
+            'total': total,
+          },
+        },
+      );
+    } catch (_) {}
   }
 
   Future<void> _openAddressPicker() async {
@@ -113,21 +176,79 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+  Future<void> _confirmClearCart() async {
+    if (_cart.isEmpty) return;
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Очистить корзину?'),
+          content: const Text('Все товары будут удалены из корзины.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Очистить'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldClear == true) {
+      _cart.clear();
+    }
+  }
+
   void _goToHomeTab() {
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
-  void _handleCheckout() {
-    if (_cart.state.isEmpty) return;
+  Future<void> _handleCheckout() async {
+    if (_cart.isEmpty || _isCheckoutStarting) return;
 
-    if (_addressRepository.selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Сначала выберите адрес доставки'),
-        ),
-      );
+    if (_isDeliveryLoading) {
+      _showSnackBar('Подождите, загружается стоимость доставки');
       return;
     }
+
+    final selectedAddress = _addressRepository.selectedAddress;
+
+    if (_requiresAddressBeforeCheckout && selectedAddress == null) {
+      _showSnackBar('Сначала выберите адрес доставки');
+      await _openAddressPicker();
+      return;
+    }
+
+    final restaurantId = _cart.restaurantId?.trim() ?? '';
+    if (restaurantId.isEmpty) {
+      _showSnackBar('Не удалось определить ресторан');
+      return;
+    }
+
+    final subtotal = _cart.subtotal;
+    final total = subtotal + _deliveryFee;
+
+    setState(() {
+      _isCheckoutStarting = true;
+    });
+
+    await _trackCheckoutStart(
+      address: selectedAddress,
+      subtotal: subtotal,
+      deliveryFee: _deliveryFee,
+      total: total,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isCheckoutStarting = false;
+    });
 
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -136,18 +257,27 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
+  void _showSnackBar(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = _cart.state;
+    final items = _cart.items;
     final selectedAddress = _addressRepository.selectedAddress;
-    final subtotal = state.subtotal;
+    final subtotal = _cart.subtotal;
     final total = subtotal + _deliveryFee;
+    final isEmpty = _cart.isEmpty;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF9FAFB),
-        foregroundColor: const Color(0xFF111827),
+        backgroundColor: _bg,
+        foregroundColor: _text,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
@@ -158,46 +288,60 @@ class _CartPageState extends State<CartPage> {
           ),
         ),
         centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-            child: _CartAddressCard(
-              selectedAddress: selectedAddress,
-              onTap: _openAddressPicker,
+        actions: [
+          if (!isEmpty)
+            IconButton(
+              onPressed: _confirmClearCart,
+              icon: const Icon(Icons.delete_sweep_outlined),
+              tooltip: 'Очистить корзину',
             ),
-          ),
-          Expanded(
-            child: state.isEmpty
-                ? _EmptyCart(
-                    onGoHome: _goToHomeTab,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    itemBuilder: (context, index) {
-                      final item = state.items[index];
-                      return _CartItemCard(
-                        item: item,
-                        onMinus: () => _cart.decrement(item.productId),
-                        onPlus: () => _cart.increment(item.productId),
-                        onRemove: () => _confirmRemove(item),
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemCount: state.items.length,
-                  ),
-          ),
-          _CartSummary(
-            subtotal: subtotal,
-            deliveryFee: _deliveryFee,
-            total: total,
-            isLoading: _isDeliveryLoading,
-            isDisabled:
-                state.isEmpty || selectedAddress == null || _isDeliveryLoading,
-            onCheckout: _handleCheckout,
-          ),
         ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadDeliveryFee,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+              child: _CartAddressCard(
+                selectedAddress: selectedAddress,
+                onTap: _openAddressPicker,
+              ),
+            ),
+            Expanded(
+              child: isEmpty
+                  ? _EmptyCart(
+                      onGoHome: _goToHomeTab,
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+
+                        return _CartItemCard(
+                          item: item,
+                          onMinus: () => _cart.decrement(item.productId),
+                          onPlus: () => _cart.increment(item.productId),
+                          onRemove: () => _confirmRemove(item),
+                        );
+                      },
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemCount: items.length,
+                    ),
+            ),
+            _CartSummary(
+              subtotal: subtotal,
+              deliveryFee: _deliveryFee,
+              total: total,
+              isLoading: _isDeliveryLoading,
+              isCheckoutStarting: _isCheckoutStarting,
+              isDisabled:
+                  isEmpty || _isDeliveryLoading,
+              onCheckout: _handleCheckout,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -247,7 +391,7 @@ class _CartAddressCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
+                  color: Colors.white.withOpacity(0.20),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -341,8 +485,9 @@ class _CartItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitleParts = <String>[
-      if ((item.description ?? '').isNotEmpty) item.description!,
-      if ((item.weight ?? '').isNotEmpty) item.weight!,
+      if ((item.description ?? '').trim().isNotEmpty)
+        item.description!.trim(),
+      if ((item.weight ?? '').trim().isNotEmpty) item.weight!.trim(),
     ];
 
     return Container(
@@ -569,6 +714,7 @@ class _CartSummary extends StatelessWidget {
     required this.deliveryFee,
     required this.total,
     required this.isLoading,
+    required this.isCheckoutStarting,
     required this.isDisabled,
     required this.onCheckout,
   });
@@ -577,6 +723,7 @@ class _CartSummary extends StatelessWidget {
   final int deliveryFee;
   final int total;
   final bool isLoading;
+  final bool isCheckoutStarting;
   final bool isDisabled;
   final VoidCallback onCheckout;
 
@@ -584,6 +731,7 @@ class _CartSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final deliveryValue = isLoading ? '...' : '$deliveryFee ₸';
     final totalValue = isLoading ? '...' : '$total ₸';
+    final disabled = isDisabled || isCheckoutStarting;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
@@ -616,11 +764,11 @@ class _CartSummary extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Opacity(
-              opacity: isDisabled ? 0.55 : 1,
+              opacity: disabled ? 0.55 : 1,
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: isDisabled ? null : onCheckout,
+                  onTap: disabled ? null : onCheckout,
                   borderRadius: BorderRadius.circular(20),
                   child: Ink(
                     padding: const EdgeInsets.symmetric(
@@ -648,9 +796,22 @@ class _CartSummary extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Оформить заказ',
-                          style: TextStyle(
+                        if (isCheckoutStarting) ...[
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Text(
+                          isCheckoutStarting
+                              ? 'Переходим...'
+                              : 'Оформить заказ',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
@@ -663,7 +824,7 @@ class _CartSummary extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: Colors.white.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -731,10 +892,11 @@ class _EmptyCart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Container(
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 70, 16, 24),
+      children: [
+        Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           decoration: BoxDecoration(
@@ -788,7 +950,7 @@ class _EmptyCart extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onGoHome,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF489F2A),
+                    backgroundColor: Color(0xFF489F2A),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -807,7 +969,7 @@ class _EmptyCart extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

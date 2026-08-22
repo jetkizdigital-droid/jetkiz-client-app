@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
@@ -14,8 +16,11 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  late final SearchApi _searchApi;
+  final ApiClient _apiClient = ApiClient();
   final TextEditingController _controller = TextEditingController();
+
+  late final SearchApi _searchApi;
+
   Timer? _debounce;
 
   bool _isLoading = false;
@@ -28,7 +33,20 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    _searchApi = SearchApi(ApiClient());
+    _searchApi = SearchApi(_apiClient);
+
+    unawaited(
+      _trackClientEvent(
+        eventName: 'screen_view',
+        entityType: 'screen',
+        entityId: 'search',
+        source: 'search_page',
+        metadata: {
+          'screen': 'search',
+          'title': 'Поиск',
+        },
+      ),
+    );
   }
 
   @override
@@ -60,6 +78,17 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  void _onSubmitted(String value) {
+    final query = value.trim();
+
+    if (query.isEmpty) {
+      return;
+    }
+
+    _debounce?.cancel();
+    _search(query);
+  }
+
   Future<void> _search(String query) async {
     setState(() {
       _isLoading = true;
@@ -73,9 +102,51 @@ class _SearchPageState extends State<SearchPage> {
         return;
       }
 
+      final currentQuery = _controller.text.trim();
+
+      if (currentQuery != query) {
+        return;
+      }
+
       setState(() {
         _result = result;
       });
+
+      final restaurantsCount = result.restaurants.length;
+      final productsCount = result.products.length;
+      final resultsCount = restaurantsCount + productsCount;
+
+      if (resultsCount == 0) {
+        unawaited(
+          _trackClientEvent(
+            eventName: 'search_no_results',
+            entityType: 'search_query',
+            entityId: query,
+            source: 'search_page',
+            metadata: {
+              'query': query,
+              'resultsCount': 0,
+              'restaurantsCount': 0,
+              'productsCount': 0,
+            },
+          ),
+        );
+      } else {
+        unawaited(
+          _trackClientEvent(
+            eventName: 'search',
+            entityType: 'search_query',
+            entityId: query,
+            source: 'search_page',
+            metadata: {
+              'query': query,
+              'resultsCount': resultsCount,
+              'restaurantsCount': restaurantsCount,
+              'productsCount': productsCount,
+            },
+          ),
+        );
+      }
     } catch (_) {
       if (!mounted) {
         return;
@@ -111,23 +182,237 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
-  void _openRestaurant({
-    required String restaurantId,
-    required String restaurantName,
+  void _openRestaurantResult({
+    required SearchRestaurantItem item,
+    required int position,
   }) {
-    if (restaurantId.trim().isEmpty) {
+    if (item.id.trim().isEmpty) {
       return;
     }
+
+    final query = _controller.text.trim();
+
+    unawaited(
+      _trackSearchResultClick(
+        query: query,
+        entityType: 'restaurant',
+        entityId: item.id,
+        title: item.name,
+        position: position,
+        metadata: {
+          'restaurantId': item.id,
+          'restaurantName': item.name,
+          'ratingAvg': item.ratingAvg,
+          if (item.address != null) 'address': item.address,
+          if (item.workingHours != null) 'workingHours': item.workingHours,
+        },
+      ),
+    );
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantMenuPage(
-          restaurantId: restaurantId,
-          restaurantName:
-              restaurantName.trim().isEmpty ? 'Ресторан' : restaurantName,
+          restaurantId: item.id,
+          restaurantName: item.name.trim().isEmpty ? 'Ресторан' : item.name,
         ),
       ),
     );
+  }
+
+  void _openProductResult({
+    required SearchProductItem item,
+    required int position,
+  }) {
+    if (item.restaurantId.trim().isEmpty) {
+      return;
+    }
+
+    final query = _controller.text.trim();
+
+    unawaited(
+      _trackSearchResultClick(
+        query: query,
+        entityType: 'product',
+        entityId: item.id,
+        title: item.title,
+        position: position,
+        metadata: {
+          'productId': item.id,
+          'productTitle': item.title,
+          'restaurantId': item.restaurantId,
+          'restaurantName': item.restaurantName,
+          'price': item.price,
+          if (item.categoryTitle != null) 'categoryTitle': item.categoryTitle,
+          if (item.weight != null) 'weight': item.weight,
+          'isDrink': item.isDrink,
+        },
+      ),
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantMenuPage(
+          restaurantId: item.restaurantId,
+          restaurantName:
+              item.restaurantName.trim().isEmpty ? 'Ресторан' : item.restaurantName,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _trackSearchResultClick({
+    required String query,
+    required String entityType,
+    required String entityId,
+    required String title,
+    required int position,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await _trackClientEvent(
+      eventName: 'search_result_click',
+      entityType: entityType,
+      entityId: entityId,
+      source: 'search_results',
+      metadata: {
+        'query': query,
+        'entityType': entityType,
+        'entityId': entityId,
+        'title': title,
+        'position': position,
+        if (metadata != null) ...metadata,
+      },
+    );
+
+    await _trackSearchClick(
+      query: query,
+      entityType: entityType,
+      entityId: entityId,
+      position: position,
+      title: title,
+    );
+  }
+
+  Future<void> _trackSearchClick({
+    required String query,
+    required String entityType,
+    required String entityId,
+    required int position,
+    required String title,
+  }) async {
+    try {
+      final deviceId = await _apiClient.getDeviceId();
+
+      await _apiClient.dio.post(
+        '/search/click',
+        data: {
+          'query': query,
+          'entityType': entityType,
+          'entityId': entityId,
+          'deviceId': deviceId,
+          'platform': _backendPlatformName(),
+          'appVersion': '1.0.0',
+          'metadata': {
+            'title': title,
+            'position': position,
+            'source': 'search_page',
+          },
+        },
+      );
+    } on DioException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'SearchPage: /search/click failed: ${error.response?.statusCode} ${error.response?.data}',
+        );
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('SearchPage: /search/click failed: $error');
+      }
+    }
+  }
+
+  Future<void> _trackClientEvent({
+    required String eventName,
+    String? entityType,
+    String? entityId,
+    String? source,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final accessToken = await _apiClient.getAccessToken();
+
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        if (kDebugMode) {
+          debugPrint('SearchPage: skip $eventName, user is not authorized');
+        }
+        return;
+      }
+
+      final deviceId = await _apiClient.getDeviceId();
+
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': eventName,
+          'deviceId': deviceId,
+          'platform': _backendPlatformName(),
+          'appVersion': '1.0.0',
+          if (entityType != null) 'entityType': entityType,
+          if (entityId != null) 'entityId': entityId,
+          if (source != null) 'source': source,
+          'metadata': {
+            'deviceId': deviceId,
+            'platform': _clientPlatformName(),
+            'app': 'client',
+            'appVersion': '1.0.0',
+            'locale': 'ru',
+            'timezone': 'Asia/Almaty',
+            if (metadata != null) ...metadata,
+          },
+        },
+      );
+    } on DioException catch (error) {
+      if (kDebugMode) {
+        debugPrint(
+          'SearchPage: $eventName failed: ${error.response?.statusCode} ${error.response?.data}',
+        );
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('SearchPage: $eventName failed: $error');
+      }
+    }
+  }
+
+  String _backendPlatformName() {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'ANDROID';
+      case TargetPlatform.iOS:
+        return 'IOS';
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.fuchsia:
+        return 'WEB';
+    }
+  }
+
+  String _clientPlatformName() {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.macOS:
+        return 'macos';
+      case TargetPlatform.windows:
+        return 'windows';
+      case TargetPlatform.linux:
+        return 'linux';
+      case TargetPlatform.fuchsia:
+        return 'fuchsia';
+    }
   }
 
   @override
@@ -183,6 +468,7 @@ class _SearchPageState extends State<SearchPage> {
                       controller: _controller,
                       autofocus: true,
                       onChanged: _onChanged,
+                      onSubmitted: _onSubmitted,
                       textInputAction: TextInputAction.search,
                       decoration: const InputDecoration(
                         hintText: 'Блюда, напитки, рестораны',
@@ -214,16 +500,16 @@ class _SearchPageState extends State<SearchPage> {
               isLoading: _isLoading,
               error: _error,
               result: _result,
-              onRestaurantTap: (item) {
-                _openRestaurant(
-                  restaurantId: item.id,
-                  restaurantName: item.name,
+              onRestaurantTap: (item, position) {
+                _openRestaurantResult(
+                  item: item,
+                  position: position,
                 );
               },
-              onProductTap: (item) {
-                _openRestaurant(
-                  restaurantId: item.restaurantId,
-                  restaurantName: item.restaurantName,
+              onProductTap: (item, position) {
+                _openProductResult(
+                  item: item,
+                  position: position,
                 );
               },
               isEmptyResult: isEmptyResult,
@@ -250,8 +536,8 @@ class _SearchBody extends StatelessWidget {
   final bool isLoading;
   final String? error;
   final SearchResult result;
-  final ValueChanged<SearchRestaurantItem> onRestaurantTap;
-  final ValueChanged<SearchProductItem> onProductTap;
+  final void Function(SearchRestaurantItem item, int position) onRestaurantTap;
+  final void Function(SearchProductItem item, int position) onProductTap;
   final bool isEmptyResult;
 
   @override
@@ -286,28 +572,39 @@ class _SearchBody extends StatelessWidget {
         if (result.restaurants.isNotEmpty) ...[
           const _SectionTitle(title: 'Рестораны'),
           const SizedBox(height: 10),
-          ...result.restaurants.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RestaurantTile(
-                item: item,
-                onTap: () => onRestaurantTap(item),
-              ),
-            ),
+          ...result.restaurants.asMap().entries.map(
+            (entry) {
+              final index = entry.key;
+              final item = entry.value;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _RestaurantTile(
+                  item: item,
+                  onTap: () => onRestaurantTap(item, index + 1),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 8),
         ],
         if (result.products.isNotEmpty) ...[
           const _SectionTitle(title: 'Блюда и напитки'),
           const SizedBox(height: 10),
-          ...result.products.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _ProductTile(
-                item: item,
-                onTap: () => onProductTap(item),
-              ),
-            ),
+          ...result.products.asMap().entries.map(
+            (entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final position = result.restaurants.length + index + 1;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ProductTile(
+                  item: item,
+                  onTap: () => onProductTap(item, position),
+                ),
+              );
+            },
           ),
         ],
       ],

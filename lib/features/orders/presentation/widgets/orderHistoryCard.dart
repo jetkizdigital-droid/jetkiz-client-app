@@ -51,7 +51,10 @@ class OrderHistoryCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                OrderStatusChip(status: item.status),
+                OrderStatusChip(
+                  status: item.status,
+                  fulfillmentType: item.fulfillmentType,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -61,9 +64,7 @@ class OrderHistoryCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    item.restaurant.nameRu.isEmpty
-                        ? 'Ресторан'
-                        : item.restaurant.nameRu,
+                    item.restaurant.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -95,6 +96,24 @@ class OrderHistoryCard extends StatelessWidget {
                 height: 1.35,
               ),
             ),
+            if (item.isPickup) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  const _MetaChip(
+                    icon: Icons.shopping_bag_outlined,
+                    text: 'Самовывоз',
+                  ),
+                  if (item.canShowPickupCode)
+                    _MetaChip(
+                      icon: Icons.pin_rounded,
+                      text: 'Код: ${item.pickupCode!.trim()}',
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
@@ -137,6 +156,46 @@ class OrderHistoryCard extends StatelessWidget {
   static String _formatDate(DateTime value) {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(value.day)}.${two(value.month)}.${value.year}  ${two(value.hour)}:${two(value.minute)}';
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: const Color(0xFF6B7280),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF374151),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

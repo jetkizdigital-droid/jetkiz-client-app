@@ -1,74 +1,143 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
+import 'package:jetkiz_mobile/features/notifications/presentation/models/notificationsTab.dart';
+import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationCard.dart';
+import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationsEmptyState.dart';
+import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationsErrorState.dart';
+import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationsTabs.dart';
+
+typedef OpenOrderFromNotification = FutureOr<void> Function(
+  String? orderId,
+  int? orderNumber,
+);
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({
     super.key,
     this.onOpenOrder,
+    this.source = 'notifications_page',
   });
 
-  final void Function(String orderId, int? orderNumber)? onOpenOrder;
+  final OpenOrderFromNotification? onOpenOrder;
+  final String source;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
 
-enum _NotificationsTab {
-  orders,
-  promos,
-}
-
 class _NotificationsPageState extends State<NotificationsPage> {
+  late final ApiClient _apiClient;
   late final NotificationsApi _api;
+  late final AnalyticsService _analyticsService;
 
   bool _loading = true;
-  bool _markTabLoading = false;
+  bool _refreshing = false;
+  bool _markAllLoading = false;
   String? _error;
 
   List<NotificationItem> _items = const [];
   int _unreadCount = 0;
 
-  _NotificationsTab _selectedTab = _NotificationsTab.orders;
+  NotificationsTab _selectedTab = NotificationsTab.orders;
 
   @override
   void initState() {
     super.initState();
-    _api = NotificationsApi(ApiClient());
-    _load();
+
+    _apiClient = ApiClient();
+    _api = NotificationsApi(_apiClient);
+    _analyticsService = AnalyticsService(_apiClient);
+
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: 'notifications',
+        title: 'Уведомления',
+        source: widget.source,
+        metadata: {
+          'initialTab': _selectedTab.key,
+        },
+      ),
+    );
+
+    unawaited(_load());
   }
 
-  List<NotificationItem> get _orderItems =>
-      _items.where(_isOrderNotification).toList();
+  List<NotificationItem> get _orderItems {
+    return _items.where(_isOrderNotification).toList();
+  }
 
-  List<NotificationItem> get _promoItems =>
-      _items.where((item) => !_isOrderNotification(item)).toList();
+  List<NotificationItem> get _promoItems {
+    return _items.where((item) => !_isOrderNotification(item)).toList();
+  }
 
   List<NotificationItem> get _visibleItems {
     switch (_selectedTab) {
-      case _NotificationsTab.orders:
+      case NotificationsTab.orders:
         return _orderItems;
-      case _NotificationsTab.promos:
+      case NotificationsTab.promos:
         return _promoItems;
     }
   }
 
-  int get _ordersUnreadCount => _orderItems.where((e) => !e.isRead).length;
+  int get _ordersUnreadCount {
+    return _orderItems.where((item) => !item.isRead).length;
+  }
 
-  int get _promosUnreadCount => _promoItems.where((e) => !e.isRead).length;
+  int get _promosUnreadCount {
+    return _promoItems.where((item) => !item.isRead).length;
+  }
 
   bool _isOrderNotification(NotificationItem item) {
     final type = item.type.trim().toUpperCase();
-    final hasOrderId = (item.orderId ?? '').trim().isNotEmpty;
+    final orderId = (item.orderId ?? '').trim();
 
-    if (hasOrderId) return true;
-    if (type.startsWith('ORDER_')) return true;
+    if (orderId.isNotEmpty) {
+      return true;
+    }
+
+    if (item.orderNumber != null) {
+      return true;
+    }
+
+    if (type.startsWith('ORDER_')) {
+      return true;
+    }
 
     return false;
   }
 
+  void _selectTab(NotificationsTab tab) {
+    if (_selectedTab == tab) {
+      return;
+    }
+
+    setState(() {
+      _selectedTab = tab;
+    });
+
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: tab.screenName,
+        title: tab.title,
+        source: 'notifications_tabs',
+        metadata: {
+          'tab': tab.key,
+          'ordersUnreadCount': _ordersUnreadCount,
+          'promosUnreadCount': _promosUnreadCount,
+          'totalUnreadCount': _unreadCount,
+        },
+      ),
+    );
+  }
+
   Future<void> _load() async {
+    if (!mounted) return;
+
     setState(() {
       _loading = true;
       _error = null;
@@ -79,20 +148,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
       if (!mounted) return;
 
-      final sorted = [...result.items]
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
       setState(() {
-        _items = sorted;
+        _items = _sortItems(result.items);
         _unreadCount = result.unreadCount;
       });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _error = 'Не удалось загрузить уведомления';
       });
     } finally {
       if (!mounted) return;
+
       setState(() {
         _loading = false;
       });
@@ -100,45 +168,60 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Future<void> _refresh() async {
+    if (_refreshing) return;
+
+    setState(() {
+      _refreshing = true;
+    });
+
     try {
       final result = await _api.getNotifications();
 
       if (!mounted) return;
 
-      final sorted = [...result.items]
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
       setState(() {
-        _items = sorted;
+        _items = _sortItems(result.items);
         _unreadCount = result.unreadCount;
         _error = null;
       });
     } catch (_) {
       if (!mounted) return;
+
+      _showError('Не удалось обновить уведомления');
+    } finally {
+      if (!mounted) return;
+
       setState(() {
-        _error = 'Не удалось обновить уведомления';
+        _refreshing = false;
       });
     }
   }
 
+  List<NotificationItem> _sortItems(List<NotificationItem> source) {
+    final sorted = [...source]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return sorted;
+  }
+
   Future<void> _markAsRead(NotificationItem item) async {
-    if (item.isRead) return;
+    if (item.isRead) {
+      return;
+    }
 
     final previousItems = _items;
-    final previousUnread = _unreadCount;
+    final previousUnreadCount = _unreadCount;
 
     setState(() {
-      _items = _items.map((e) {
-        if (e.id != item.id) return e;
-        return NotificationItem(
-          id: e.id,
-          type: e.type,
-          title: e.title,
-          body: e.body,
+      _items = _items.map((current) {
+        if (current.id != item.id) {
+          return current;
+        }
+
+        return _copyNotificationItem(
+          current,
           isRead: true,
-          createdAt: e.createdAt,
           readAt: DateTime.now(),
-          data: e.data,
         );
       }).toList();
 
@@ -149,21 +232,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
       await _api.markAsRead(item.id);
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _items = previousItems;
-        _unreadCount = previousUnread;
+        _unreadCount = previousUnreadCount;
       });
+
       _showError('Не удалось отметить уведомление как прочитанное');
     }
   }
 
   Future<void> _markAllAsRead() async {
-    if (_markTabLoading || _unreadCount == 0) {
+    if (_markAllLoading || _unreadCount == 0) {
       return;
     }
 
+    final previousItems = _items;
+    final previousUnreadCount = _unreadCount;
+    final now = DateTime.now();
+
     setState(() {
-      _markTabLoading = true;
+      _markAllLoading = true;
+      _items = _items
+          .map(
+            (item) => item.isRead
+                ? item
+                : _copyNotificationItem(
+                    item,
+                    isRead: true,
+                    readAt: now,
+                  ),
+          )
+          .toList();
+      _unreadCount = 0;
     });
 
     try {
@@ -171,26 +272,73 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
       if (!mounted) return;
 
-      await _load();
+      unawaited(_refresh());
     } catch (_) {
       if (!mounted) return;
+
+      setState(() {
+        _items = previousItems;
+        _unreadCount = previousUnreadCount;
+      });
+
       _showError('Не удалось отметить уведомления как прочитанные');
     } finally {
       if (!mounted) return;
+
       setState(() {
-        _markTabLoading = false;
+        _markAllLoading = false;
       });
     }
   }
 
-  Future<void> _handleTap(NotificationItem item) async {
+  NotificationItem _copyNotificationItem(
+    NotificationItem item, {
+    required bool isRead,
+    required DateTime? readAt,
+  }) {
+    return NotificationItem(
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      body: item.body,
+      isRead: isRead,
+      createdAt: item.createdAt,
+      readAt: readAt,
+      data: item.data,
+    );
+  }
+
+  Future<void> _handleNotificationTap(NotificationItem item) async {
+    final isOrderNotification = _isOrderNotification(item);
+    final orderId = (item.orderId ?? '').trim();
+    final normalizedOrderId = orderId.isEmpty ? null : orderId;
+    final orderNumber = item.orderNumber;
+
+    unawaited(
+      _analyticsService.trackNotificationOpen(
+        notificationId: item.id,
+        orderId: normalizedOrderId,
+        orderNumber: orderNumber,
+        source: 'notifications_${_selectedTab.key}',
+      ),
+    );
+
     await _markAsRead(item);
 
-    if (_isOrderNotification(item)) {
-      final orderId = item.orderId;
-      if (orderId != null && orderId.isNotEmpty) {
-        widget.onOpenOrder?.call(orderId, item.orderNumber);
+    if (!mounted) return;
+
+    if (isOrderNotification &&
+        (normalizedOrderId != null || orderNumber != null)) {
+      final handler = widget.onOpenOrder;
+
+      if (handler != null) {
+        await handler(normalizedOrderId, orderNumber);
+        return;
       }
+    }
+
+    if (!isOrderNotification) {
+      _showError('Это уведомление не связано с заказом');
     }
   }
 
@@ -222,8 +370,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         actions: [
           if (_unreadCount > 0)
             TextButton(
-              onPressed: _markTabLoading ? null : _markAllAsRead,
-              child: _markTabLoading
+              onPressed: _markAllLoading ? null : _markAllAsRead,
+              child: _markAllLoading
                   ? const SizedBox(
                       width: 18,
                       height: 18,
@@ -236,494 +384,61 @@ class _NotificationsPageState extends State<NotificationsPage> {
       body: SafeArea(
         child: Column(
           children: [
-            _NotificationsTabs(
+            NotificationsTabs(
               selectedTab: _selectedTab,
               ordersUnreadCount: _ordersUnreadCount,
               promosUnreadCount: _promosUnreadCount,
-              onChanged: (tab) {
-                setState(() {
-                  _selectedTab = tab;
-                });
-              },
+              onChanged: _selectTab,
             ),
             Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? _NotificationsErrorState(
-                          message: _error!,
-                          onRetry: _load,
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _refresh,
-                          child: visibleItems.isEmpty
-                              ? _NotificationsEmptyState(
-                                  title: _selectedTab == _NotificationsTab.orders
-                                      ? 'Пока нет уведомлений по заказам'
-                                      : 'Пока нет акций и общих уведомлений',
-                                  subtitle: _selectedTab ==
-                                          _NotificationsTab.orders
-                                      ? 'Статусы заказов будут появляться здесь автоматически.'
-                                      : 'На данный момент уведомлений нет.',
-                                )
-                              : ListView.separated(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    12,
-                                    16,
-                                    24,
-                                  ),
-                                  itemCount: visibleItems.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final item = visibleItems[index];
-                                    final isOrderNotification =
-                                        _isOrderNotification(item);
-
-                                    return _NotificationCard(
-                                      item: item,
-                                      isOrderNotification: isOrderNotification,
-                                      onTap: () => _handleTap(item),
-                                    );
-                                  },
-                                ),
-                        ),
+              child: _buildBody(visibleItems),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _NotificationsTabs extends StatelessWidget {
-  const _NotificationsTabs({
-    required this.selectedTab,
-    required this.ordersUnreadCount,
-    required this.promosUnreadCount,
-    required this.onChanged,
-  });
-
-  final _NotificationsTab selectedTab;
-  final int ordersUnreadCount;
-  final int promosUnreadCount;
-  final ValueChanged<_NotificationsTab> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 66,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: _NotificationsTabButton(
-              label: 'Заказы',
-              unreadCount: ordersUnreadCount,
-              selected: selectedTab == _NotificationsTab.orders,
-              onTap: () => onChanged(_NotificationsTab.orders),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _NotificationsTabButton(
-              label: 'Акции',
-              unreadCount: promosUnreadCount,
-              selected: selectedTab == _NotificationsTab.promos,
-              onTap: () => onChanged(_NotificationsTab.promos),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NotificationsTabButton extends StatelessWidget {
-  const _NotificationsTabButton({
-    required this.label,
-    required this.unreadCount,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final int unreadCount;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = selected ? const Color(0xFFEAF7E5) : Colors.white;
-    final border =
-        selected ? const Color(0xFF489F2A) : const Color(0xFFE0E0E0);
-    final text = selected ? const Color(0xFF2E7D32) : const Color(0xFF444444);
-
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: border),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: text,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (unreadCount > 0) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF489F2A),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$unreadCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({
-    required this.item,
-    required this.isOrderNotification,
-    required this.onTap,
-  });
-
-  final NotificationItem item;
-  final bool isOrderNotification;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasOrder = (item.orderId ?? '').trim().isNotEmpty;
-
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: item.isRead
-                  ? const Color(0xFFE7E7E7)
-                  : const Color(0xFF489F2A),
-              width: item.isRead ? 1 : 1.4,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _NotificationLeading(
-                isRead: item.isRead,
-                type: item.type,
-                isOrderNotification: isOrderNotification,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 15,
-                              fontWeight: item.isRead
-                                  ? FontWeight.w700
-                                  : FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatDateTime(item.createdAt),
-                          style: const TextStyle(
-                            color: Color(0xFF777777),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.body,
-                      style: const TextStyle(
-                        color: Color(0xFF2B2B2B),
-                        fontSize: 14,
-                        height: 1.35,
-                      ),
-                    ),
-                    if (hasOrder) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Spacer(),
-                          _OpenOrderButton(onTap: onTap),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (!item.isRead) ...[
-                const SizedBox(width: 8),
-                Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.only(top: 6),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF489F2A),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NotificationLeading extends StatelessWidget {
-  const _NotificationLeading({
-    required this.isRead,
-    required this.type,
-    required this.isOrderNotification,
-  });
-
-  final bool isRead;
-  final String type;
-  final bool isOrderNotification;
-
-  IconData _pickIcon() {
-    final normalized = type.trim().toUpperCase();
-
-    if (isOrderNotification) {
-      switch (normalized) {
-        case 'ORDER_DELIVERED':
-          return Icons.check_circle_rounded;
-        case 'ORDER_CANCELED':
-          return Icons.cancel_rounded;
-        case 'ORDER_ACCEPTED':
-        case 'ORDER_READY':
-        case 'ORDER_ON_THE_WAY':
-          return Icons.receipt_long_rounded;
-        default:
-          return Icons.local_shipping_rounded;
-      }
+  Widget _buildBody(List<NotificationItem> visibleItems) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return Icons.local_offer_rounded;
-  }
+    if (_error != null) {
+      return NotificationsErrorState(
+        message: _error!,
+        onRetry: _load,
+      );
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final icon = _pickIcon();
-    final bg = isOrderNotification
-        ? const Color(0xFFEAF7E5)
-        : const Color(0xFFFFF4DB);
-    final color = isOrderNotification
-        ? const Color(0xFF2E7D32)
-        : const Color(0xFFB7791F);
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: visibleItems.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              children: [
+                NotificationsEmptyState(
+                  title: _selectedTab.emptyTitle,
+                  subtitle: _selectedTab.emptySubtitle,
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              itemCount: visibleItems.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final item = visibleItems[index];
 
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Icon(
-        icon,
-        color: isRead ? color.withOpacity(0.78) : color,
-        size: 22,
-      ),
+                return NotificationCard(
+                  item: item,
+                  isOrderNotification: _isOrderNotification(item),
+                  onTap: () => _handleNotificationTap(item),
+                );
+              },
+            ),
     );
   }
-}
-
-class _OpenOrderButton extends StatelessWidget {
-  const _OpenOrderButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF489F2A),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          child: Text(
-            'Открыть заказ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NotificationsEmptyState extends StatelessWidget {
-  const _NotificationsEmptyState({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
-      children: [
-        const Icon(
-          Icons.notifications_none_rounded,
-          size: 68,
-          color: Color(0xFF489F2A),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Color(0xFF7A7A7A),
-            height: 1.4,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NotificationsErrorState extends StatelessWidget {
-  const _NotificationsErrorState({
-    required this.message,
-    required this.onRetry,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 52,
-              color: Colors.redAccent,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 14),
-            ElevatedButton(
-              onPressed: onRetry,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF489F2A),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Повторить'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _formatDateTime(DateTime value) {
-  final now = DateTime.now();
-  final local = value.toLocal();
-
-  final isToday = now.year == local.year &&
-      now.month == local.month &&
-      now.day == local.day;
-
-  final hh = local.hour.toString().padLeft(2, '0');
-  final mm = local.minute.toString().padLeft(2, '0');
-
-  if (isToday) {
-    return '$hh:$mm';
-  }
-
-  final dd = local.day.toString().padLeft(2, '0');
-  final mo = local.month.toString().padLeft(2, '0');
-
-  return '$dd.$mo $hh:$mm';
 }

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
@@ -10,6 +13,7 @@ import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/notificationsPage.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationsBellButton.dart';
+import 'package:jetkiz_mobile/features/orders/presentation/orderDetailsPage.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersHistoryPage.dart';
 import 'package:jetkiz_mobile/features/restaurants/presentation/restaurantsPage.dart';
 import 'package:jetkiz_mobile/features/search/presentation/searchPage.dart';
@@ -22,8 +26,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late final HomeApi _homeApi;
+  final ApiClient _apiClient = ApiClient();
   final AddressRepository _addressRepository = AddressRepository.instance;
+
+  late final HomeApi _homeApi;
+  late final AnalyticsService _analyticsService;
 
   bool _isLoading = true;
   String? _error;
@@ -32,8 +39,20 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _homeApi = HomeApi(ApiClient());
+
+    _homeApi = HomeApi(_apiClient);
+    _analyticsService = AnalyticsService(_apiClient);
+
     _addressRepository.addListener(_handleAddressChanged);
+
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: 'home',
+        title: 'Главная',
+        source: 'app_navigation',
+      ),
+    );
+
     _load();
   }
 
@@ -44,9 +63,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleAddressChanged() {
-    if (mounted) {
-      setState(() {});
-    }
+    if (!mounted) return;
+
+    setState(() {});
   }
 
   Future<void> _load() async {
@@ -83,6 +102,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openAddresses() async {
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: 'addresses',
+        title: 'Адреса',
+        source: 'home_address_card',
+      ),
+    );
+
     final selectedAddress = await Navigator.of(context).push<Address>(
       MaterialPageRoute(
         builder: (_) => AddressesPage(
@@ -99,7 +126,29 @@ class _HomePageState extends State<HomePage> {
     _addressRepository.setSelectedAddress(selectedAddress);
   }
 
+  void _openSearchPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const SearchPage(),
+      ),
+    );
+  }
+
   void _openCategoryProducts(HomeCategoryData category) {
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: 'category_products',
+        title: category.titleRu,
+        source: 'home_categories',
+        entityType: 'category',
+        entityId: category.id,
+        metadata: {
+          'categoryId': category.id,
+          'categoryTitle': category.titleRu,
+        },
+      ),
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CategoryProductsPage(category: category),
@@ -108,6 +157,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openRestaurantMenu(HomeRestaurantData restaurant) {
+    unawaited(
+      _analyticsService.trackRestaurantView(
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        source: 'home_pinned_restaurants',
+      ),
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RestaurantMenuPage(
@@ -120,21 +177,49 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openRestaurantsPage() {
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: 'restaurants',
+        title: 'Рестораны',
+        source: 'home_restaurants_section',
+      ),
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const RestaurantsPage(),
+      ),
+    );
+  }
+
   void _openNotificationsPage() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NotificationsPage(
+          source: 'home_notifications_button',
           onOpenOrder: _openOrderById,
         ),
       ),
     );
   }
 
-  void _openOrderById(String orderId, int? orderNumber) {
-    Navigator.of(context).push(
+  Future<void> _openOrderById(String? orderId, int? orderNumber) async {
+    final normalizedOrderId = orderId?.trim() ?? '';
+
+    if (normalizedOrderId.isNotEmpty) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailsPage(orderId: normalizedOrderId),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => OrdersHistoryPage(
-          initialOrderId: orderId,
+          initialOrderId: null,
           initialOrderNumber: orderNumber,
         ),
       ),
@@ -162,13 +247,7 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       children: [
                         _SearchRow(
-                          onSearchTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const SearchPage(),
-                              ),
-                            );
-                          },
+                          onSearchTap: _openSearchPage,
                           onOpenOrderFromNotification: _openOrderById,
                           onOpenNotifications: _openNotificationsPage,
                         ),
@@ -205,13 +284,7 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 16),
                         ],
                         _RestaurantsSectionHeader(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const RestaurantsPage(),
-                              ),
-                            );
-                          },
+                          onTap: _openRestaurantsPage,
                         ),
                         const SizedBox(height: 12),
                         if (data?.pinnedRestaurants.isEmpty ?? true)
@@ -246,8 +319,7 @@ class _SearchRow extends StatelessWidget {
   });
 
   final VoidCallback onSearchTap;
-  final void Function(String orderId, int? orderNumber)
-      onOpenOrderFromNotification;
+  final OpenOrderFromNotification onOpenOrderFromNotification;
   final VoidCallback onOpenNotifications;
 
   @override
@@ -286,19 +358,25 @@ class _SearchRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFDADDE2)),
-          ),
-          child: Center(
-            child: NotificationsBellButton(
-              iconColor: const Color(0xFF7B7F87),
-              iconSize: 28,
-              onOpenOrder: onOpenOrderFromNotification,
+        InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onOpenNotifications,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFDADDE2)),
+            ),
+            child: Center(
+              child: IgnorePointer(
+                child: NotificationsBellButton(
+                  iconColor: const Color(0xFF7B7F87),
+                  iconSize: 28,
+                  onOpenOrder: onOpenOrderFromNotification,
+                ),
+              ),
             ),
           ),
         ),

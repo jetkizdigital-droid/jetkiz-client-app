@@ -15,7 +15,7 @@ class NotificationsBellButton extends StatefulWidget {
     this.pollInterval = const Duration(seconds: 20),
   });
 
-  final void Function(String orderId, int? orderNumber)? onOpenOrder;
+  final OpenOrderFromNotification? onOpenOrder;
   final Color iconColor;
   final double iconSize;
   final Duration pollInterval;
@@ -31,29 +31,70 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
 
   Timer? _timer;
   bool _loading = false;
+  bool _isAppActive = true;
   int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addObserver(this);
+
     _api = NotificationsApi(ApiClient());
+
     _load();
-    _timer = Timer.periodic(widget.pollInterval, (_) => _load());
+    _startPolling();
+  }
+
+  @override
+  void didUpdateWidget(covariant NotificationsBellButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.pollInterval != widget.pollInterval) {
+      _stopPolling();
+      _startPolling();
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _timer?.cancel();
+    _stopPolling();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _load();
+    final isActive = state == AppLifecycleState.resumed;
+
+    if (_isAppActive == isActive) {
+      return;
     }
+
+    _isAppActive = isActive;
+
+    if (_isAppActive) {
+      _load();
+      _startPolling();
+    } else {
+      _stopPolling();
+    }
+  }
+
+  void _startPolling() {
+    if (!_isAppActive) return;
+    if (widget.pollInterval <= Duration.zero) return;
+    if (_timer?.isActive == true) return;
+
+    _timer = Timer.periodic(
+      widget.pollInterval,
+      (_) => _load(),
+    );
+  }
+
+  void _stopPolling() {
+    _timer?.cancel();
+    _timer = null;
   }
 
   Future<void> _load() async {
@@ -66,11 +107,13 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
 
       if (!mounted) return;
 
-      setState(() {
-        _unreadCount = result.unreadCount;
-      });
+      if (_unreadCount != result.unreadCount) {
+        setState(() {
+          _unreadCount = result.unreadCount;
+        });
+      }
     } catch (_) {
-      // silent by design
+      // Silent by design: badge must not break the current screen.
     } finally {
       _loading = false;
     }
@@ -81,11 +124,13 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
       MaterialPageRoute(
         builder: (_) => NotificationsPage(
           onOpenOrder: widget.onOpenOrder,
+          source: 'notifications_bell',
         ),
       ),
     );
 
     if (!mounted) return;
+
     await _load();
   }
 
@@ -93,6 +138,7 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: _open,
+      tooltip: 'Уведомления',
       icon: NotificationBadge(
         count: _unreadCount,
         child: Icon(

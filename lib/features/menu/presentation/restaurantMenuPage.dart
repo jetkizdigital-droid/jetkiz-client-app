@@ -12,11 +12,6 @@ import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 import 'package:jetkiz_mobile/features/reviews/presentation/restaurantReviewsPage.dart';
 
 class RestaurantMenuPage extends StatefulWidget {
-  final String restaurantId;
-  final String? restaurantName;
-  final String? restaurantImageUrl;
-  final String? restaurantAddress;
-
   const RestaurantMenuPage({
     super.key,
     required this.restaurantId,
@@ -24,6 +19,11 @@ class RestaurantMenuPage extends StatefulWidget {
     this.restaurantImageUrl,
     this.restaurantAddress,
   });
+
+  final String restaurantId;
+  final String? restaurantName;
+  final String? restaurantImageUrl;
+  final String? restaurantAddress;
 
   @override
   State<RestaurantMenuPage> createState() => _RestaurantMenuPageState();
@@ -35,16 +35,17 @@ enum _MenuLanguage {
 }
 
 class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
+  late final ApiClient _apiClient;
   late final RestaurantMenuApi _menuApi;
   late final FinanceConfigApi _financeConfigApi;
   late final FavoritesApi _favoritesApi;
-  late final ApiClient _apiClient;
 
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
   String? _error;
+
   RestaurantMenuData? _menuData;
   RestaurantReviewPageData? _reviewsData;
 
@@ -64,10 +65,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   @override
   void initState() {
     super.initState();
+
     _apiClient = ApiClient();
     _menuApi = RestaurantMenuApi(_apiClient);
     _financeConfigApi = FinanceConfigApi(_apiClient);
     _favoritesApi = FavoritesApi(_apiClient);
+
     _load();
   }
 
@@ -78,21 +81,6 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     super.dispose();
   }
 
-  Future<RestaurantReviewPageData> _loadReviewsSummary() async {
-    final response = await _apiClient.dio.get<Map<String, dynamic>>(
-      '/restaurants/${widget.restaurantId}/reviews',
-      queryParameters: const {
-        'page': 1,
-        'limit': 100,
-        'includeUser': true,
-        'includeOrder': false,
-      },
-    );
-
-    final json = response.data ?? const <String, dynamic>{};
-    return RestaurantReviewPageData.fromJson(json);
-  }
-
   Future<void> _load() async {
     setState(() {
       _isLoading = true;
@@ -100,17 +88,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     });
 
     try {
-      final results = await Future.wait([
-        _menuApi.getRestaurantMenu(
-          restaurantId: widget.restaurantId,
-        ),
-        _financeConfigApi.getFinanceConfig(),
-        _loadReviewsSummary(),
-      ]);
+      final data = await _menuApi.getRestaurantMenu(
+        restaurantId: widget.restaurantId,
+      );
 
-      final data = results[0] as RestaurantMenuData;
-      final financeConfig = results[1] as FinanceConfigData;
-      final reviewsData = results[2] as RestaurantReviewPageData;
+      final financeConfig = await _safeLoadFinanceConfig();
+      final reviewsData = await _safeLoadReviewsSummary();
 
       if (!mounted) return;
 
@@ -118,21 +101,50 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
         _menuData = data;
         _reviewsData = reviewsData;
         _selectedTabId = 'all';
-        _deliveryFee = financeConfig.activeDeliveryFee;
+        _deliveryFee = financeConfig?.activeDeliveryFee ?? 0;
       });
 
+      _safeTrackRestaurantView(data);
       await _loadFavoriteIdsSilently();
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _error = 'Не удалось загрузить меню ресторана';
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<FinanceConfigData?> _safeLoadFinanceConfig() async {
+    try {
+      return await _financeConfigApi.getFinanceConfig();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<RestaurantReviewPageData?> _safeLoadReviewsSummary() async {
+    try {
+      final response = await _apiClient.dio.get<Map<String, dynamic>>(
+        '/restaurants/${widget.restaurantId}/reviews',
+        queryParameters: const {
+          'page': 1,
+          'limit': 100,
+          'includeUser': true,
+          'includeOrder': false,
+        },
+      );
+
+      final json = response.data ?? const <String, dynamic>{};
+      return RestaurantReviewPageData.fromJson(json);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -156,17 +168,76 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _favoriteProductIds.clear();
         _isRestaurantFavorite = false;
       });
     } finally {
-      if (mounted) {
-        setState(() {
-          _isRestaurantFavoriteLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isRestaurantFavoriteLoading = false;
+      });
     }
+  }
+
+  Future<void> _safeTrackRestaurantView(RestaurantMenuData data) async {
+    try {
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': 'restaurant_view',
+          'metadata': {
+            'restaurantId': widget.restaurantId,
+            'restaurantName': data.restaurant.displayName,
+            'source': 'restaurant_menu',
+            'itemsCount': data.items.length,
+            'categoriesCount': data.categories.length,
+          },
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _safeTrackProductView(RestaurantMenuItem item) async {
+    try {
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': 'product_view',
+          'metadata': {
+            'restaurantId': widget.restaurantId,
+            'productId': item.id,
+            'productName': item.title,
+            'price': item.price,
+            'categoryId': item.categoryId,
+            'categoryName': item.categoryTitle,
+            'isAvailable': item.isAvailable,
+            'source': 'restaurant_menu',
+          },
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _safeTrackAddToCart(RestaurantMenuItem item) async {
+    try {
+      await _apiClient.dio.post(
+        '/client-events',
+        data: {
+          'eventName': 'add_to_cart',
+          'metadata': {
+            'restaurantId': widget.restaurantId,
+            'productId': item.id,
+            'productName': item.title,
+            'price': item.price,
+            'quantity': 1,
+            'source': 'restaurant_menu',
+          },
+        },
+      );
+    } catch (_) {}
   }
 
   String _allTabTitle() {
@@ -225,11 +296,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
         ? groups
         : groups.where((group) => group.category.id == _selectedTabId).toList();
 
-    if (_searchQuery.trim().isEmpty) {
+    final query = _searchQuery.trim().toLowerCase();
+
+    if (query.isEmpty) {
       return filteredByTab;
     }
 
-    final query = _searchQuery.trim().toLowerCase();
     final result = <RestaurantMenuGroup>[];
 
     for (final group in filteredByTab) {
@@ -265,6 +337,11 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   }
 
   void _addFirst(RestaurantMenuItem item) {
+    if (!item.canAddToCart) {
+      _showSnackBar('Товар сейчас недоступен');
+      return;
+    }
+
     CartRepository.instance.addItem(
       productId: item.id,
       restaurantId: widget.restaurantId,
@@ -276,10 +353,16 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       weight: item.weight,
     );
 
+    _safeTrackAddToCart(item);
     setState(() {});
   }
 
   void _increment(RestaurantMenuItem item) {
+    if (!item.canAddToCart) {
+      _showSnackBar('Товар сейчас недоступен');
+      return;
+    }
+
     CartRepository.instance.addItem(
       productId: item.id,
       restaurantId: widget.restaurantId,
@@ -291,6 +374,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       weight: item.weight,
     );
 
+    _safeTrackAddToCart(item);
     setState(() {});
   }
 
@@ -319,20 +403,22 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       }
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _isRestaurantFavorite = wasFavorite;
       });
+
       _showFavoriteError(
         wasFavorite
             ? 'Не удалось удалить ресторан из избранного'
             : 'Не удалось добавить ресторан в избранное',
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isRestaurantFavoriteBusy = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isRestaurantFavoriteBusy = false;
+      });
     }
   }
 
@@ -345,6 +431,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
 
     setState(() {
       _favoritePendingProductIds.add(productId);
+
       if (wasFavorite) {
         _favoriteProductIds.remove(productId);
       } else {
@@ -360,6 +447,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       }
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         if (wasFavorite) {
           _favoriteProductIds.add(productId);
@@ -367,21 +455,26 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _favoriteProductIds.remove(productId);
         }
       });
+
       _showFavoriteError(
         wasFavorite
             ? 'Не удалось удалить блюдо из избранного'
             : 'Не удалось добавить блюдо в избранное',
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _favoritePendingProductIds.remove(productId);
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _favoritePendingProductIds.remove(productId);
+      });
     }
   }
 
   void _showFavoriteError(String message) {
+    _showSnackBar(message);
+  }
+
+  void _showSnackBar(String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
@@ -390,6 +483,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   }
 
   void _openProductDetails(RestaurantMenuItem item) {
+    _safeTrackProductView(item);
+
     final restaurantName =
         _menuData?.restaurant.displayName ?? widget.restaurantName;
 
@@ -414,6 +509,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
 
   String get _restaurantName {
     final data = _menuData;
+
     if (data == null) {
       return widget.restaurantName ?? 'Ресторан';
     }
@@ -464,10 +560,10 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       _readDynamicString(restaurant, 'rating'),
     ]);
 
-    if (raw == null) return '4.9';
+    if (raw == null) return '—';
 
     final parsed = double.tryParse(raw.replaceAll(',', '.'));
-    if (parsed == null) return raw;
+    if (parsed == null || parsed <= 0) return raw;
 
     return parsed.toStringAsFixed(1);
   }
@@ -503,11 +599,13 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     if (data == null) return 0;
 
     var count = 0;
+
     for (final review in data.items) {
       for (final media in review.media) {
         if (media.isVideo) count++;
       }
     }
+
     return count;
   }
 
@@ -516,11 +614,13 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     if (data == null) return 0;
 
     var count = 0;
+
     for (final review in data.items) {
       for (final media in review.media) {
         if (media.isImage) count++;
       }
     }
+
     return count;
   }
 
@@ -529,11 +629,13 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     if (data == null) return 0;
 
     var count = 0;
+
     for (final review in data.items) {
       for (final media in review.media) {
         if (media.isAudio) count++;
       }
     }
+
     return count;
   }
 
@@ -589,7 +691,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                               elevation: 0,
                               flexibleSpace: LayoutBuilder(
                                 builder: (context, constraints) {
-                                  final top = MediaQuery.of(context).padding.top;
+                                  final top =
+                                      MediaQuery.of(context).padding.top;
                                   final maxHeight = 160 + top;
                                   final collapseT =
                                       ((maxHeight - constraints.maxHeight) /
@@ -911,85 +1014,6 @@ class _CategoriesStrip extends StatelessWidget {
             }),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _RestaurantHeroHeader extends StatelessWidget {
-  const _RestaurantHeroHeader({
-    required this.imageUrl,
-    required this.onBackTap,
-    required this.onFavoriteTap,
-    required this.isRestaurantFavorite,
-    required this.isRestaurantFavoriteBusy,
-  });
-
-  final String? imageUrl;
-  final VoidCallback onBackTap;
-  final VoidCallback onFavoriteTap;
-  final bool isRestaurantFavorite;
-  final bool isRestaurantFavoriteBusy;
-
-  @override
-  Widget build(BuildContext context) {
-    final topInset = MediaQuery.of(context).padding.top;
-
-    return SizedBox(
-      height: 160,
-      width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          _HeroImageLayer(imageUrl: imageUrl),
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x2E000000),
-                  Color(0x0A000000),
-                  Color(0x3D000000),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: topInset + 6,
-            left: 14,
-            child: _HeaderCircleButton(
-              onTap: onBackTap,
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: Colors.black87,
-                size: 18,
-              ),
-            ),
-          ),
-          Positioned(
-            top: topInset + 6,
-            right: 14,
-            child: _HeaderCircleButton(
-              onTap: isRestaurantFavoriteBusy ? null : onFavoriteTap,
-              child: isRestaurantFavoriteBusy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      isRestaurantFavorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: isRestaurantFavorite
-                          ? Colors.redAccent
-                          : Colors.black87,
-                      size: 21,
-                    ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1489,6 +1513,8 @@ class _MenuCategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleItems = items;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1507,7 +1533,7 @@ class _MenuCategorySection extends StatelessWidget {
           ),
         ],
         GridView.builder(
-          itemCount: items.length,
+          itemCount: visibleItems.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -1517,7 +1543,7 @@ class _MenuCategorySection extends StatelessWidget {
             childAspectRatio: 0.72,
           ),
           itemBuilder: (context, index) {
-            final item = items[index];
+            final item = visibleItems[index];
             final productId = item.id;
 
             return _MenuProductCard(
@@ -1570,139 +1596,143 @@ class _MenuProductCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFD9D9D9),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  _MenuProductImage(item: item),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Material(
-                      color: Colors.white,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: isFavoriteBusy ? null : onFavoriteTap,
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: isFavoriteBusy
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Icon(
-                                  isFavorite
-                                      ? Icons.favorite_rounded
-                                      : Icons.favorite_border_rounded,
-                                  color: isFavorite ? Colors.red : Colors.black,
-                                  size: 22,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (!isAvailable)
+        child: Opacity(
+          opacity: isAvailable ? 1 : 0.58,
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFD9D9D9),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
+                  children: [
+                    _MenuProductImage(item: item),
                     Positioned(
-                      left: 8,
-                      bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xB3000000),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'Недоступно',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                      top: 6,
+                      right: 6,
+                      child: Material(
+                        color: Colors.white,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: isFavoriteBusy ? null : onFavoriteTap,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: isFavoriteBusy
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(
+                                    isFavorite
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    color:
+                                        isFavorite ? Colors.red : Colors.black,
+                                    size: 22,
+                                  ),
                           ),
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
+                    if (!isAvailable)
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xB3000000),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'Недоступно',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    if ((item.description ?? '').trim().isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        item.description!.trim(),
+                        item.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Color(0xFF5F5F5F),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          height: 1.2,
+                          color: Colors.black,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
                         ),
                       ),
+                      if ((item.description ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          item.description!.trim(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF5F5F5F),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${item.price}₸',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        height: 1.0,
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.priceText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          height: 1.0,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (!isAvailable)
-                    const SizedBox.shrink()
-                  else if (quantity > 0)
-                    _MenuQuantityControl(
-                      quantity: quantity,
-                      onAdd: onAdd,
-                      onRemove: onRemove,
-                    )
-                  else
-                    _CompactAddButton(
-                      onTap: onAddFirst,
-                    ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    if (!isAvailable)
+                      const SizedBox.shrink()
+                    else if (quantity > 0)
+                      _MenuQuantityControl(
+                        quantity: quantity,
+                        onAdd: onAdd,
+                        onRemove: onRemove,
+                      )
+                    else
+                      _CompactAddButton(
+                        onTap: onAddFirst,
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1870,19 +1900,19 @@ class _MenuEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.search_off_rounded,
               size: 56,
               color: Color(0xFFB0B0B0),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: 12),
+            Text(
               'Ничего не найдено',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -1891,8 +1921,8 @@ class _MenuEmptyState extends StatelessWidget {
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               'Попробуй изменить поиск или выбрать другую категорию.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -1982,7 +2012,7 @@ class _SmoothScrollBehavior extends ScrollBehavior {
 }
 
 String? _normalizeUrl(String? value) {
-  final raw = (value ?? '').trim();
+  final raw = value?.trim() ?? '';
   if (raw.isEmpty) return null;
 
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
@@ -1996,6 +2026,7 @@ String? _normalizeUrl(String? value) {
     if (base.endsWith('/')) {
       return '${base.substring(0, base.length - 1)}$raw';
     }
+
     return '$base$raw';
   }
 
@@ -2009,10 +2040,12 @@ String? _normalizeUrl(String? value) {
 String? _firstNonEmpty(List<String?> values) {
   for (final value in values) {
     final normalized = value?.trim() ?? '';
+
     if (normalized.isNotEmpty) {
       return normalized;
     }
   }
+
   return null;
 }
 
@@ -2021,8 +2054,10 @@ String? _readDynamicString(dynamic source, String field) {
 
   if (source is Map) {
     final direct = source[field];
+
     if (direct != null) {
       final value = direct.toString().trim();
+
       if (value.isNotEmpty) return value;
     }
   }
@@ -2071,24 +2106,6 @@ String? _readDynamicString(dynamic source, String field) {
         return source.addressLine?.toString();
       case 'fullAddress':
         return source.fullAddress?.toString();
-      case 'reviewsCount':
-        return source.reviewsCount?.toString();
-      case 'reviewCount':
-        return source.reviewCount?.toString();
-      case 'ratingCount':
-        return source.ratingCount?.toString();
-      case 'videoReviewsCount':
-        return source.videoReviewsCount?.toString();
-      case 'reviewVideoCount':
-        return source.reviewVideoCount?.toString();
-      case 'photoReviewsCount':
-        return source.photoReviewsCount?.toString();
-      case 'reviewPhotoCount':
-        return source.reviewPhotoCount?.toString();
-      case 'audioReviewsCount':
-        return source.audioReviewsCount?.toString();
-      case 'reviewAudioCount':
-        return source.reviewAudioCount?.toString();
     }
   } catch (_) {
     return null;
