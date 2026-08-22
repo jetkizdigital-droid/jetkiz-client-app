@@ -81,8 +81,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     if (!_isProductOrderable(product)) {
       _showMessage(
         product.restaurant.isOpenForOrders
-            ? 'РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ'
-            : 'Р РµСЃС‚РѕСЂР°РЅ СЃРµР№С‡Р°СЃ Р·Р°РєСЂС‹С‚',
+            ? 'Товар сейчас недоступен'
+            : 'Ресторан сейчас закрыт',
       );
       return;
     }
@@ -148,8 +148,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     if (!_isProductOrderable(product)) {
       _showMessage(
         product.restaurant.isOpenForOrders
-            ? 'РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ'
-            : 'Р РµСЃС‚РѕСЂР°РЅ СЃРµР№С‡Р°СЃ Р·Р°РєСЂС‹С‚',
+            ? 'Товар сейчас недоступен'
+            : 'Ресторан сейчас закрыт',
       );
       return;
     }
@@ -242,7 +242,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Р’С‹Р±РµСЂРёС‚Рµ СЂРµСЃС‚РѕСЂР°РЅ',
+                  'Выберите ресторан',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -253,7 +253,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text(
-                    'Р’СЃРµ СЂРµСЃС‚РѕСЂР°РЅС‹',
+                    'Все рестораны',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -272,7 +272,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 14),
                     child: Text(
-                      'РќРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… СЂРµСЃС‚РѕСЂР°РЅРѕРІ',
+                      'Нет доступных ресторанов',
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF777777),
@@ -492,7 +492,7 @@ class _CategoryHeader extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'Р¤РёР»СЊС‚СЂ РїРѕ СЂРµСЃС‚РѕСЂР°РЅСѓ',
+                        'Фильтр по ресторану',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 10,
@@ -692,7 +692,7 @@ class _CategoryProductCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${product.price} в‚ё',
+                      '${product.price} ₸',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -894,7 +894,7 @@ class _EmptyCategoryState extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'Р’ СЌС‚РѕР№ РєР°С‚РµРіРѕСЂРёРё РїРѕРєР° РЅРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… С‚РѕРІР°СЂРѕРІ',
+          'В этой категории пока нет доступных товаров',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 17,

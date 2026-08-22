@@ -108,8 +108,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       if (!mounted) return;
 
       setState(() {
-        _error =
-            'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РјРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР°';
+        _error = 'Не удалось загрузить меню ресторана';
       });
     } finally {
       if (!mounted) return;
@@ -208,45 +207,45 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   String _allTabTitle() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Р’СЃРµ';
+        return 'Все';
       case _MenuLanguage.kk:
-        return 'Р‘Р°СЂР»С‹Т“С‹';
+        return 'Барлығы';
     }
   }
 
   String _searchHint() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'РџРѕРёСЃРє РїРѕ РјРµРЅСЋ...';
+        return 'Поиск по меню...';
       case _MenuLanguage.kk:
-        return 'РњУ™Р·С–СЂРґРµРЅ С–Р·РґРµСѓ...';
+        return 'Мәзірден іздеу...';
     }
   }
 
   String _basketItemsLabel() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Р’ РєРѕСЂР·РёРЅРµ';
+        return 'В корзине';
       case _MenuLanguage.kk:
-        return 'РЎРµР±РµС‚С‚Рµ';
+        return 'Себетте';
     }
   }
 
   String _deliveryLabel() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Р”РѕСЃС‚Р°РІРєР°';
+        return 'Доставка';
       case _MenuLanguage.kk:
-        return 'Р–РµС‚РєС–Р·Сѓ';
+        return 'Жеткізу';
     }
   }
 
   String _nextButtonLabel() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Р”Р°Р»РµРµ';
+        return 'Далее';
       case _MenuLanguage.kk:
-        return 'УСЂС– Т›Р°СЂР°Р№';
+        return 'Әрі қарай';
     }
   }
 
@@ -309,7 +308,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     }
 
     if (!item.canAddToCart) {
-      _showSnackBar('РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+      _showSnackBar('Товар сейчас недоступен');
       return false;
     }
 
@@ -320,7 +319,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     if (!_canAddItemToCart(item)) return;
 
     if (!item.canAddToCart) {
-      _showSnackBar('РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+      _showSnackBar('Товар сейчас недоступен');
       return;
     }
 
@@ -343,7 +342,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     if (!_canAddItemToCart(item)) return;
 
     if (!item.canAddToCart) {
-      _showSnackBar('РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+      _showSnackBar('Товар сейчас недоступен');
       return;
     }
 
@@ -426,7 +425,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     final data = _menuData;
 
     if (data == null) {
-      return widget.restaurantName ?? 'Р РµСЃС‚РѕСЂР°РЅ';
+      return widget.restaurantName ?? 'Ресторан';
     }
 
     final name = data.restaurant.displayName.trim();
@@ -434,7 +433,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return name;
     }
 
-    return widget.restaurantName ?? 'Р РµСЃС‚РѕСЂР°РЅ';
+    return widget.restaurantName ?? 'Ресторан';
   }
 
   String? get _restaurantImageUrl {
@@ -464,7 +463,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'tagline'),
           _readDynamicString(restaurant, 'shortDescription'),
         ]) ??
-        'Р›СѓС‡С€РёРµ Р±Р»СЋРґР° СЃ РґРѕСЃС‚Р°РІРєРѕР№ РЅР° РґРѕРј';
+        'Лучшие блюда с доставкой на дом';
   }
 
   String get _restaurantRatingText {
@@ -475,7 +474,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       _readDynamicString(restaurant, 'rating'),
     ]);
 
-    if (raw == null) return 'вЂ”';
+    if (raw == null) return '—';
 
     final parsed = double.tryParse(raw.replaceAll(',', '.'));
     if (parsed == null || parsed <= 0) return raw;
@@ -492,7 +491,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'estimatedDeliveryTime'),
           _readDynamicString(restaurant, 'deliveryDuration'),
         ]) ??
-        '30вЂ“35 РјРёРЅ';
+        '30–35 мин';
   }
 
   String get _restaurantAddressText {
@@ -504,7 +503,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'fullAddress'),
           widget.restaurantAddress,
         ]) ??
-        'РђРґСЂРµСЃ СѓС‚РѕС‡РЅСЏРµС‚СЃСЏ';
+        'Адрес уточняется';
   }
 
   int get _reviewsCount => _reviewsData?.total ?? 0;
@@ -584,8 +583,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                   )
                 : menuData == null
                     ? _RestaurantMenuErrorState(
-                        message:
-                            'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° РЅРµ РЅР°Р№РґРµРЅРѕ',
+                        message: 'Меню ресторана не найдено',
                         onRetry: _load,
                       )
                     : ScrollConfiguration(
@@ -1241,7 +1239,7 @@ class _ReviewsSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'РћС‚Р·С‹РІС‹ ($reviewsCount)',
+                    'Отзывы ($reviewsCount)',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -1585,7 +1583,7 @@ class _MenuProductCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
-                            'РќРµРґРѕСЃС‚СѓРїРЅРѕ',
+                            'Недоступно',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -1843,7 +1841,7 @@ class _MenuEmptyState extends StatelessWidget {
             ),
             SizedBox(height: 12),
             Text(
-              'РќРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ',
+              'Ничего не найдено',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -1853,7 +1851,7 @@ class _MenuEmptyState extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              'РџРѕРїСЂРѕР±СѓР№ РёР·РјРµРЅРёС‚СЊ РїРѕРёСЃРє РёР»Рё РІС‹Р±СЂР°С‚СЊ РґСЂСѓРіСѓСЋ РєР°С‚РµРіРѕСЂРёСЋ.',
+              'Попробуй изменить поиск или выбрать другую категорию.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -1912,7 +1910,7 @@ class _RestaurantMenuErrorState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('РџРѕРІС‚РѕСЂРёС‚СЊ'),
+              child: const Text('Повторить'),
             ),
           ],
         ),
