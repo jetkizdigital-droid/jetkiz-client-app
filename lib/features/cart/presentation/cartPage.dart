@@ -1,18 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
-import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
-import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
-import 'package:jetkiz_mobile/features/auth/presentation/phoneLoginPage.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/checkout/presentation/checkoutPage.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
-import 'package:jetkiz_mobile/features/restaurants/data/restaurantsApi.dart';
-import 'package:jetkiz_mobile/features/restaurants/domain/restaurant.dart';
 
 import '../data/cartRepository.dart';
 import '../domain/cartItem.dart';
@@ -33,17 +25,10 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
   late final ApiClient _apiClient;
   late final FinanceConfigApi _financeConfigApi;
-  late final RestaurantsApi _restaurantsApi;
 
   int _deliveryFee = 0;
   bool _isDeliveryLoading = true;
   bool _isCheckoutStarting = false;
-  bool _isCheckingAuth = true;
-  bool _isAuthorized = false;
-  bool _restaurantClosed = false;
-  bool _isRestaurantAvailabilityLoading = false;
-  Restaurant? _cartRestaurant;
-  Timer? _availabilityTimer;
 
   bool get _requiresAddressBeforeCheckout => false;
 
@@ -54,122 +39,33 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
     _apiClient = ApiClient();
     _financeConfigApi = FinanceConfigApi(_apiClient);
-    _restaurantsApi = RestaurantsApi(_apiClient);
 
     _cart.addListener(_handleCartChanged);
     _addressRepository.addListener(_handleAddressChanged);
-    AuthSessionController.instance.addListener(_handleSessionChanged);
 
-    _availabilityTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _recalculateRestaurantAvailability(),
-    );
-
-    _bootstrap();
-  }
-
-  Future<void> _bootstrap() async {
-    final authorized = await AuthStorage().hasAccessToken();
-    if (!mounted) return;
-    setState(() {
-      _isAuthorized = authorized;
-      _isCheckingAuth = false;
-    });
-    if (!authorized) return;
-    await Future.wait([_loadDeliveryFee(), _syncCart(), _trackCartView()]);
-    await _loadRestaurantAvailability();
-  }
-
-  Future<void> _loadRestaurantAvailability() async {
-    final restaurantId = _cart.restaurantId?.trim() ?? '';
-    if (restaurantId.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _cartRestaurant = null;
-          _restaurantClosed = false;
-          _isRestaurantAvailabilityLoading = false;
-        });
-      }
-      return;
-    }
-    if (mounted) {
-      setState(() => _isRestaurantAvailabilityLoading = true);
-    }
-    try {
-      final restaurants = await _restaurantsApi.getAllPublicRestaurants(random: false);
-      final matches = restaurants.where((item) => item.id == restaurantId);
-      final restaurant = matches.isEmpty ? null : matches.first;
-      if (mounted) {
-        setState(() {
-          _cartRestaurant = restaurant;
-          _restaurantClosed = restaurant == null || !restaurant.canOrder;
-          _isRestaurantAvailabilityLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _cartRestaurant = null;
-          _restaurantClosed = true;
-          _isRestaurantAvailabilityLoading = false;
-        });
-      }
-    }
-  }
-
-  void _recalculateRestaurantAvailability() {
-    if (!mounted || _cart.isEmpty) return;
-    final closed = _cartRestaurant == null || !_cartRestaurant!.canOrder;
-    if (closed != _restaurantClosed) {
-      setState(() => _restaurantClosed = closed);
-    }
-  }
-
-  Future<void> _openLogin() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PhoneLoginPage(
-          onAuthorized: () async {
-            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-          },
-        ),
-      ),
-    );
-    if (!mounted) return;
-    await _bootstrap();
+    _loadDeliveryFee();
+    _syncCart();
+    _trackCartView();
   }
 
   @override
   void dispose() {
-    _availabilityTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _cart.removeListener(_handleCartChanged);
     _addressRepository.removeListener(_handleAddressChanged);
-    AuthSessionController.instance.removeListener(_handleSessionChanged);
     super.dispose();
-  }
-
-  void _handleSessionChanged() {
-    _bootstrap();
   }
 
   void _handleCartChanged() {
     if (!mounted) return;
     setState(() {});
-    final currentId = _cartRestaurant?.id;
-    if (_cart.restaurantId != currentId) {
-      unawaited(_loadRestaurantAvailability());
-    } else {
-      _recalculateRestaurantAvailability();
-    }
     _showPendingPriceUpdateDialog();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _cart.isNotEmpty) {
-      unawaited(_syncCart());
-      unawaited(_loadRestaurantAvailability());
+      _syncCart();
     }
   }
 
@@ -208,7 +104,6 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     await Future.wait([
       _loadDeliveryFee(),
       _syncCart(),
-      _loadRestaurantAvailability(),
     ]);
   }
 
@@ -363,12 +258,6 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   Future<void> _handleCheckout() async {
     if (_cart.isEmpty || _isCheckoutStarting) return;
 
-    await _loadRestaurantAvailability();
-    if (!mounted || _restaurantClosed) {
-      _showSnackBar('Ресторан сейчас закрыт и не принимает заказы');
-      return;
-    }
-
     if (_isDeliveryLoading) {
       _showSnackBar('Подождите, загружается стоимость доставки');
       return;
@@ -453,17 +342,6 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizationScope.of(context).strings;
-    if (_isCheckingAuth) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (!_isAuthorized) {
-      return Scaffold(
-        backgroundColor: _bg,
-        appBar: AppBar(title: Text(strings.cartTitle), centerTitle: true),
-        body: _GuestCart(onLogin: _openLogin, onGoHome: _goToHomeTab),
-      );
-    }
     final items = _cart.items;
     final selectedAddress = _addressRepository.selectedAddress;
     final subtotal = _cart.subtotal;
@@ -477,9 +355,9 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
         foregroundColor: _text,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
-          strings.cartTitle,
-          style: const TextStyle(
+        title: const Text(
+          'Корзина',
+          style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -536,50 +414,9 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
               isLoading: _isDeliveryLoading,
               isCheckoutStarting: _isCheckoutStarting,
               isDisabled:
-                  isEmpty ||
-                  _isDeliveryLoading ||
-                  _isRestaurantAvailabilityLoading ||
-                  _cart.hasBlockingItems ||
-                  _restaurantClosed,
-              disabledReason: _isRestaurantAvailabilityLoading
-                  ? 'Проверяем ресторан'
-                  : _restaurantClosed
-                      ? 'Ресторан закрыт'
-                      : null,
+                  isEmpty || _isDeliveryLoading || _cart.hasBlockingItems,
               onCheckout: _handleCheckout,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GuestCart extends StatelessWidget {
-  const _GuestCart({required this.onLogin, required this.onGoHome});
-  final VoidCallback onLogin;
-  final VoidCallback onGoHome;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppLocalizationScope.of(context).strings;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.shopping_cart_outlined, size: 72),
-            const SizedBox(height: 20),
-            Text(strings.guestCartTitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 10),
-            Text(strings.guestCartSubtitle,
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            FilledButton(onPressed: onLogin, child: Text(strings.loginToAccount)),
-            TextButton(onPressed: onGoHome, child: Text(strings.browseRestaurants)),
           ],
         ),
       ),
@@ -610,8 +447,8 @@ class _CartAddressCard extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
-                Color(0xFF489F2A),
-                Color(0xFF489F2A),
+                Color(0xFF4CAF50),
+                Color(0xFF45A049),
               ],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
@@ -619,7 +456,7 @@ class _CartAddressCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x1A489F2A),
+                color: Color(0x1A4CAF50),
                 blurRadius: 18,
                 offset: Offset(0, 8),
               ),
@@ -631,7 +468,7 @@ class _CartAddressCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.20),
+                  color: Colors.white.withOpacity(0.20),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -752,7 +589,7 @@ class _CartItemCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: SizedBox(
               width: 96,
-              height: 112,
+              height: 96,
               child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                   ? Image.network(
                       item.imageUrl!,
@@ -765,7 +602,7 @@ class _CartItemCard extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: SizedBox(
-              height: 112,
+              height: 96,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -810,31 +647,15 @@ class _CartItemCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${item.totalPrice} ₸',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                            Text(
-                              '${item.price} ₸ за штуку',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF6B7280),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          '${item.totalPrice} ₸',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -956,7 +777,7 @@ class _QuantitySquareButton extends StatelessWidget {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: filled ? const Color(0xFF489F2A) : Colors.white,
+          color: filled ? const Color(0xFF4CAF50) : Colors.white,
           borderRadius: BorderRadius.circular(10),
           boxShadow: const [
             BoxShadow(
@@ -984,7 +805,6 @@ class _CartSummary extends StatelessWidget {
     required this.isLoading,
     required this.isCheckoutStarting,
     required this.isDisabled,
-    required this.disabledReason,
     required this.onCheckout,
   });
 
@@ -994,7 +814,6 @@ class _CartSummary extends StatelessWidget {
   final bool isLoading;
   final bool isCheckoutStarting;
   final bool isDisabled;
-  final String? disabledReason;
   final VoidCallback onCheckout;
 
   @override
@@ -1046,11 +865,10 @@ class _CartSummary extends StatelessWidget {
                       vertical: 15,
                     ),
                     decoration: BoxDecoration(
-                      color: disabled ? const Color(0xFF9CA3AF) : null,
-                      gradient: disabled ? null : const LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [
-                          Color(0xFF489F2A),
-                          Color(0xFF489F2A),
+                          Color(0xFF4CAF50),
+                          Color(0xFF45A049),
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -1058,7 +876,7 @@ class _CartSummary extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x1A489F2A),
+                          color: Color(0x1A4CAF50),
                           blurRadius: 16,
                           offset: Offset(0, 8),
                         ),
@@ -1079,9 +897,9 @@ class _CartSummary extends StatelessWidget {
                           const SizedBox(width: 10),
                         ],
                         Text(
-                          disabledReason ?? (isCheckoutStarting
+                          isCheckoutStarting
                               ? 'Переходим...'
-                              : 'Оформить заказ'),
+                              : 'Оформить заказ',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -1095,7 +913,7 @@ class _CartSummary extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: Colors.white.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(

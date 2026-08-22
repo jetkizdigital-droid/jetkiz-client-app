@@ -1,17 +1,11 @@
-import 'dart:typed_data';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jetkiz_mobile/app/app.dart';
-import 'package:jetkiz_mobile/core/network/apiClient.dart';
 
 void main() {
   testWidgets('Jetkiz app builds', (WidgetTester tester) async {
-    ApiClient().dio.httpClientAdapter = _TestHttpClientAdapter();
     await tester.pumpWidget(const JetkizApp());
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -24,24 +18,4 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
-}
-
-class _TestHttpClientAdapter implements HttpClientAdapter {
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    return ResponseBody.fromString(
-      '{}',
-      200,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
 }

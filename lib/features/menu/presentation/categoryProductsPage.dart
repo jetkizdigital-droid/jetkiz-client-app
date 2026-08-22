@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
-import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
@@ -103,24 +102,21 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     return CartRepository.instance.quantityOf(productId);
   }
 
-  Future<void> _incrementProduct(HomeCategoryProductData product) async {
+  void _incrementProduct(HomeCategoryProductData product) {
     if (!product.isOrderable) {
       _showSnackBar(_productUnavailableMessage(product));
       return;
     }
 
-    final result = await addItemWithRestaurantConfirmation(
-      context: context,
+    CartRepository.instance.addItem(
       productId: product.id,
       restaurantId: product.restaurant.id,
-      restaurantName: product.restaurant.name,
       title: product.title,
       price: product.price,
       quantity: 1,
       imageUrl: product.fullImageUrl,
     );
 
-    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     setState(() {});
   }
 

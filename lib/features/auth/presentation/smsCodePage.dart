@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
 import 'package:jetkiz_mobile/features/auth/data/authPostLoginService.dart';
-import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 
 class SmsCodePage extends StatefulWidget {
   final String phone;
@@ -178,7 +177,6 @@ class _SmsCodePageState extends State<SmsCodePage> {
       );
 
       await _postLoginService.syncAfterLogin();
-      AuthSessionController.instance.sessionChanged();
 
       if (!mounted) return;
 

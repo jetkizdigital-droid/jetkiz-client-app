@@ -4,7 +4,6 @@ import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
-import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/profileEntryPage.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartPage.dart';
@@ -34,7 +33,6 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
     setState(() {
       _language = language;
     });
-    ApiClient().setLocale(language.name);
     SharedPreferences.getInstance().then(
       (preferences) => preferences.setString(_languageKey, language.name),
     );
@@ -56,7 +54,6 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
     final language = saved == AppLanguage.kk.name
         ? AppLanguage.kk
         : AppLanguage.ru;
-    ApiClient().setLocale(language.name);
     if (_language != language) setState(() => _language = language);
   }
 
@@ -314,7 +311,7 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF489F2A),
+              seedColor: const Color(0xFFFF7A00),
             ),
             appBarTheme: const AppBarTheme(
               centerTitle: false,
@@ -402,7 +399,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _onItemTapped,
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFCFF4D1),
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),

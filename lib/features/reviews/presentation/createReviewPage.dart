@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,8 +66,8 @@ class _QuickReactionOption {
 
 class _CreateReviewPageState extends State<CreateReviewPage>
     with TickerProviderStateMixin {
-  static const _green = Color(0xFF489F2A);
-  static const _greenDark = Color(0xFF489F2A);
+  static const _green = Color(0xFF4CAF50);
+  static const _greenDark = Color(0xFF45A049);
   static const _bg = Color(0xFFF9FAFB);
   static const _textMain = Color(0xFF1F2937);
   static const _textMuted = Color(0xFF6B7280);
@@ -172,10 +171,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
   }
 
   Future<void> _pickPhotoFromCamera() async {
-    if (_draftMedia.length >= 10) {
-      _showSnack('Можно добавить не больше 10 фотографий');
-      return;
-    }
     try {
       final file = await _imagePicker.pickImage(
         source: ImageSource.camera,
@@ -184,19 +179,13 @@ class _CreateReviewPageState extends State<CreateReviewPage>
 
       if (file == null) return;
 
-      final selectedFile = File(file.path);
-      if (await selectedFile.length() > 8 * 1024 * 1024) {
-        _showSnack('Фотография должна быть меньше 8 МБ');
-        return;
-      }
-
       HapticFeedback.lightImpact();
 
       setState(() {
         _draftMedia.add(
           _DraftMediaItem(
             id: DateTime.now().microsecondsSinceEpoch.toString(),
-            file: selectedFile,
+            file: File(file.path),
             type: _DraftMediaType.photo,
           ),
         );
@@ -207,10 +196,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
   }
 
   Future<void> _pickFromGallery() async {
-    if (_draftMedia.length >= 10) {
-      _showSnack('Можно добавить не больше 10 фотографий');
-      return;
-    }
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
@@ -220,6 +205,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
           'jpeg',
           'png',
           'webp',
+          'heic',
+          'heif',
         ],
       );
 
@@ -228,19 +215,13 @@ class _CreateReviewPageState extends State<CreateReviewPage>
       final path = result.files.single.path;
       if (path == null || path.trim().isEmpty) return;
 
-      final selectedFile = File(path);
-      if (await selectedFile.length() > 8 * 1024 * 1024) {
-        _showSnack('Фотография должна быть меньше 8 МБ');
-        return;
-      }
-
       HapticFeedback.lightImpact();
 
       setState(() {
         _draftMedia.add(
           _DraftMediaItem(
             id: DateTime.now().microsecondsSinceEpoch.toString(),
-            file: selectedFile,
+            file: File(path),
             type: _DraftMediaType.photo,
           ),
         );
@@ -269,10 +250,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
 
     try {
       for (final item in _draftMedia) {
-        final response = await _uploadApi.uploadFile(
-          item.file,
-          orderId: widget.orderId,
-        );
+        final response = await _uploadApi.uploadFile(item.file);
         uploaded.add(
           CreateReviewMediaInput(
             type: response.type,
@@ -332,8 +310,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
-    } catch (error) {
-      _showSnack(_reviewErrorMessage(error));
+    } catch (_) {
+      _showSnack('Не удалось отправить отзыв');
     } finally {
       if (mounted) {
         setState(() {
@@ -341,25 +319,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
         });
       }
     }
-  }
-
-  String _reviewErrorMessage(Object error) {
-    if (error is DioException) {
-      final data = error.response?.data;
-      if (data is Map) {
-        final message = data['message'];
-        if (message is String && message.trim().isNotEmpty) {
-          return message.trim();
-        }
-        if (message is List && message.isNotEmpty) {
-          return message.first.toString();
-        }
-      }
-      if (error.response?.statusCode == 401) {
-        return 'Войдите в аккаунт, чтобы оставить отзыв';
-      }
-    }
-    return 'Не удалось отправить отзыв';
   }
 
   void _showSnack(String text) {
@@ -453,7 +412,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                     sigmaY: 2,
                                   ),
                                   child: Container(
-                                    color: Colors.white.withValues(alpha: 0.06),
+                                    color: Colors.white.withOpacity(0.06),
                                   ),
                                 ),
                               ),
@@ -471,7 +430,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                           ),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.white.withValues(alpha: 0.88),
+                                                Colors.white.withOpacity(0.88),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -503,7 +462,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                             vertical: 7,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _green.withValues(alpha: 0.92),
+                                            color: _green.withOpacity(0.92),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -732,7 +691,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                             TextField(
                               controller: _textController,
                               focusNode: _textFocusNode,
-                              maxLength: 3000,
                               minLines: 6,
                               maxLines: 10,
                               textCapitalization: TextCapitalization.sentences,
@@ -826,7 +784,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                       boxShadow: active
                                           ? const [
                                               BoxShadow(
-                                                color: Color(0x33489F2A),
+                                                color: Color(0x334CAF50),
                                                 blurRadius: 16,
                                                 offset: Offset(0, 4),
                                               ),
@@ -890,7 +848,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                   onTap: _pickPhotoFromCamera,
                                 ),
                                 _MediaActionButton(
-                                  color: const Color(0xFF489F2A),
+                                  color: const Color(0xFF22C55E),
                                   icon: Icons.image_rounded,
                                   label: 'Галерея',
                                   onTap: _pickFromGallery,
@@ -963,7 +921,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
           if (_showSuccess)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withOpacity(0.5),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                   child: Center(
@@ -994,7 +952,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Color(0x33489F2A),
+                                    color: Color(0x334CAF50),
                                     blurRadius: 18,
                                     offset: Offset(0, 8),
                                   ),
@@ -1064,7 +1022,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
               boxShadow: _isFormValid
                   ? const [
                       BoxShadow(
-                        color: Color(0x33489F2A),
+                        color: Color(0x334CAF50),
                         blurRadius: 24,
                         offset: Offset(0, 10),
                       ),
@@ -1123,7 +1081,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white.withValues(alpha: 0.8),
+      color: Colors.white.withOpacity(0.8),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
         children: [
@@ -1218,7 +1176,7 @@ class _MediaActionButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: color.withValues(alpha: 0.28),
+                  color: color.withOpacity(0.28),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),

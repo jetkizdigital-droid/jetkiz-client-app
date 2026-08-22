@@ -130,7 +130,11 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
         _error = 'Не удалось загрузить историю заказов';
       });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
@@ -169,7 +173,11 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
 
       _showSnack('Не удалось обновить историю заказов');
     } finally {
-      if (mounted) setState(() => _refreshing = false);
+      if (!mounted) return;
+
+      setState(() {
+        _refreshing = false;
+      });
     }
   }
 
@@ -202,7 +210,11 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
 
       _showSnack('Не удалось загрузить ещё заказы');
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (!mounted) return;
+
+      setState(() {
+        _loadingMore = false;
+      });
     }
   }
 

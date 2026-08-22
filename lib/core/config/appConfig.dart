@@ -4,7 +4,7 @@
   Важно для будущих сессий:
   - разработка идёт на физическом Android устройстве
   - не использовать адрес эмулятора 10.0.2.2
-  - backend доступен через adb reverse и 127.0.0.1:3000
+  - backend доступен через adb reverse и 127.0.0.1:3001
 */
 
 class AppConfig {
@@ -15,10 +15,6 @@ class AppConfig {
     defaultValue: productionBaseUrl,
   );
   static const bool _isReleaseBuild = bool.fromEnvironment('dart.vm.product');
-  static const String supportWhatsAppNumber = String.fromEnvironment(
-    'JETKIZ_SUPPORT_WHATSAPP',
-    defaultValue: '',
-  );
 
   static String get baseUrl {
     final normalized = _definedBaseUrl.trim();

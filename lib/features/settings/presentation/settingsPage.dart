@@ -25,6 +25,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const _notificationsKey = 'jetkiz.notifications.enabled';
   bool notificationsEnabled = true;
 
   static const _background = Color(0xFFF5F5F5);
@@ -41,19 +42,18 @@ class _SettingsPageState extends State<SettingsPage> {
     final preferences = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      notificationsEnabled =
-          preferences.getBool(PushNotificationService.preferenceKey) ?? true;
+      notificationsEnabled = preferences.getBool(_notificationsKey) ?? true;
     });
   }
 
   Future<void> _setNotificationsEnabled(bool value) async {
     setState(() => notificationsEnabled = value);
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setBool(PushNotificationService.preferenceKey, value);
+    await preferences.setBool(_notificationsKey, value);
 
     final service = PushNotificationService(ApiClient());
     if (value) {
-      await service.init();
+      await service.registerCurrentToken();
     } else {
       await service.unregisterCurrentToken();
     }

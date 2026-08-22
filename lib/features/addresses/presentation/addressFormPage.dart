@@ -22,6 +22,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
   static const Color _bg = Color(0xFFF7FAF5);
   static const Color _text = Color(0xFF111827);
   static const Color _muted = Color(0xFF6B7280);
+  static const Color _border = Color(0xFFE5E7EB);
   static const Color _error = Color(0xFFE53935);
 
   late final AddressesApi _addressesApi;
@@ -194,7 +195,11 @@ class _AddressFormPageState extends State<AddressFormPage> {
             'Не удалось сохранить адрес. Проверь подключение и попробуй ещё раз.';
       });
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (!mounted) return;
+
+      setState(() {
+        _isSaving = false;
+      });
     }
   }
 

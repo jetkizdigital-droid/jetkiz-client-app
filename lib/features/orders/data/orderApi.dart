@@ -120,7 +120,7 @@ class OrderApi {
   String _extractErrorMessage(DioException error) {
     final serverMessage = _extractServerMessage(error.response?.data);
     if (serverMessage != null) {
-      return _translateServerMessage(serverMessage);
+      return serverMessage;
     }
 
     switch (error.type) {
@@ -178,19 +178,6 @@ class OrderApi {
     }
 
     return 'Не удалось создать заказ';
-  }
-
-  String _translateServerMessage(String message) {
-    switch (message.trim().toLowerCase()) {
-      case 'restaurant is closed':
-        return 'Ресторан сейчас закрыт и не принимает заказы';
-      case 'restaurant is not accepting orders':
-        return 'Ресторан временно не принимает заказы';
-      case 'product is unavailable':
-        return 'Один из товаров сейчас недоступен';
-      default:
-        return message;
-    }
   }
 
   String? _extractServerMessage(dynamic data) {

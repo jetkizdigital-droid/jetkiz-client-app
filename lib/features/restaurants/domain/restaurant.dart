@@ -86,7 +86,6 @@ class Restaurant extends Equatable {
       status: status,
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
-      workingHours: workingHours,
     );
   }
 

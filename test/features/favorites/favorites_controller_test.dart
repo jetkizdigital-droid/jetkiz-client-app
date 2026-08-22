@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
@@ -8,11 +7,6 @@ import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/favorites/domain/favorite_models.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  FlutterSecureStorage.setMockInitialValues({
-    'accessToken': 'test-access-token',
-  });
-
   group('FavoritesController', () {
     test('removeProduct success leaves product removed', () async {
       final api = _FakeFavoritesApi()

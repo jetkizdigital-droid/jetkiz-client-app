@@ -53,12 +53,11 @@ class ReviewCard extends StatelessWidget {
                     ),
                   ),
                 if (review.hasMedia) ReviewMediaBlocks(items: review.media),
-                if (review.reactions.isNotEmpty ||
-                    review.reactionsSummary.isNotEmpty) ...[
+                if (review.reactions.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ReviewReactions(
                     items: review.reactions,
-                    summary: review.reactionsSummary,
+                    onAddReaction: () {},
                   ),
                 ],
               ],
@@ -207,15 +206,15 @@ class _RestaurantReplySection extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0x0D489F2A),
-            Color(0x1A489F2A),
+            Color(0x0D4CAF50),
+            Color(0x1A4CAF50),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         border: Border(
           top: BorderSide(
-            color: Color(0x33489F2A),
+            color: Color(0x334CAF50),
           ),
         ),
       ),
@@ -228,7 +227,7 @@ class _RestaurantReplySection extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF489F2A),
+                  color: Color(0xFF4CAF50),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -297,12 +296,11 @@ class _RestaurantReplySection extends StatelessWidget {
                     ),
                   ),
                 if (response.hasMedia) ReviewMediaBlocks(items: response.media),
-                if (response.reactions.isNotEmpty ||
-                    response.reactionsSummary.isNotEmpty) ...[
+                if (response.reactions.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ReviewReactions(
                     items: response.reactions,
-                    summary: response.reactionsSummary,
+                    onAddReaction: () {},
                   ),
                 ],
               ],

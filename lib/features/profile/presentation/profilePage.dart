@@ -4,13 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
-import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
-import 'package:jetkiz_mobile/core/support/supportLauncher.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
-import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersPage.dart';
@@ -32,7 +29,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  static const _green = Color(0xFF489F2A);
+  static const _green = Color(0xFF4CAF50);
   static const _background = Color(0xFFF9FAFB);
   static const _textLight = Color(0xFF9CA3AF);
 
@@ -169,7 +166,6 @@ class _ProfilePageState extends State<ProfilePage> {
     CartRepository.instance.clear();
     AddressRepository.instance.clearSelectedAddress();
     FavoritesController.instance.reset();
-    AuthSessionController.instance.sessionChanged();
 
     if (!mounted) return;
 
@@ -198,23 +194,22 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizationScope.of(context).strings;
     final menuItems = <_ProfileMenuItem>[
       _ProfileMenuItem(
         icon: Icons.badge_outlined,
-        label: strings.profileMyData,
+        label: 'Мои данные',
         iconColor: const Color(0xFF3B82F6),
         onTap: _openEditProfile,
       ),
       _ProfileMenuItem(
         icon: Icons.credit_card_outlined,
-        label: strings.profileAddCard,
+        label: 'Добавить карту',
         iconColor: const Color(0xFF8B5CF6),
-        onTap: () => _showComingSoon(strings.profileAddCard),
+        onTap: () => _showComingSoon('Добавить карту'),
       ),
       _ProfileMenuItem(
         icon: Icons.settings_outlined,
-        label: strings.profileSettings,
+        label: 'Настройки',
         iconColor: const Color(0xFF4B5563),
         onTap: () {
           Navigator.push(
@@ -227,8 +222,8 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       _ProfileMenuItem(
         icon: Icons.location_on_outlined,
-        label: strings.profileAddresses,
-        iconColor: const Color(0xFF489F2A),
+        label: 'Адреса',
+        iconColor: const Color(0xFF22C55E),
         onTap: () {
           Navigator.push(
             context,
@@ -240,7 +235,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       _ProfileMenuItem(
         icon: Icons.history_rounded,
-        label: strings.profileOrdersHistory,
+        label: 'История заказов',
         iconColor: const Color(0xFFF59E0B),
         onTap: () {
           Navigator.push(
@@ -253,13 +248,13 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       _ProfileMenuItem(
         icon: Icons.support_agent_outlined,
-        label: strings.profileSupport,
+        label: 'Поддержка',
         iconColor: const Color(0xFF06B6D4),
-        onTap: () => SupportLauncher.openWhatsApp(context),
+        onTap: () => _openWebPage('https://jetkiz.asia'),
       ),
       _ProfileMenuItem(
         icon: Icons.description_outlined,
-        label: strings.profilePublicOffer,
+        label: 'Публичная оферта',
         iconColor: const Color(0xFF6366F1),
         onTap: () => _openWebPage('https://jetkiz.asia/privacy'),
       ),
@@ -274,10 +269,10 @@ class _ProfilePageState extends State<ProfilePage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             children: [
-              Center(
+              const Center(
                 child: Text(
-                  strings.profileTitle,
-                  style: const TextStyle(
+                  'Профиль',
+                  style: TextStyle(
                     color: Colors.black,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -295,7 +290,7 @@ class _ProfilePageState extends State<ProfilePage> {
               else if (_errorText != null)
                 _ProfileErrorCard(
                   message: _errorText!,
-                  retryText: strings.retry,
+                  retryText: 'Повторить',
                   onRetry: _loadProfile,
                 )
               else ...[
@@ -327,7 +322,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           )
                         : const Icon(Icons.logout_rounded, size: 24),
                     label: Text(
-                      _isLoggingOut ? strings.loggingOut : strings.logout,
+                      _isLoggingOut ? 'Выход...' : 'Выйти',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -346,10 +341,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Center(
+                const Center(
                   child: Text(
-                    strings.appVersion,
-                    style: const TextStyle(
+                    'Версия 1.0.0',
+                    style: TextStyle(
                       fontSize: 13,
                       color: _textLight,
                       fontWeight: FontWeight.w400,
@@ -390,7 +385,7 @@ class _ProfileHeaderCard extends StatelessWidget {
   final bool isUploadingAvatar;
   final VoidCallback onAvatarTap;
 
-  static const _green = Color(0xFF489F2A);
+  static const _green = Color(0xFF4CAF50);
   static const _cardBorder = Color(0xFFF0F1F3);
   static const _textMain = Color(0xFF1F2937);
   static const _textMuted = Color(0xFF6B7280);
@@ -398,7 +393,6 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizationScope.of(context).strings;
     final avatarUrl = (profile?.resolvedAvatarUrl ?? '').trim();
 
     return Container(
@@ -490,12 +484,12 @@ class _ProfileHeaderCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              SizedBox(
+              const SizedBox(
                 width: 96,
                 child: Text(
-                  strings.profileEditPhoto,
+                  'Нажмите, чтобы изменить фото',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _textLight,
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
@@ -513,7 +507,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    profile?.displayTitle ?? strings.profileDefaultName,
+                    profile?.displayTitle ?? 'Клиент Jetkiz',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -534,7 +528,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          profile?.displaySubtitle ?? strings.profileDefaultSubtitle,
+                          profile?.displaySubtitle ?? 'Профиль клиента',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -556,14 +550,14 @@ class _ProfileHeaderCard extends StatelessWidget {
                       color: _green.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const _ActiveDot(),
-                        const SizedBox(width: 6),
+                        _ActiveDot(),
+                        SizedBox(width: 6),
                         Text(
-                          strings.profileActive,
-                          style: const TextStyle(
+                          'Активен',
+                          style: TextStyle(
                             color: _green,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -679,7 +673,7 @@ class _ActiveDot extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: const BoxDecoration(
-        color: Color(0xFF489F2A),
+        color: Color(0xFF4CAF50),
         shape: BoxShape.circle,
       ),
     );

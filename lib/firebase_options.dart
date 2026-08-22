@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBzeYsBwMaIT3QKBPh70Q17jBk4EUTiRgM',
-    appId: '1:97147344656:android:09888a326ced5c1e5f7795',
+    appId: '1:97147344656:android:5cc0dd4e4c742a3c5f7795',
     messagingSenderId: '97147344656',
     projectId: 'jetkiz-mobile',
     storageBucket: 'jetkiz-mobile.firebasestorage.app',

@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
-import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 
 class ApiClient {
   ApiClient._internal() {
@@ -67,7 +66,7 @@ class ApiClient {
             final refreshed = await _tryRefreshToken();
 
             if (!refreshed) {
-              await clearTokens(notifySession: true);
+              await clearTokens();
               return handler.next(error);
             }
 
@@ -132,14 +131,8 @@ class ApiClient {
   String? _refreshToken;
   bool _isInitialized = false;
   Future<bool>? _refreshFuture;
-  String _locale = 'ru';
 
   Dio get dio => _dio;
-
-  void setLocale(String locale) {
-    final normalized = locale.trim().toLowerCase();
-    _locale = normalized == 'kk' ? 'kk' : 'ru';
-  }
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -202,13 +195,10 @@ class ApiClient {
     return _authStorage.getOrCreateDeviceId();
   }
 
-  Future<void> clearTokens({bool notifySession = false}) async {
+  Future<void> clearTokens() async {
     _accessToken = null;
     _refreshToken = null;
     await _authStorage.clear();
-    if (notifySession) {
-      AuthSessionController.instance.sessionChanged();
-    }
   }
 
   Future<void> clearAccessToken() async {
@@ -281,7 +271,7 @@ class ApiClient {
     options.headers['X-Platform'] = _platformName();
     options.headers['X-App-Version'] = '1.0.0';
     options.headers['X-Device-Id'] = deviceId;
-    options.headers['X-Locale'] = _locale;
+    options.headers['X-Locale'] = 'ru';
     options.headers['X-Timezone'] = 'Asia/Almaty';
     options.headers['User-Agent'] = 'JetkizApp/1.0';
   }

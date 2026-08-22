@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
-import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 
@@ -267,7 +266,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     }
   }
 
-  Future<void> _addToCart() async {
+  void _addToCart() {
     if (!_product.canAddToCart) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Товар сейчас недоступен')),
@@ -288,11 +287,14 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       return;
     }
 
-    final result = await addItemWithRestaurantConfirmation(
-      context: context,
+    final cart = CartRepository.instance;
+    final hadDifferentRestaurant = cart.restaurantId != null &&
+        cart.restaurantId != restaurantId &&
+        cart.isNotEmpty;
+
+    cart.addItem(
       productId: _product.id,
       restaurantId: restaurantId,
-      restaurantName: widget.restaurantName ?? '',
       title: _resolvedTitle,
       price: _product.price,
       quantity: _quantity,
@@ -301,15 +303,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       weight: _weight,
     );
 
-    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
-    if (result == CartAddResult.rejectedInvalidItem) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось добавить товар в корзину')),
-      );
-      return;
-    }
-
-    final message = 'Добавлено в корзину: $_quantity шт.';
+    final message = hadDifferentRestaurant
+        ? 'Корзина очищена и обновлена под новый ресторан. Добавлено: $_quantity шт.'
+        : 'Добавлено в корзину: $_quantity шт.';
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

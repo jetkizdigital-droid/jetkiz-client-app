@@ -12,7 +12,6 @@ class ReviewMediaUploadApi {
 
   Future<UploadReviewMediaResponse> uploadFile(
     File file, {
-    required String orderId,
     String? kind,
     bool makePreview = true,
   }) async {
@@ -21,7 +20,6 @@ class ReviewMediaUploadApi {
         (kind ?? _detectKindFromPath(file.path)).trim().toUpperCase();
 
     final formData = FormData.fromMap({
-      'orderId': orderId,
       'file': await MultipartFile.fromFile(
         file.path,
         filename: fileName,

@@ -28,7 +28,6 @@ class RestaurantReviewPageData {
           .toList(),
       total: _readInt(json, const ['total']) ??
           _readInt(json, const ['data', 'total']) ??
-          _readInt(json, const ['meta', 'total']) ??
           itemsRaw.length,
       reactionSummary: summaryRaw
           .whereType<Map>()
@@ -60,8 +59,6 @@ class RestaurantReview {
     this.order,
     this.media = const [],
     this.reactions = const [],
-    this.reactionsSummary = const [],
-    this.currentUserReaction,
     this.response,
   });
 
@@ -84,8 +81,6 @@ class RestaurantReview {
   final ReviewOrder? order;
   final List<ReviewMediaItem> media;
   final List<ReviewReactionItem> reactions;
-  final List<ReviewReactionSummaryItem> reactionsSummary;
-  final String? currentUserReaction;
   final ReviewResponse? response;
 
   bool get hasText => (text ?? '').trim().isNotEmpty;
@@ -125,9 +120,6 @@ class RestaurantReview {
           .whereType<Map>()
           .map((e) => ReviewReactionItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      reactionsSummary: _readReactionSummary(json),
-      currentUserReaction:
-          _readNullableString(json, const ['currentUserReaction']),
       response: _readMap(json, const ['response']) == null
           ? null
           : ReviewResponse.fromJson(_readMap(json, const ['response'])!),
@@ -315,8 +307,6 @@ class ReviewResponse {
     this.createdByUser,
     this.media = const [],
     this.reactions = const [],
-    this.reactionsSummary = const [],
-    this.currentUserReaction,
   });
 
   final String id;
@@ -330,8 +320,6 @@ class ReviewResponse {
   final ReviewUser? createdByUser;
   final List<ReviewMediaItem> media;
   final List<ReviewReactionItem> reactions;
-  final List<ReviewReactionSummaryItem> reactionsSummary;
-  final String? currentUserReaction;
 
   bool get hasText => (text ?? '').trim().isNotEmpty;
   bool get hasMedia => media.isNotEmpty;
@@ -360,28 +348,8 @@ class ReviewResponse {
           .whereType<Map>()
           .map((e) => ReviewReactionItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      reactionsSummary: _readReactionSummary(json),
-      currentUserReaction:
-          _readNullableString(json, const ['currentUserReaction']),
     );
   }
-}
-
-List<ReviewReactionSummaryItem> _readReactionSummary(
-  Map<String, dynamic> json,
-) {
-  final raw = _readMap(json, const ['reactionsSummary']);
-  if (raw == null) return const [];
-
-  return raw.entries
-      .map(
-        (entry) => ReviewReactionSummaryItem(
-          type: entry.key,
-          count: _parseIntValue(entry.value) ?? 0,
-        ),
-      )
-      .where((item) => item.count > 0)
-      .toList();
 }
 
 List<dynamic>? _extractList(Map<String, dynamic> json, List<String> path) {
@@ -448,12 +416,6 @@ int? _readInt(Map<String, dynamic> json, List<String> path) {
   if (current is String) return int.tryParse(current);
   if (current is num) return current.toInt();
   return null;
-}
-
-int? _parseIntValue(dynamic value) {
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  return int.tryParse(value?.toString() ?? '');
 }
 
 bool _readBool(Map<String, dynamic> json, List<String> path) {

@@ -71,7 +71,11 @@ class _AddressesPageState extends State<AddressesPage> {
             'Не удалось загрузить адреса. Проверь подключение и попробуй ещё раз.';
       });
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -171,7 +175,11 @@ class _AddressesPageState extends State<AddressesPage> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _deletingAddressId = null);
+      if (!mounted) return;
+
+      setState(() {
+        _deletingAddressId = null;
+      });
     }
   }
 
