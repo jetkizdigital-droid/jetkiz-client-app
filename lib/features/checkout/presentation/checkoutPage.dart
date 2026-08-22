@@ -167,6 +167,32 @@ class _CheckoutPageState extends State<CheckoutPage> {
     });
 
     try {
+      final syncResult = await _cartRepository.syncWithServer();
+
+      if (syncResult.failed) {
+        throw const _CheckoutBlockedException(
+          'Не удалось обновить корзину. Проверьте интернет.',
+        );
+      }
+
+      if (syncResult.priceChanged) {
+        _cartRepository.consumePendingPriceUpdateNotification();
+
+        if (mounted) {
+          await _showPriceUpdatedDialog();
+        }
+
+        return;
+      }
+
+      if (_cartRepository.hasBlockingItems) {
+        if (mounted) {
+          await _showCartBlockedDialog();
+        }
+
+        return;
+      }
+
       final profile = await _profileApi.getMe();
 
       final phone = profile.phone.trim();
@@ -186,6 +212,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       /// 3. create order после успешного payment result
       await Future<void>.delayed(const Duration(milliseconds: 800));
 
+      final orderItems = _cartRepository.toOrderItemsJson();
+
       final payload = CreateOrderPayload(
         restaurantId: restaurantId,
         fulfillmentType: _fulfillmentType,
@@ -194,11 +222,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
         leaveAtDoor: false,
         comment: null,
         promoCode: null,
-        items: cartState.items
+        items: orderItems
             .map(
               (item) => CreateOrderItemPayload(
-                productId: item.productId,
-                quantity: item.quantity,
+                productId: item['productId']?.toString() ?? '',
+                quantity: item['quantity'] is int
+                    ? item['quantity'] as int
+                    : int.tryParse(item['quantity']?.toString() ?? '') ?? 0,
               ),
             )
             .toList(),
@@ -214,6 +244,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _createdOrder = _CreatedOrderView.fromJson(order);
         _orderPlaced = true;
       });
+    } on _CheckoutBlockedException catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
 
@@ -233,6 +269,44 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _goHome() {
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+  }
+
+  Future<void> _showPriceUpdatedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Цены обновились'),
+          content: const Text('Цены на некоторые позиции изменились.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Понятно'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showCartBlockedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Не все блюда доступны'),
+          content: const Text(
+            'Удалите недоступные позиции из корзины, чтобы продолжить.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Понятно'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -385,6 +459,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ),
     );
   }
+}
+
+class _CheckoutBlockedException implements Exception {
+  const _CheckoutBlockedException(this.message);
+
+  final String message;
 }
 
 class _CheckoutSectionTitle extends StatelessWidget {

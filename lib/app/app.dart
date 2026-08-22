@@ -4,6 +4,7 @@ import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/profileEntryPage.dart';
+import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartPage.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/favorites/presentation/favoritesPage.dart';
@@ -21,7 +22,7 @@ class JetkizApp extends StatefulWidget {
   State<JetkizApp> createState() => _JetkizAppState();
 }
 
-class _JetkizAppState extends State<JetkizApp> {
+class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
   AppLanguage _language = AppLanguage.ru;
 
   void _setLanguage(AppLanguage language) {
@@ -35,13 +36,24 @@ class _JetkizAppState extends State<JetkizApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     AppNavigator.registerPushNavigationHandler(_handlePushNavigation);
+    CartRepository.instance.restore();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     AppNavigator.clearPushNavigationHandler();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        CartRepository.instance.isNotEmpty) {
+      CartRepository.instance.syncWithServer();
+    }
   }
 
   Future<void> _handleNotificationTap(NotificationItem item) async {
@@ -351,6 +363,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     if (index == 1) {
       FavoritesController.instance.refreshIfStale();
+    }
+
+    if (index == 2) {
+      CartRepository.instance.syncWithServer();
     }
   }
 

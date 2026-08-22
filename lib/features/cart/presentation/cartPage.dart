@@ -16,12 +16,9 @@ class CartPage extends StatefulWidget {
   State<CartPage> createState() => _CartPageState();
 }
 
-class _CartPageState extends State<CartPage> {
-  static const Color _green = Color(0xFF489F2A);
+class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   static const Color _bg = Color(0xFFF9FAFB);
   static const Color _text = Color(0xFF111827);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _border = Color(0xFFE5E7EB);
 
   final CartRepository _cart = CartRepository.instance;
   final AddressRepository _addressRepository = AddressRepository.instance;
@@ -38,6 +35,7 @@ class _CartPageState extends State<CartPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _apiClient = ApiClient();
     _financeConfigApi = FinanceConfigApi(_apiClient);
@@ -46,11 +44,13 @@ class _CartPageState extends State<CartPage> {
     _addressRepository.addListener(_handleAddressChanged);
 
     _loadDeliveryFee();
+    _syncCart();
     _trackCartView();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cart.removeListener(_handleCartChanged);
     _addressRepository.removeListener(_handleAddressChanged);
     super.dispose();
@@ -59,6 +59,14 @@ class _CartPageState extends State<CartPage> {
   void _handleCartChanged() {
     if (!mounted) return;
     setState(() {});
+    _showPendingPriceUpdateDialog();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _cart.isNotEmpty) {
+      _syncCart();
+    }
   }
 
   void _handleAddressChanged() {
@@ -90,6 +98,45 @@ class _CartPageState extends State<CartPage> {
 
       _showSnackBar('Не удалось загрузить стоимость доставки');
     }
+  }
+
+  Future<void> _refreshCart() async {
+    await Future.wait([
+      _loadDeliveryFee(),
+      _syncCart(),
+    ]);
+  }
+
+  Future<CartSyncResult> _syncCart() async {
+    final result = await _cart.syncWithServer();
+    if (!mounted) return result;
+
+    _showPendingPriceUpdateDialog();
+    return result;
+  }
+
+  void _showPendingPriceUpdateDialog() {
+    if (!_cart.consumePendingPriceUpdateNotification()) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Цены обновились'),
+            content: const Text('Цены на некоторые позиции изменились.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Понятно'),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   Future<void> _trackCartView() async {
@@ -230,12 +277,40 @@ class _CartPageState extends State<CartPage> {
       return;
     }
 
-    final subtotal = _cart.subtotal;
-    final total = subtotal + _deliveryFee;
-
     setState(() {
       _isCheckoutStarting = true;
     });
+
+    final syncResult = await _syncCart();
+    if (!mounted) return;
+
+    if (syncResult.failed) {
+      setState(() {
+        _isCheckoutStarting = false;
+      });
+      _showSnackBar('Не удалось обновить корзину. Проверьте интернет.');
+      return;
+    }
+
+    if (_cart.hasBlockingItems) {
+      setState(() {
+        _isCheckoutStarting = false;
+      });
+      _showSnackBar(
+        'Удалите недоступные позиции из корзины, чтобы продолжить.',
+      );
+      return;
+    }
+
+    if (syncResult.priceChanged) {
+      setState(() {
+        _isCheckoutStarting = false;
+      });
+      return;
+    }
+
+    final subtotal = _cart.subtotal;
+    final total = subtotal + _deliveryFee;
 
     await _trackCheckoutStart(
       address: selectedAddress,
@@ -298,7 +373,7 @@ class _CartPageState extends State<CartPage> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadDeliveryFee,
+        onRefresh: _refreshCart,
         child: Column(
           children: [
             Padding(
@@ -322,7 +397,9 @@ class _CartPageState extends State<CartPage> {
                         return _CartItemCard(
                           item: item,
                           onMinus: () => _cart.decrement(item.productId),
-                          onPlus: () => _cart.increment(item.productId),
+                          onPlus: item.canOrder
+                              ? () => _cart.increment(item.productId)
+                              : null,
                           onRemove: () => _confirmRemove(item),
                         );
                       },
@@ -336,7 +413,8 @@ class _CartPageState extends State<CartPage> {
               total: total,
               isLoading: _isDeliveryLoading,
               isCheckoutStarting: _isCheckoutStarting,
-              isDisabled: isEmpty || _isDeliveryLoading,
+              isDisabled:
+                  isEmpty || _isDeliveryLoading || _cart.hasBlockingItems,
               onCheckout: _handleCheckout,
             ),
           ],
@@ -478,7 +556,7 @@ class _CartItemCard extends StatelessWidget {
 
   final CartItem item;
   final VoidCallback onMinus;
-  final VoidCallback onPlus;
+  final VoidCallback? onPlus;
   final VoidCallback onRemove;
 
   @override
@@ -548,6 +626,19 @@ class _CartItemCard extends StatelessWidget {
                         fontSize: 12,
                         color: Color(0xFF6B7280),
                         height: 1.2,
+                      ),
+                    ),
+                  ],
+                  if (!item.canOrder) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      item.blockingReason,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
@@ -625,7 +716,7 @@ class _QuantityControl extends StatelessWidget {
 
   final int quantity;
   final VoidCallback onMinus;
-  final VoidCallback onPlus;
+  final VoidCallback? onPlus;
 
   @override
   Widget build(BuildContext context) {
@@ -674,7 +765,7 @@ class _QuantitySquareButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool filled;
 
   @override
