@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
+import 'package:jetkiz_mobile/features/notifications/data/notificationsStateController.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/notificationsPage.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationBadge.dart';
 
@@ -42,6 +43,8 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
     WidgetsBinding.instance.addObserver(this);
 
     _api = NotificationsApi(ApiClient());
+    NotificationsStateController.instance.addListener(_handleUnreadChanged);
+    _unreadCount = NotificationsStateController.instance.unreadCount;
 
     _load();
     _startPolling();
@@ -59,9 +62,16 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
 
   @override
   void dispose() {
+    NotificationsStateController.instance.removeListener(_handleUnreadChanged);
     WidgetsBinding.instance.removeObserver(this);
     _stopPolling();
     super.dispose();
+  }
+
+  void _handleUnreadChanged() {
+    final next = NotificationsStateController.instance.unreadCount;
+    if (!mounted || next == _unreadCount) return;
+    setState(() => _unreadCount = next);
   }
 
   @override
@@ -102,7 +112,7 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
     if (_loading) return;
 
     if (!await AuthStorage().hasAccessToken()) {
-      if (mounted && _unreadCount != 0) setState(() => _unreadCount = 0);
+      NotificationsStateController.instance.setUnreadCount(0);
       return;
     }
 
@@ -114,9 +124,8 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
       if (!mounted) return;
 
       if (_unreadCount != result.unreadCount) {
-        setState(() {
-          _unreadCount = result.unreadCount;
-        });
+        NotificationsStateController.instance
+            .setUnreadCount(result.unreadCount);
       }
     } catch (_) {
       // Silent by design: badge must not break the current screen.
