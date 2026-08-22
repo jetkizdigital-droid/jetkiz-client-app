@@ -10,7 +10,8 @@ void main() {
   testWidgets('Jetkiz app builds', (WidgetTester tester) async {
     ApiClient().dio.httpClientAdapter = _TestHttpClientAdapter();
     await tester.pumpWidget(const JetkizApp());
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(MaterialApp), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
