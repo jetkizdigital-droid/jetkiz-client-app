@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
@@ -24,6 +26,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   final FavoritesController _favorites = FavoritesController.instance;
   bool _isCheckingAuth = true;
   bool _isAuthorized = false;
+  Timer? _availabilityTimer;
 
   @override
   void initState() {
@@ -32,11 +35,18 @@ class _FavoritesPageState extends State<FavoritesPage>
     _tabController.addListener(_handleTabChanged);
     _favorites.addListener(_handleFavoritesChanged);
     AuthSessionController.instance.addListener(_handleSessionChanged);
+    _availabilityTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _isAuthorized) setState(() {});
+      },
+    );
     _bootstrap();
   }
 
   @override
   void dispose() {
+    _availabilityTimer?.cancel();
     _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
     _favorites.removeListener(_handleFavoritesChanged);
