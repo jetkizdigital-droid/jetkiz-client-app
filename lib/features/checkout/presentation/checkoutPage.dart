@@ -307,7 +307,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 140),
                 children: [
-                  _CheckoutSectionTitle(title: 'Способ получения'),
+                  const _CheckoutSectionTitle(title: 'Способ получения'),
                   const SizedBox(height: 10),
                   _FulfillmentSelector(
                     value: _fulfillmentType,
@@ -322,7 +322,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   if (_isPickup) ...[
                     const _PickupInfoCard(),
                   ] else ...[
-                    _CheckoutSectionTitle(title: 'Адрес доставки'),
+                    const _CheckoutSectionTitle(title: 'Адрес доставки'),
                     const SizedBox(height: 10),
                     _CheckoutAddressCard(
                       address: address,
@@ -330,11 +330,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                   ],
                   const SizedBox(height: 18),
-                  _CheckoutSectionTitle(title: 'Ваш заказ'),
+                  const _CheckoutSectionTitle(title: 'Ваш заказ'),
                   const SizedBox(height: 10),
                   _CheckoutItemsCard(items: items),
                   const SizedBox(height: 18),
-                  _CheckoutSectionTitle(title: 'Выбор карты'),
+                  const _CheckoutSectionTitle(title: 'Выбор карты'),
                   const SizedBox(height: 10),
                   ..._savedCards.map(
                     (card) => Padding(
@@ -363,7 +363,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     },
                   ),
                   const SizedBox(height: 18),
-                  _CheckoutSectionTitle(title: 'Итого'),
+                  const _CheckoutSectionTitle(title: 'Итого'),
                   const SizedBox(height: 10),
                   _CheckoutSummaryCard(
                     subtotal: subtotal,
@@ -434,7 +434,8 @@ class _FulfillmentSelector extends StatelessWidget {
         ),
       ],
       selected: {value},
-      onSelectionChanged: enabled ? (selected) => onChanged(selected.first) : null,
+      onSelectionChanged:
+          enabled ? (selected) => onChanged(selected.first) : null,
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: const Color(0xFFEAF7E4),
         selectedForegroundColor: const Color(0xFF489F2A),

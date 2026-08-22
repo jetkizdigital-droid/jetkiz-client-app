@@ -422,8 +422,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                         return _RestaurantSection(
                           group: group,
                           favoriteProductIds: _favoriteProductIds,
-                          favoritePendingProductIds:
-                              _favoritePendingProductIds,
+                          favoritePendingProductIds: _favoritePendingProductIds,
                           favoritesLoading: _favoritesLoading,
                           getQuantity: _getQuantity,
                           onRestaurantTap: () {

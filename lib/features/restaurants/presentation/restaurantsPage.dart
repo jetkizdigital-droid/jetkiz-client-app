@@ -107,9 +107,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
       final address = (restaurant.address ?? '').toLowerCase();
       final description = restaurant.displayDescription.toLowerCase();
 
-      return name.contains(q) ||
-          address.contains(q) ||
-          description.contains(q);
+      return name.contains(q) || address.contains(q) || description.contains(q);
     }).toList();
   }
 
@@ -408,9 +406,7 @@ class _ResultHeader extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            hasQuery
-                ? 'Найдено: $visibleCount'
-                : 'Ресторанов: $totalCount',
+            hasQuery ? 'Найдено: $visibleCount' : 'Ресторанов: $totalCount',
             style: const TextStyle(
               color: Color(0xFF111827),
               fontSize: 16,
@@ -634,7 +630,7 @@ class _PageError extends StatelessWidget {
           child: FilledButton(
             onPressed: onRetry,
             style: FilledButton.styleFrom(
-              backgroundColor: Color(0xFF489F2A),
+              backgroundColor: const Color(0xFF489F2A),
               foregroundColor: Colors.white,
             ),
             child: const Text('Повторить'),

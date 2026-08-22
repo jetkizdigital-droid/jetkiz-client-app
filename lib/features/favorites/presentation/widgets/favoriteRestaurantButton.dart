@@ -24,8 +24,7 @@ class FavoriteRestaurantButton extends StatefulWidget {
       _FavoriteRestaurantButtonState();
 }
 
-class _FavoriteRestaurantButtonState
-    extends State<FavoriteRestaurantButton> {
+class _FavoriteRestaurantButtonState extends State<FavoriteRestaurantButton> {
   late final FavoritesApi _favoritesApi;
 
   bool _isFavorite = false;
@@ -125,9 +124,7 @@ class _FavoriteRestaurantButtonState
               size: widget.iconSize,
               color: _isFavorite ? color : null,
             ),
-      tooltip: _isFavorite
-          ? 'Убрать из избранного'
-          : 'Добавить в избранное',
+      tooltip: _isFavorite ? 'Убрать из избранного' : 'Добавить в избранное',
     );
   }
 }

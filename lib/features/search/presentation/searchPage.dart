@@ -253,8 +253,9 @@ class _SearchPageState extends State<SearchPage> {
       MaterialPageRoute(
         builder: (_) => RestaurantMenuPage(
           restaurantId: item.restaurantId,
-          restaurantName:
-              item.restaurantName.trim().isEmpty ? 'Ресторан' : item.restaurantName,
+          restaurantName: item.restaurantName.trim().isEmpty
+              ? 'Ресторан'
+              : item.restaurantName,
         ),
       ),
     );
@@ -419,10 +420,8 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     final query = _controller.text.trim();
     final hasQuery = query.isNotEmpty;
-    final isEmptyResult = hasQuery &&
-        !_isLoading &&
-        _error == null &&
-        _result.isEmpty;
+    final isEmptyResult =
+        hasQuery && !_isLoading && _error == null && _result.isEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F9),
@@ -662,7 +661,8 @@ class _RestaurantTile extends StatelessWidget {
               child: SizedBox(
                 width: 76,
                 height: 76,
-                child: item.coverImageUrl != null && item.coverImageUrl!.isNotEmpty
+                child: item.coverImageUrl != null &&
+                        item.coverImageUrl!.isNotEmpty
                     ? Image.network(
                         item.coverImageUrl!,
                         fit: BoxFit.cover,
@@ -753,7 +753,8 @@ class _ProductTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final subtitleParts = <String>[
       if (item.restaurantName.trim().isNotEmpty) item.restaurantName.trim(),
-      if (item.categoryTitle?.trim().isNotEmpty == true) item.categoryTitle!.trim(),
+      if (item.categoryTitle?.trim().isNotEmpty == true)
+        item.categoryTitle!.trim(),
       if (item.isDrink) 'Напиток',
       if (item.weight?.trim().isNotEmpty == true) item.weight!.trim(),
     ];

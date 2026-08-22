@@ -65,7 +65,8 @@ class OrderDetailsData {
 
   bool get canLeaveReview {
     final statusValue = statusUpper;
-    return (statusValue == 'DELIVERED' || statusValue == 'PAID') && !ratingGiven;
+    return (statusValue == 'DELIVERED' || statusValue == 'PAID') &&
+        !ratingGiven;
   }
 
   bool get canRepeatOrder => items.isNotEmpty;

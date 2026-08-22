@@ -9,6 +9,7 @@
 /// - home screen is backend-first
 /// - pinned restaurants are loaded separately from restaurants/public/list
 /// - categories may contain empty products[] and UI must handle that safely
+library;
 
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/home/domain/homeData.dart';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/smsCodePage.dart';
@@ -18,18 +19,14 @@ import 'package:jetkiz_mobile/features/auth/presentation/smsCodePage.dart';
 /// Подтверждённый backend contract:
 /// - POST /auth/request-code
 /// - body: { phone }
-/// - response: { success, phone, code, expiresAt }
+/// - response: { success, phone, expiresAt, resendAvailableAt }
 ///
 /// Куда ставить API:
 /// - API уже вынесен в lib/features/auth/data/authApi.dart
 /// - UI здесь не работает с Dio напрямую
 /// - используется только AuthApi + ApiClient
 ///
-/// DEV note:
-/// - Пока backend работает с фиксированным кодом 1234.
-/// - Это подтверждено в auth.service.ts.
-/// - После перехода на реальную SMS-отправку mobile flow останется тем же:
-///   request-code -> SmsCodePage -> verify-code -> save token.
+/// Auth flow: request-code -> SmsCodePage -> verify-code -> save token.
 class PhoneLoginPage extends StatefulWidget {
   final VoidCallback? onAuthorized;
 
@@ -127,16 +124,25 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         MaterialPageRoute(
           builder: (_) => SmsCodePage(
             phone: normalizedPhone,
+            resendAvailableAt: response.resendAvailableAt,
             onAuthorized: widget.onAuthorized,
           ),
         ),
       );
-    } catch (error) {
+    } on AuthApiException catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Не удалось отправить код: $error'),
+          content: Text(_requestCodeErrorMessage(error)),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось отправить код. Попробуйте позже.'),
         ),
       );
     } finally {
@@ -145,6 +151,19 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
           _isSubmitting = false;
         });
       }
+    }
+  }
+
+  String _requestCodeErrorMessage(AuthApiException error) {
+    switch (error.type) {
+      case AuthApiErrorType.tooManyAttempts:
+        return 'Слишком много запросов. Попробуйте позже.';
+      case AuthApiErrorType.noInternet:
+        return error.userMessage;
+      case AuthApiErrorType.invalidCode:
+      case AuthApiErrorType.expiredCode:
+      case AuthApiErrorType.serverError:
+        return 'Не удалось отправить код. Попробуйте позже.';
     }
   }
 
@@ -163,20 +182,10 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: Image.asset(
-                'assets/images//Vector.svg',
+              child: SvgPicture.asset(
+                'assets/images/Vector.svg',
                 height: 68,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) {
-                  return const Text(
-                    'jetkiz',
-                    style: TextStyle(
-                      color: primaryGreen,
-                      fontSize: 42,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  );
-                },
               ),
             ),
             const SizedBox(height: 56),

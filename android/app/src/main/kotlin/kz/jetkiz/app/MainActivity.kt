@@ -1,4 +1,4 @@
-package com.example.jetkiz_mobile
+package kz.jetkiz.app
 
 import io.flutter.embedding.android.FlutterActivity
 

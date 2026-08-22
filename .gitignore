@@ -12,7 +12,6 @@ ios/Pods/
 token.txt
 *.accessToken
 *.iml
-@"
 
 # Secrets / signing
 .env
@@ -27,4 +26,3 @@ android/key.properties
 *_REPORT.md
 JETKIZ_CLIENT_APP_FULL_STATUS_AFTER_PROFILE.md
 make_jetkiz_report.ps1
-"@ | Add-Content .gitignore

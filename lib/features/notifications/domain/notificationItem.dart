@@ -65,14 +65,12 @@ class NotificationsPageData {
   final int unreadCount;
 
   factory NotificationsPageData.fromJson(Map<String, dynamic> json) {
-    final itemsRaw =
-        _extractList(json, const ['items']) ??
+    final itemsRaw = _extractList(json, const ['items']) ??
         _extractList(json, const ['data', 'items']) ??
         _extractList(json, const ['result', 'items']) ??
         const [];
 
-    final unreadCount =
-        _parseInt(json['unreadCount']) ??
+    final unreadCount = _parseInt(json['unreadCount']) ??
         _parseInt((json['meta'] is Map ? json['meta']['unreadCount'] : null)) ??
         itemsRaw
             .whereType<Map>()

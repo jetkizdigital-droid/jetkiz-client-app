@@ -2,17 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
 import 'package:jetkiz_mobile/features/auth/data/authPostLoginService.dart';
 
 class SmsCodePage extends StatefulWidget {
   final String phone;
+  final DateTime? resendAvailableAt;
   final VoidCallback? onAuthorized;
 
   const SmsCodePage({
     super.key,
     required this.phone,
+    this.resendAvailableAt,
     this.onAuthorized,
   });
 
@@ -21,6 +24,9 @@ class SmsCodePage extends StatefulWidget {
 }
 
 class _SmsCodePageState extends State<SmsCodePage> {
+  static const int _otpLength = 6;
+  static const int _resendCooldownSeconds = 60;
+
   final TextEditingController _codeController = TextEditingController();
   final FocusNode _codeFocusNode = FocusNode();
   final ApiClient _apiClient = ApiClient();
@@ -33,14 +39,14 @@ class _SmsCodePageState extends State<SmsCodePage> {
   String? _errorText;
 
   Timer? _resendTimer;
-  int _secondsLeft = 30;
+  int _secondsLeft = _resendCooldownSeconds;
 
   @override
   void initState() {
     super.initState();
     _authApi = AuthApi(_apiClient);
     _postLoginService = AuthPostLoginService(_apiClient);
-    _startResendTimer();
+    _startResendTimer(resendAvailableAt: widget.resendAvailableAt);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -59,7 +65,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
   String get _digits => _extractDigits(_codeController.text);
 
-  bool get _canSubmit => _digits.length == 4 && !_isSubmitting;
+  bool get _canSubmit => _digits.length == _otpLength && !_isSubmitting;
 
   bool get _canResend => _secondsLeft == 0 && !_isSubmitting && !_isResending;
 
@@ -67,11 +73,17 @@ class _SmsCodePageState extends State<SmsCodePage> {
     return value.replaceAll(RegExp(r'[^0-9]'), '');
   }
 
-  void _startResendTimer() {
+  void _startResendTimer({DateTime? resendAvailableAt}) {
     _resendTimer?.cancel();
 
+    final now = DateTime.now();
+    final secondsLeft =
+        resendAvailableAt != null && resendAvailableAt.isAfter(now)
+            ? resendAvailableAt.difference(now).inSeconds + 1
+            : _resendCooldownSeconds;
+
     setState(() {
-      _secondsLeft = 30;
+      _secondsLeft = secondsLeft;
     });
 
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -112,7 +124,8 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
   void _onCodeChanged(String value) {
     final digits = _extractDigits(value);
-    final safe = digits.length > 4 ? digits.substring(0, 4) : digits;
+    final safe =
+        digits.length > _otpLength ? digits.substring(0, _otpLength) : digits;
 
     if (safe != value) {
       _codeController.value = TextEditingValue(
@@ -129,7 +142,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
       setState(() {});
     }
 
-    if (safe.length == 4 && !_isSubmitting) {
+    if (safe.length == _otpLength && !_isSubmitting) {
       _submit();
     }
   }
@@ -169,11 +182,21 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
       widget.onAuthorized?.call();
       Navigator.of(context).pop();
+    } on AuthApiException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorText = error.userMessage;
+        _isSubmitting = false;
+      });
+
+      _codeController.clear();
+      _codeFocusNode.requestFocus();
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _errorText = 'Неверный код. Попробуйте ещё раз.';
+        _errorText = 'Сервис временно недоступен. Попробуйте позже.';
         _isSubmitting = false;
       });
 
@@ -191,24 +214,29 @@ class _SmsCodePageState extends State<SmsCodePage> {
     });
 
     try {
-      await _authApi.requestSmsCode(phone: widget.phone);
+      final response = await _authApi.requestSmsCode(phone: widget.phone);
 
       if (!mounted) return;
 
       _codeController.clear();
-      _startResendTimer();
+      _startResendTimer(resendAvailableAt: response.resendAvailableAt);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Код отправлен повторно.'),
         ),
       );
+    } on AuthApiException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorText = _resendErrorMessage(error);
+      });
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _errorText =
-            'Не удалось отправить код. Проверьте интернет и попробуйте ещё раз.';
+        _errorText = 'Не удалось отправить код. Попробуйте позже.';
       });
     } finally {
       if (mounted) {
@@ -216,6 +244,19 @@ class _SmsCodePageState extends State<SmsCodePage> {
           _isResending = false;
         });
       }
+    }
+  }
+
+  String _resendErrorMessage(AuthApiException error) {
+    switch (error.type) {
+      case AuthApiErrorType.tooManyAttempts:
+        return 'Слишком много запросов. Попробуйте позже.';
+      case AuthApiErrorType.noInternet:
+        return error.userMessage;
+      case AuthApiErrorType.invalidCode:
+      case AuthApiErrorType.expiredCode:
+      case AuthApiErrorType.serverError:
+        return 'Не удалось отправить код. Попробуйте позже.';
     }
   }
 
@@ -232,11 +273,11 @@ class _SmsCodePageState extends State<SmsCodePage> {
         onTap: () => _codeFocusNode.requestFocus(),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          height: 92,
+          height: 64,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: const Color(0xFFD9D9D9),
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _errorText != null
                   ? const Color(0xFFE53935)
@@ -250,7 +291,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
             hasValue ? digits[index] : '',
             style: TextStyle(
               color: Colors.black,
-              fontSize: 34,
+              fontSize: 28,
               fontWeight: isFilled ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
@@ -314,8 +355,8 @@ class _SmsCodePageState extends State<SmsCodePage> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Image.asset(
-                          'assets/images//Vector.svg',
+                        SvgPicture.asset(
+                          'assets/images/Vector.svg',
                           height: 86,
                           fit: BoxFit.contain,
                         ),
@@ -356,7 +397,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                               autofillHints: const [AutofillHints.oneTimeCode],
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(4),
+                                LengthLimitingTextInputFormatter(_otpLength),
                               ],
                               onChanged: _onCodeChanged,
                               decoration: const InputDecoration(
@@ -371,15 +412,12 @@ class _SmsCodePageState extends State<SmsCodePage> {
                           ),
                         ),
                         Row(
-                          children: [
-                            _buildCodeBox(index: 0, digits: digits),
-                            const SizedBox(width: 16),
-                            _buildCodeBox(index: 1, digits: digits),
-                            const SizedBox(width: 16),
-                            _buildCodeBox(index: 2, digits: digits),
-                            const SizedBox(width: 16),
-                            _buildCodeBox(index: 3, digits: digits),
-                          ],
+                          children: List.generate(_otpLength, (index) {
+                            return [
+                              if (index > 0) const SizedBox(width: 8),
+                              _buildCodeBox(index: index, digits: digits),
+                            ];
+                          }).expand((widgets) => widgets).toList(),
                         ),
                         const SizedBox(height: 22),
                         if (_isSubmitting)

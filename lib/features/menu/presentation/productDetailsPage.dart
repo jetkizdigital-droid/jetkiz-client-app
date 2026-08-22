@@ -264,7 +264,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     final cart = CartRepository.instance;
     final hadDifferentRestaurant = cart.restaurantId != null &&
         cart.restaurantId != restaurantId &&
-        !cart.isEmpty;
+        cart.isNotEmpty;
 
     cart.addItem(
       productId: _product.id,

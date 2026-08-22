@@ -354,9 +354,8 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   void _showSnackBar(String message) {
-    final text = message.trim().isEmpty
-        ? 'Не удалось загрузить заказы'
-        : message.trim();
+    final text =
+        message.trim().isEmpty ? 'Не удалось загрузить заказы' : message.trim();
 
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
@@ -812,39 +811,39 @@ class _LoadingState extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
-          child: Column(
+          child: const Column(
             children: [
               Row(
                 children: [
                   _SkeletonBox(width: 120, height: 18),
-                  const Spacer(),
+                  Spacer(),
                   _SkeletonBox(width: 90, height: 28, radius: 999),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Row(
                 children: [
                   _SkeletonBox(width: 58, height: 58, radius: 14),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _SkeletonBox(width: double.infinity, height: 16),
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _SkeletonBox(width: 140, height: 12),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _SkeletonBox(width: double.infinity, height: 36, radius: 12),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               Row(
                 children: [
                   _SkeletonBox(width: 90, height: 24),
-                  const Spacer(),
+                  Spacer(),
                   _SkeletonBox(width: 110, height: 40, radius: 14),
                 ],
               ),
@@ -1000,9 +999,8 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = message.trim().isEmpty
-        ? 'Не удалось загрузить заказы'
-        : message.trim();
+    final text =
+        message.trim().isEmpty ? 'Не удалось загрузить заказы' : message.trim();
 
     return Center(
       child: Padding(

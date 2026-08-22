@@ -19,8 +19,7 @@ class InAppNotificationsHost extends StatefulWidget {
   final Duration pollInterval;
 
   @override
-  State<InAppNotificationsHost> createState() =>
-      _InAppNotificationsHostState();
+  State<InAppNotificationsHost> createState() => _InAppNotificationsHostState();
 }
 
 class _InAppNotificationsHostState extends State<InAppNotificationsHost>
@@ -196,13 +195,11 @@ class _InAppNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = isOrderNotification
-        ? const Color(0xFF489F2A)
-        : const Color(0xFFF59E0B);
+    final accent =
+        isOrderNotification ? const Color(0xFF489F2A) : const Color(0xFFF59E0B);
 
-    final softBg = isOrderNotification
-        ? const Color(0xFFEAF7E5)
-        : const Color(0xFFFFF4DB);
+    final softBg =
+        isOrderNotification ? const Color(0xFFEAF7E5) : const Color(0xFFFFF4DB);
 
     final actionText =
         isOrderNotification ? 'Открыть заказ' : 'Открыть уведомления';

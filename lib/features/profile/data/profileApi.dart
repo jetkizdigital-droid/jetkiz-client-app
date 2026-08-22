@@ -69,7 +69,8 @@ class ProfileApi {
       );
 
       final responseMap = _tryAsMap(response.data);
-      final avatarUrl = responseMap == null ? null : _extractAvatarUrl(responseMap);
+      final avatarUrl =
+          responseMap == null ? null : _extractAvatarUrl(responseMap);
 
       final current = await getMe();
 

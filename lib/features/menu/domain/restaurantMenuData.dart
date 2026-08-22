@@ -94,8 +94,7 @@ class RestaurantMenuData extends Equatable {
             id: entry.key,
             code: firstItem.categoryCode ?? '',
             titleRu: firstItem.categoryNameRu ?? 'Без названия',
-            titleKk:
-                firstItem.categoryNameKk ?? firstItem.categoryNameRu ?? '',
+            titleKk: firstItem.categoryNameKk ?? firstItem.categoryNameRu ?? '',
             sortOrder: firstItem.categorySortOrder ?? 999999,
             iconUrl: null,
           );

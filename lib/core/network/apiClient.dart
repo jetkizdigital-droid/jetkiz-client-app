@@ -24,8 +24,7 @@ class ApiClient {
         onRequest: (options, handler) async {
           await _applyBaseHeaders(options);
 
-          final skipRefresh =
-              options.headers['x-skip-auth-refresh'] == 'true';
+          final skipRefresh = options.headers['x-skip-auth-refresh'] == 'true';
 
           if (skipRefresh) {
             options.headers.remove('Authorization');
@@ -79,8 +78,7 @@ class ApiClient {
                 _accessToken ?? await _authStorage.getAccessToken();
 
             if (newAccessToken != null && newAccessToken.trim().isNotEmpty) {
-              retryHeaders['Authorization'] =
-                  'Bearer ${newAccessToken.trim()}';
+              retryHeaders['Authorization'] = 'Bearer ${newAccessToken.trim()}';
             } else {
               retryHeaders.remove('Authorization');
             }

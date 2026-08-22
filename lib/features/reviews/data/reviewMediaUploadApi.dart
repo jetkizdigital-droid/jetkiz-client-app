@@ -16,7 +16,8 @@ class ReviewMediaUploadApi {
     bool makePreview = true,
   }) async {
     final fileName = file.path.split(Platform.pathSeparator).last;
-    final resolvedKind = (kind ?? _detectKindFromPath(file.path)).trim().toUpperCase();
+    final resolvedKind =
+        (kind ?? _detectKindFromPath(file.path)).trim().toUpperCase();
 
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(

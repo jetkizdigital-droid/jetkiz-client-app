@@ -134,7 +134,8 @@ class AnalyticsService {
 
       if (accessToken == null || accessToken.trim().isEmpty) {
         if (kDebugMode) {
-          debugPrint('AnalyticsService: skip $eventName, user is not authorized');
+          debugPrint(
+              'AnalyticsService: skip $eventName, user is not authorized');
         }
         return;
       }

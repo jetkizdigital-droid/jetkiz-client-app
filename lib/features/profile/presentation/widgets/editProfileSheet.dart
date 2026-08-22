@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
 import 'package:jetkiz_mobile/features/profile/domain/updateProfileDto.dart';
 
-typedef SaveProfileCallback = Future<ProfileData> Function(UpdateProfileDto dto);
+typedef SaveProfileCallback = Future<ProfileData> Function(
+    UpdateProfileDto dto);
 
 Future<ProfileData?> showEditProfileSheet({
   required BuildContext context,
@@ -239,7 +240,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
               key: _formKey,
               child: Column(
                 children: [
-                  _FieldLabel(
+                  const _FieldLabel(
                     title: 'Имя',
                     required: true,
                   ),

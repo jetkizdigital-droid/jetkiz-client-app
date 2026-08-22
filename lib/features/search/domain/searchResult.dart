@@ -12,15 +12,13 @@ class SearchResult {
   bool get isEmpty => restaurants.isEmpty && products.isEmpty;
 
   factory SearchResult.fromJson(Map<String, dynamic> json) {
-    final restaurantsRaw =
-        _extractList(json, const ['restaurants']) ??
+    final restaurantsRaw = _extractList(json, const ['restaurants']) ??
         _extractList(json, const ['items', 'restaurants']) ??
         _extractList(json, const ['data', 'restaurants']) ??
         _extractList(json, const ['result', 'restaurants']) ??
         const [];
 
-    final productsRaw =
-        _extractList(json, const ['products']) ??
+    final productsRaw = _extractList(json, const ['products']) ??
         _extractList(json, const ['items', 'products']) ??
         _extractList(json, const ['data', 'products']) ??
         _extractList(json, const ['result', 'products']) ??
@@ -33,7 +31,8 @@ class SearchResult {
     return SearchResult(
       restaurants: restaurantsRaw
           .whereType<Map>()
-          .map((e) => SearchRestaurantItem.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) =>
+              SearchRestaurantItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       products: productsRaw
           .whereType<Map>()

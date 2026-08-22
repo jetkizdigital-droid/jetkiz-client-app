@@ -166,9 +166,8 @@ class _FavoritesPageState extends State<FavoritesPage>
       if (!mounted) return;
 
       setState(() {
-        _restaurants = _restaurants
-            .where((x) => x.restaurant.id != restaurantId)
-            .toList();
+        _restaurants =
+            _restaurants.where((x) => x.restaurant.id != restaurantId).toList();
       });
 
       _showSnack('Ресторан удалён из избранного');
@@ -313,8 +312,7 @@ class _FavoritesPageState extends State<FavoritesPage>
             _EmptyView(
               icon: Icons.favorite_outline,
               title: 'Нет избранных блюд',
-              subtitle:
-                  'Добавь блюда в избранное, чтобы не искать их заново.',
+              subtitle: 'Добавь блюда в избранное, чтобы не искать их заново.',
             ),
           ],
         ),

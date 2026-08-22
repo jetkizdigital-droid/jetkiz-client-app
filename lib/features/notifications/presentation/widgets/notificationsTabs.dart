@@ -60,8 +60,7 @@ class _NotificationsTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor =
-        selected ? const Color(0xFFEAF7E5) : Colors.white;
+    final backgroundColor = selected ? const Color(0xFFEAF7E5) : Colors.white;
     final borderColor =
         selected ? const Color(0xFF489F2A) : const Color(0xFFE0E0E0);
     final textColor =

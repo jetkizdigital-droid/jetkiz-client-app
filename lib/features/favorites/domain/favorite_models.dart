@@ -41,14 +41,12 @@ class FavoriteRestaurantsResponse {
   final FavoriteMeta meta;
 
   factory FavoriteRestaurantsResponse.fromJson(Map<String, dynamic> json) {
-    final itemsRaw =
-        _extractList(json, const ['items']) ??
+    final itemsRaw = _extractList(json, const ['items']) ??
         _extractList(json, const ['data', 'items']) ??
         _extractList(json, const ['result', 'items']) ??
         const [];
 
-    final metaRaw =
-        _extractMap(json, const ['meta']) ??
+    final metaRaw = _extractMap(json, const ['meta']) ??
         _extractMap(json, const ['data', 'meta']) ??
         _extractMap(json, const ['result', 'meta']) ??
         <String, dynamic>{'total': itemsRaw.length};
@@ -77,14 +75,12 @@ class FavoriteProductsResponse {
   final FavoriteMeta meta;
 
   factory FavoriteProductsResponse.fromJson(Map<String, dynamic> json) {
-    final itemsRaw =
-        _extractList(json, const ['items']) ??
+    final itemsRaw = _extractList(json, const ['items']) ??
         _extractList(json, const ['data', 'items']) ??
         _extractList(json, const ['result', 'items']) ??
         const [];
 
-    final metaRaw =
-        _extractMap(json, const ['meta']) ??
+    final metaRaw = _extractMap(json, const ['meta']) ??
         _extractMap(json, const ['data', 'meta']) ??
         _extractMap(json, const ['result', 'meta']) ??
         <String, dynamic>{'total': itemsRaw.length};
@@ -119,18 +115,15 @@ class FavoriteAllResponse {
   final int total;
 
   factory FavoriteAllResponse.fromJson(Map<String, dynamic> json) {
-    final restaurantsRaw =
-        _extractList(json, const ['restaurants']) ??
+    final restaurantsRaw = _extractList(json, const ['restaurants']) ??
         _extractList(json, const ['data', 'restaurants']) ??
         const [];
 
-    final productsRaw =
-        _extractList(json, const ['products']) ??
+    final productsRaw = _extractList(json, const ['products']) ??
         _extractList(json, const ['data', 'products']) ??
         const [];
 
-    final meta =
-        _extractMap(json, const ['meta']) ??
+    final meta = _extractMap(json, const ['meta']) ??
         _extractMap(json, const ['data', 'meta']) ??
         const <String, dynamic>{};
 
@@ -346,10 +339,12 @@ class FavoriteProduct {
     );
 
     final fallbackImage = parsedImages.isNotEmpty
-        ? parsedImages.firstWhere(
-            (x) => x.isMain,
-            orElse: () => parsedImages.first,
-          ).url
+        ? parsedImages
+            .firstWhere(
+              (x) => x.isMain,
+              orElse: () => parsedImages.first,
+            )
+            .url
         : null;
 
     return FavoriteProduct(
@@ -464,7 +459,8 @@ List<dynamic>? _extractList(Map<String, dynamic> json, List<String> path) {
   return current is List ? current : null;
 }
 
-Map<String, dynamic>? _extractMap(Map<String, dynamic> json, List<String> path) {
+Map<String, dynamic>? _extractMap(
+    Map<String, dynamic> json, List<String> path) {
   dynamic current = json;
 
   for (final part in path) {
@@ -501,9 +497,8 @@ String _readString(
   }
 
   for (final key in fallbackKeys) {
-    final value = key.contains('.')
-        ? _readValue(json, key.split('.'))
-        : json[key];
+    final value =
+        key.contains('.') ? _readValue(json, key.split('.')) : json[key];
     if (value != null && value.toString().trim().isNotEmpty) {
       return value.toString().trim();
     }
@@ -535,9 +530,8 @@ int _readInt(
   if (direct != null) return direct;
 
   for (final key in fallbackKeys) {
-    final value = key.contains('.')
-        ? _readValue(json, key.split('.'))
-        : json[key];
+    final value =
+        key.contains('.') ? _readValue(json, key.split('.')) : json[key];
     final parsed = _parseInt(value);
     if (parsed != null) return parsed;
   }
@@ -554,9 +548,8 @@ int? _readNullableInt(
   if (direct != null) return direct;
 
   for (final key in fallbackKeys) {
-    final value = key.contains('.')
-        ? _readValue(json, key.split('.'))
-        : json[key];
+    final value =
+        key.contains('.') ? _readValue(json, key.split('.')) : json[key];
     final parsed = _parseInt(value);
     if (parsed != null) return parsed;
   }
@@ -573,9 +566,8 @@ double _readDouble(
   if (direct != null) return direct;
 
   for (final key in fallbackKeys) {
-    final value = key.contains('.')
-        ? _readValue(json, key.split('.'))
-        : json[key];
+    final value =
+        key.contains('.') ? _readValue(json, key.split('.')) : json[key];
     final parsed = _parseDouble(value);
     if (parsed != null) return parsed;
   }
@@ -593,9 +585,8 @@ bool _readBool(
   if (direct != null) return direct;
 
   for (final key in fallbackKeys) {
-    final value = key.contains('.')
-        ? _readValue(json, key.split('.'))
-        : json[key];
+    final value =
+        key.contains('.') ? _readValue(json, key.split('.')) : json[key];
     final parsed = _parseBool(value);
     if (parsed != null) return parsed;
   }

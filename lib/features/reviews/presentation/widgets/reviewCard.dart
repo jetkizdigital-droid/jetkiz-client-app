@@ -52,8 +52,7 @@ class ReviewCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (review.hasMedia)
-                  ReviewMediaBlocks(items: review.media),
+                if (review.hasMedia) ReviewMediaBlocks(items: review.media),
                 if (review.reactions.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ReviewReactions(
@@ -296,8 +295,7 @@ class _RestaurantReplySection extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (response.hasMedia)
-                  ReviewMediaBlocks(items: response.media),
+                if (response.hasMedia) ReviewMediaBlocks(items: response.media),
                 if (response.reactions.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   ReviewReactions(

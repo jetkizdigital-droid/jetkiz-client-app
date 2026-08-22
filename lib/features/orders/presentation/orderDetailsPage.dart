@@ -56,7 +56,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       if (!mounted) return;
 
       setState(() {
-        _errorText = 'Не удалось загрузить детали заказа';
+        _errorText =
+            'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С‘РЎвЂљРЎРЉ Р Т‘Р ВµРЎвЂљР В°Р В»Р С‘ Р В·Р В°Р С”Р В°Р В·Р В°';
       });
     } finally {
       if (!mounted) return;
@@ -75,7 +76,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     if (restaurantId.isEmpty) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(
-          content: Text('Не удалось определить ресторан заказа'),
+          content: Text(
+              'Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•Р С—РЎР‚Р ВµР Т‘Р ВµР В»Р С‘РЎвЂљРЎРЉ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р… Р В·Р В°Р С”Р В°Р В·Р В°'),
         ),
       );
       return;
@@ -93,7 +95,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       const SnackBar(
-        content: Text('Добавлено в корзину'),
+        content: Text(
+            'Р вЂќР С•Р В±Р В°Р Р†Р В»Р ВµР Р…Р С• Р Р† Р С”Р С•РЎР‚Р В·Р С‘Р Р…РЎС“'),
       ),
     );
 
@@ -101,28 +104,27 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   void _leaveReview() {
-  final order = _order;
-  if (order == null) return;
+    final order = _order;
+    if (order == null) return;
 
-  final restaurantName =
-      order.restaurant?.nameRu.trim().isNotEmpty == true
-          ? order.restaurant!.nameRu
-          : 'Ресторан';
+    final restaurantName = order.restaurant?.nameRu.trim().isNotEmpty == true
+        ? order.restaurant!.nameRu
+        : 'Р В Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…';
 
-  final firstItem = order.items.isNotEmpty ? order.items.first : null;
+    final firstItem = order.items.isNotEmpty ? order.items.first : null;
 
-  Navigator.of(context).push(
-    MaterialPageRoute(
-      builder: (_) => CreateReviewPage(
-        orderId: order.id,
-        restaurantName: restaurantName,
-        restaurantImageUrl: order.restaurant?.resolvedCoverImageUrl,
-        orderItemTitle: firstItem?.title,
-        orderItemPrice: firstItem?.price,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateReviewPage(
+          orderId: order.id,
+          restaurantName: restaurantName,
+          restaurantImageUrl: order.restaurant?.resolvedCoverImageUrl,
+          orderItemTitle: firstItem?.title,
+          orderItemPrice: firstItem?.price,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _openRestaurant() {
     final restaurant = _order?.restaurant;
@@ -130,7 +132,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
-        content: Text('Открыть ресторан: ${restaurant.nameRu}'),
+        content: Text(
+            'Р С›РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљРЎРЉ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…: ${restaurant.nameRu}'),
       ),
     );
   }
@@ -138,7 +141,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   void _openSupport() {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       const SnackBar(
-        content: Text('Поддержка будет подключена позже'),
+        content: Text(
+            'Р СџР С•Р Т‘Р Т‘Р ВµРЎР‚Р В¶Р С”Р В° Р В±РЎС“Р Т‘Р ВµРЎвЂљ Р С—Р С•Р Т‘Р С”Р В»РЎР‹РЎвЂЎР ВµР Р…Р В° Р С—Р С•Р В·Р В¶Р Вµ'),
       ),
     );
   }
@@ -162,7 +166,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         backgroundColor: _bg,
         body: Center(
           child: Text(
-            'Заказ не найден',
+            'Р вЂ”Р В°Р С”Р В°Р В· Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р…',
             style: TextStyle(
               color: _textMuted,
               fontSize: 15,
@@ -198,7 +202,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     _StatusBlock(
                       statusUi: statusUi,
                       orderDateText: _formatDateTime(order.createdAt),
-                      paymentStatusText: _paymentStatusLabel(order.paymentStatus),
+                      paymentStatusText:
+                          _paymentStatusLabel(order.paymentStatus),
                     ),
                     const SizedBox(height: 16),
                     if (order.restaurant != null) ...[
@@ -235,36 +240,38 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
   static String _formatDateTime(DateTime value) {
     const months = <int, String>{
-      1: 'января',
-      2: 'февраля',
-      3: 'марта',
-      4: 'апреля',
-      5: 'мая',
-      6: 'июня',
-      7: 'июля',
-      8: 'августа',
-      9: 'сентября',
-      10: 'октября',
-      11: 'ноября',
-      12: 'декабря',
+      1: 'РЎРЏР Р…Р Р†Р В°РЎР‚РЎРЏ',
+      2: 'РЎвЂћР ВµР Р†РЎР‚Р В°Р В»РЎРЏ',
+      3: 'Р СР В°РЎР‚РЎвЂљР В°',
+      4: 'Р В°Р С—РЎР‚Р ВµР В»РЎРЏ',
+      5: 'Р СР В°РЎРЏ',
+      6: 'Р С‘РЎР‹Р Р…РЎРЏ',
+      7: 'Р С‘РЎР‹Р В»РЎРЏ',
+      8: 'Р В°Р Р†Р С–РЎС“РЎРѓРЎвЂљР В°',
+      9: 'РЎРѓР ВµР Р…РЎвЂљРЎРЏР В±РЎР‚РЎРЏ',
+      10: 'Р С•Р С”РЎвЂљРЎРЏР В±РЎР‚РЎРЏ',
+      11: 'Р Р…Р С•РЎРЏР В±РЎР‚РЎРЏ',
+      12: 'Р Т‘Р ВµР С”Р В°Р В±РЎР‚РЎРЏ',
     };
 
     String two(int n) => n.toString().padLeft(2, '0');
-    return '${value.day} ${months[value.month] ?? ''} ${value.year} в ${two(value.hour)}:${two(value.minute)}';
+    return '${value.day} ${months[value.month] ?? ''} ${value.year} Р Р† ${two(value.hour)}:${two(value.minute)}';
   }
 
   static String _paymentStatusLabel(String raw) {
     switch (raw.toUpperCase()) {
       case 'PAID':
-        return 'Оплачено';
+        return 'Р С›Р С—Р В»Р В°РЎвЂЎР ВµР Р…Р С•';
       case 'PENDING':
-        return 'Оплачено';
+        return 'Р С›Р С—Р В»Р В°РЎвЂЎР ВµР Р…Р С•';
       case 'FAILED':
-        return 'Ошибка оплаты';
+        return 'Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С•Р С—Р В»Р В°РЎвЂљРЎвЂ№';
       case 'REFUNDED':
-        return 'Возврат средств';
+        return 'Р вЂ™Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљ РЎРѓРЎР‚Р ВµР Т‘РЎРѓРЎвЂљР Р†';
       default:
-        return raw.trim().isEmpty ? 'Статус оплаты неизвестен' : raw;
+        return raw.trim().isEmpty
+            ? 'Р РЋРЎвЂљР В°РЎвЂљРЎС“РЎРѓ Р С•Р С—Р В»Р В°РЎвЂљРЎвЂ№ Р Р…Р ВµР С‘Р В·Р Р†Р ВµРЎРѓРЎвЂљР ВµР Р…'
+            : raw;
     }
   }
 
@@ -277,7 +284,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (isPickup && status == 'READY') {
       return const _StatusUi(
-        label: 'Можно забирать',
+        label: 'Р СљР С•Р В¶Р Р…Р С• Р В·Р В°Р В±Р С‘РЎР‚Р В°РЎвЂљРЎРЉ',
         bgColor: Color(0xFFE6F0FF),
         textColor: Color(0xFF2B6CB0),
         icon: Icons.shopping_bag_outlined,
@@ -286,7 +293,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (isPickup && status == 'DELIVERED') {
       return const _StatusUi(
-        label: 'Получен',
+        label: 'Р СџР С•Р В»РЎС“РЎвЂЎР ВµР Р…',
         bgColor: Color(0xFFF3F4F6),
         textColor: Color(0xFF4B5563),
         icon: Icons.check_circle_rounded,
@@ -301,7 +308,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       'ON_THE_WAY',
     ].contains(status)) {
       return const _StatusUi(
-        label: 'В пути',
+        label: 'Р вЂ™ Р С—РЎС“РЎвЂљР С‘',
         bgColor: _green,
         textColor: Colors.white,
         icon: Icons.access_time_rounded,
@@ -310,7 +317,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (status == 'DELIVERED' || status == 'PAID') {
       return const _StatusUi(
-        label: 'Доставлен',
+        label: 'Р вЂќР С•РЎРѓРЎвЂљР В°Р Р†Р В»Р ВµР Р…',
         bgColor: Color(0xFFF3F4F6),
         textColor: Color(0xFF4B5563),
         icon: Icons.check_circle_rounded,
@@ -319,7 +326,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     if (status == 'CANCELED') {
       return const _StatusUi(
-        label: 'Отменён',
+        label: 'Р С›РЎвЂљР СР ВµР Р…РЎвЂР Р…',
         bgColor: Color(0xFFFEF2F2),
         textColor: Color(0xFFDC2626),
         icon: Icons.cancel_rounded,
@@ -327,7 +334,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
 
     return const _StatusUi(
-      label: 'Статус',
+      label: 'Р РЋРЎвЂљР В°РЎвЂљРЎС“РЎРѓ',
       bgColor: Color(0xFFF3F4F6),
       textColor: Color(0xFF4B5563),
       icon: Icons.info_outline_rounded,
@@ -359,7 +366,7 @@ class _DetailsHeader extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              'Заказ №$number',
+              'Р вЂ”Р В°Р С”Р В°Р В· РІвЂћвЂ“$number',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 20,
@@ -526,8 +533,8 @@ class _RestaurantBlock extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Icon(
                           Icons.store_rounded,
                           size: 16,
@@ -535,7 +542,7 @@ class _RestaurantBlock extends StatelessWidget {
                         ),
                         SizedBox(width: 6),
                         Text(
-                          'Ресторан',
+                          'Р В Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…',
                           style: TextStyle(
                             fontSize: 13,
                             color: _OrderDetailsPageState._textLight,
@@ -572,7 +579,7 @@ class _RestaurantBlock extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Открыть ресторан',
+                'Р С›РЎвЂљР С”РЎР‚РЎвЂ№РЎвЂљРЎРЉ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -615,8 +622,9 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: _OrderDetailsPageState._green,
                 ),
               ),
-              title: 'Самовывоз',
-              value: 'Самовывоз из ресторана',
+              title: 'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·',
+              value:
+                  'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В· Р С‘Р В· РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…Р В°',
             ),
           if (address != null)
             _InfoTile(
@@ -633,7 +641,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: _OrderDetailsPageState._green,
                 ),
               ),
-              title: 'Адрес доставки',
+              title: 'Р С’Р Т‘РЎР‚Р ВµРЎРѓ Р Т‘Р С•РЎРѓРЎвЂљР В°Р Р†Р С”Р С‘',
               value: address.formatted,
             ),
           if (order.comment != null && order.comment!.trim().isNotEmpty) ...[
@@ -652,7 +660,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: _OrderDetailsPageState._textMuted,
                 ),
               ),
-              title: 'Комментарий',
+              title: 'Р С™Р С•Р СР СР ВµР Р…РЎвЂљР В°РЎР‚Р С‘Р в„–',
               value: order.comment!.trim(),
             ),
           ],
@@ -675,7 +683,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                   color: Color(0xFFF97316),
                 ),
               ),
-              title: 'Время доставки',
+              title: 'Р вЂ™РЎР‚Р ВµР СРЎРЏ Р Т‘Р С•РЎРѓРЎвЂљР В°Р Р†Р С”Р С‘',
               value: _OrderDetailsPageState._formatDateTime(order.promisedAt!),
             ),
           ],
@@ -684,7 +692,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
               (order.comment == null || order.comment!.trim().isEmpty) &&
               order.promisedAt == null)
             const Text(
-              'Информация о доставке недоступна',
+              'Р ВР Р…РЎвЂћР С•РЎР‚Р СР В°РЎвЂ Р С‘РЎРЏ Р С• Р Т‘Р С•РЎРѓРЎвЂљР В°Р Р†Р С”Р Вµ Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р Р…Р В°',
               style: TextStyle(
                 fontSize: 14,
                 color: _OrderDetailsPageState._textMuted,
@@ -708,17 +716,17 @@ class _PickupCodeBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final code = order.pickupCode?.trim() ?? '';
     final value = order.isDelivered
-        ? 'Заказ получен'
+        ? 'Р вЂ”Р В°Р С”Р В°Р В· Р С—Р С•Р В»РЎС“РЎвЂЎР ВµР Р…'
         : code.isEmpty
-            ? 'Код самовывоза недоступен'
+            ? 'Р С™Р С•Р Т‘ РЎРѓР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·Р В° Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р…'
             : code;
 
     return _SectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(
                 Icons.shopping_bag_outlined,
                 size: 20,
@@ -726,7 +734,7 @@ class _PickupCodeBlock extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                'Самовывоз',
+                'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -737,7 +745,7 @@ class _PickupCodeBlock extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Код самовывоза',
+            'Р С™Р С•Р Т‘ РЎРѓР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·Р В°',
             style: TextStyle(
               fontSize: 13,
               color: _OrderDetailsPageState._textLight,
@@ -757,7 +765,7 @@ class _PickupCodeBlock extends StatelessWidget {
           if (code.isNotEmpty) ...[
             const SizedBox(height: 8),
             const Text(
-              'Покажите этот код сотруднику ресторана',
+              'Р СџР С•Р С”Р В°Р В¶Р С‘РЎвЂљР Вµ РЎРЊРЎвЂљР С•РЎвЂљ Р С”Р С•Р Т‘ РЎРѓР С•РЎвЂљРЎР‚РЎС“Р Т‘Р Р…Р С‘Р С”РЎС“ РЎР‚Р ВµРЎРѓРЎвЂљР С•РЎР‚Р В°Р Р…Р В°',
               style: TextStyle(
                 fontSize: 13,
                 color: _OrderDetailsPageState._textMuted,
@@ -784,8 +792,8 @@ class _OrderItemsBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               SizedBox(
                 width: 8,
                 height: 8,
@@ -798,7 +806,7 @@ class _OrderItemsBlock extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                'Состав заказа',
+                'Р РЋР С•РЎРѓРЎвЂљР В°Р Р† Р В·Р В°Р С”Р В°Р В·Р В°',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -810,7 +818,7 @@ class _OrderItemsBlock extends StatelessWidget {
           const SizedBox(height: 16),
           if (items.isEmpty)
             const Text(
-              'Позиции заказа недоступны',
+              'Р СџР С•Р В·Р С‘РЎвЂ Р С‘Р С‘ Р В·Р В°Р С”Р В°Р В·Р В° Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р Р…РЎвЂ№',
               style: TextStyle(
                 fontSize: 14,
                 color: _OrderDetailsPageState._textMuted,
@@ -838,7 +846,7 @@ class _OrderItemsBlock extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Количество: ${item.quantity}',
+                        'Р С™Р С•Р В»Р С‘РЎвЂЎР ВµРЎРѓРЎвЂљР Р†Р С•: ${item.quantity}',
                         style: const TextStyle(
                           fontSize: 13,
                           color: _OrderDetailsPageState._textMuted,
@@ -847,7 +855,7 @@ class _OrderItemsBlock extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        '${item.lineTotal} ₸',
+                        '${item.lineTotal} РІвЂљС‘',
                         style: const TextStyle(
                           fontSize: 15,
                           color: _OrderDetailsPageState._textMain,
@@ -878,8 +886,8 @@ class _PriceSummaryBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               SizedBox(
                 width: 8,
                 height: 8,
@@ -892,7 +900,7 @@ class _PriceSummaryBlock extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Text(
-                'Детали оплаты',
+                'Р вЂќР ВµРЎвЂљР В°Р В»Р С‘ Р С•Р С—Р В»Р В°РЎвЂљРЎвЂ№',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -903,23 +911,26 @@ class _PriceSummaryBlock extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _PriceRow(
-            title: 'Стоимость товаров',
-            value: '${order.subtotal} ₸',
+            title:
+                'Р РЋРЎвЂљР С•Р С‘Р СР С•РЎРѓРЎвЂљРЎРЉ РЎвЂљР С•Р Р†Р В°РЎР‚Р С•Р Р†',
+            value: '${order.subtotal} РІвЂљС‘',
           ),
           const SizedBox(height: 10),
           _PriceRow(
-            title: order.isPickup ? 'Самовывоз' : 'Доставка',
+            title: order.isPickup
+                ? 'Р РЋР В°Р СР С•Р Р†РЎвЂ№Р Р†Р С•Р В·'
+                : 'Р вЂќР С•РЎРѓРЎвЂљР В°Р Р†Р С”Р В°',
             value: order.isPickup
-                ? '0 ₸'
+                ? '0 РІвЂљС‘'
                 : order.deliveryFee == 0
-                    ? 'Бесплатно'
-                    : '${order.deliveryFee} ₸',
+                    ? 'Р вЂР ВµРЎРѓР С—Р В»Р В°РЎвЂљР Р…Р С•'
+                    : '${order.deliveryFee} РІвЂљС‘',
           ),
           if (order.finalDiscount > 0) ...[
             const SizedBox(height: 10),
             _PriceRow(
-              title: 'Скидка',
-              value: '-${order.finalDiscount} ₸',
+              title: 'Р РЋР С”Р С‘Р Т‘Р С”Р В°',
+              value: '-${order.finalDiscount} РІвЂљС‘',
               valueColor: _OrderDetailsPageState._green,
               titleColor: _OrderDetailsPageState._green,
             ),
@@ -932,8 +943,8 @@ class _PriceSummaryBlock extends StatelessWidget {
             ),
           ),
           _PriceRow(
-            title: 'Итого',
-            value: '${order.total} ₸',
+            title: 'Р ВРЎвЂљР С•Р С–Р С•',
+            value: '${order.total} РІвЂљС‘',
             isTotal: true,
           ),
         ],
@@ -971,7 +982,7 @@ class _ActionButtonsBlock extends StatelessWidget {
               ),
             ),
             child: const Text(
-              'Повторить заказ',
+              'Р СџР С•Р Р†РЎвЂљР С•РЎР‚Р С‘РЎвЂљРЎРЉ Р В·Р В°Р С”Р В°Р В·',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
@@ -998,7 +1009,7 @@ class _ActionButtonsBlock extends StatelessWidget {
                 ),
               ),
               child: const Text(
-                'Оставить отзыв',
+                'Р С›РЎРѓРЎвЂљР В°Р Р†Р С‘РЎвЂљРЎРЉ Р С•РЎвЂљР В·РЎвЂ№Р Р†',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -1045,13 +1056,11 @@ class _InfoTile extends StatelessWidget {
     required this.leading,
     required this.title,
     required this.value,
-    this.trailing,
   });
 
   final Widget leading;
   final String title;
   final String value;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1088,10 +1097,6 @@ class _InfoTile extends StatelessWidget {
             ),
           ),
         ),
-        if (trailing != null) ...[
-          const SizedBox(width: 10),
-          trailing!,
-        ],
       ],
     );
   }
@@ -1271,7 +1276,7 @@ class _OrderDetailsErrorView extends StatelessWidget {
               const SizedBox(height: 14),
               OutlinedButton(
                 onPressed: onRetry,
-                child: const Text('Повторить'),
+                child: const Text('Р СџР С•Р Р†РЎвЂљР С•РЎР‚Р С‘РЎвЂљРЎРЉ'),
               ),
             ],
           ),

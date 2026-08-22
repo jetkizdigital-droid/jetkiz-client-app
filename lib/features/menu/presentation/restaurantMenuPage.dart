@@ -59,7 +59,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   bool _isRestaurantFavoriteLoading = false;
   bool _isRestaurantFavoriteBusy = false;
 
-  _MenuLanguage _menuLanguage = _MenuLanguage.ru;
+  final _MenuLanguage _menuLanguage = _MenuLanguage.ru;
   int _deliveryFee = 0;
 
   @override

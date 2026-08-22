@@ -43,7 +43,7 @@ class StartPage extends StatelessWidget {
                 value: AppConfig.appName,
               ),
               const SizedBox(height: 12),
-              const _InfoBlock(
+              _InfoBlock(
                 title: 'Backend',
                 value: AppConfig.baseUrl,
               ),

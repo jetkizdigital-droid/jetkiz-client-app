@@ -101,7 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Expanded(child: Text(strings.settingsNotifications)),
                     Switch(
                       value: notificationsEnabled,
-                      activeColor: _green,
+                      activeThumbColor: _green,
                       onChanged: (v) {
                         setState(() {
                           notificationsEnabled = v;

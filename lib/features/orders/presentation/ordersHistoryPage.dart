@@ -522,9 +522,8 @@ class _Tabs extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: active
-                    ? const Color(0xFF489F2A)
-                    : const Color(0xFFF0F0F0),
+                color:
+                    active ? const Color(0xFF489F2A) : const Color(0xFFF0F0F0),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(

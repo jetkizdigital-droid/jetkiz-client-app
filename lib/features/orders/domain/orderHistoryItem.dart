@@ -75,7 +75,8 @@ class OrderHistoryItem {
     }
   }
 
-  bool get isCanceled => statusUpper == 'CANCELED' || statusUpper == 'CANCELLED';
+  bool get isCanceled =>
+      statusUpper == 'CANCELED' || statusUpper == 'CANCELLED';
 
   factory OrderHistoryItem.fromJson(Map<String, dynamic> json) {
     return OrderHistoryItem(

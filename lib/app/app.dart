@@ -323,7 +323,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     const HomePage(),
     const FavoritesPage(),
     const CartPage(),
-    ProfileEntryPage(),
+    const ProfileEntryPage(),
   ];
 
   @override

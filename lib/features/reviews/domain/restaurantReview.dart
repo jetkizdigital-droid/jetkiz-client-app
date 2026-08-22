@@ -12,14 +12,12 @@ class RestaurantReviewPageData {
   final List<ReviewReactionSummaryItem> reactionSummary;
 
   factory RestaurantReviewPageData.fromJson(Map<String, dynamic> json) {
-    final itemsRaw =
-        _extractList(json, const ['items']) ??
+    final itemsRaw = _extractList(json, const ['items']) ??
         _extractList(json, const ['data', 'items']) ??
         _extractList(json, const ['result', 'items']) ??
         const [];
 
-    final summaryRaw =
-        _extractList(json, const ['reactionSummary']) ??
+    final summaryRaw = _extractList(json, const ['reactionSummary']) ??
         _extractList(json, const ['data', 'reactionSummary']) ??
         const [];
 

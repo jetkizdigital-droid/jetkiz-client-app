@@ -1,3 +1,7 @@
+import java.util.Properties
+import java.io.FileInputStream
+import org.gradle.api.GradleException
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -7,8 +11,24 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+val isReleaseTask = gradle.startParameter.taskNames.any {
+    it.lowercase().contains("release")
+}
+
+if (isReleaseTask && !keystorePropertiesFile.exists()) {
+    throw GradleException(
+        "Release signing requires android/key.properties. " +
+            "Do not commit key.properties or the keystore."
+    )
+}
+
 android {
-    namespace = "com.example.jetkiz_mobile"
+    namespace = "kz.jetkiz.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -25,16 +45,27 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.jetkiz_mobile"
+        applicationId = "kz.jetkiz.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

@@ -429,7 +429,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                             vertical: 7,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.88),
+                                            color:
+                                                Colors.white.withOpacity(0.88),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -442,7 +443,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                               ),
                                               const SizedBox(width: 5),
                                               Text(
-                                                ((widget.restaurantRating ?? 4.9))
+                                                ((widget.restaurantRating ??
+                                                        4.9))
                                                     .toStringAsFixed(1),
                                                 style: const TextStyle(
                                                   fontSize: 14,
@@ -512,7 +514,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         ),
                       ),
                       const SizedBox(height: 18),
-
                       _SectionCard(
                         child: Column(
                           children: [
@@ -600,7 +601,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         ),
                       ),
                       const SizedBox(height: 18),
-
                       _SectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,7 +675,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         ),
                       ),
                       const SizedBox(height: 18),
-
                       _SectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,8 +693,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                               focusNode: _textFocusNode,
                               minLines: 6,
                               maxLines: 10,
-                              textCapitalization:
-                                  TextCapitalization.sentences,
+                              textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
                                 hintText:
                                     'Поделитесь впечатлениями о заказе...\n\n• Что понравилось?\n• Как была доставка?\n• Какое блюдо было самым вкусным?',
@@ -732,7 +730,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         ),
                       ),
                       const SizedBox(height: 18),
-
                       _SectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,8 +746,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                             Wrap(
                               spacing: 10,
                               runSpacing: 10,
-                              children:
-                                  List.generate(_reactionOptions.length, (index) {
+                              children: List.generate(_reactionOptions.length,
+                                  (index) {
                                 final option = _reactionOptions[index];
                                 final active =
                                     _selectedReactionIndexes.contains(index);
@@ -828,7 +825,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         ),
                       ),
                       const SizedBox(height: 18),
-
                       _SectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -843,8 +839,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                             ),
                             const SizedBox(height: 16),
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceEvenly,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 _MediaActionButton(
                                   color: const Color(0xFF3B82F6),
@@ -886,8 +881,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                           top: -8,
                                           right: -8,
                                           child: GestureDetector(
-                                            onTap: () =>
-                                                _removeMedia(item.id),
+                                            onTap: () => _removeMedia(item.id),
                                             child: Container(
                                               width: 28,
                                               height: 28,
@@ -924,7 +918,6 @@ class _CreateReviewPageState extends State<CreateReviewPage>
               ],
             ),
           ),
-
           if (_showSuccess)
             Positioned.fill(
               child: Container(

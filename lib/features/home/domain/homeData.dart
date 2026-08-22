@@ -12,6 +12,7 @@
 /// - image urls can be relative (/uploads/...) and must be resolved with AppConfig.baseUrl
 /// - product.restaurant must include status/isInApp/isAcceptingOrders/runtimeStatus when possible,
 ///   so Flutter can hide products from closed restaurants before checkout.
+library;
 
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 
@@ -189,7 +190,8 @@ class HomeCategoryProductLink {
       id: _readString(json['id']),
       productId: _readString(json['productId']),
       sortOrder: _readInt(json['sortOrder']),
-      isActive: json.containsKey('isActive') ? _readBool(json['isActive']) : true,
+      isActive:
+          json.containsKey('isActive') ? _readBool(json['isActive']) : true,
       product: json['product'] is Map
           ? HomeCategoryProductData.fromJson(
               Map<String, dynamic>.from(json['product'] as Map),
@@ -227,7 +229,8 @@ class HomeCategoryData {
       titleKk: _readString(json['titleKk']),
       imageUrl: _readNullableString(json['imageUrl']),
       sortOrder: _readInt(json['sortOrder']),
-      isActive: json.containsKey('isActive') ? _readBool(json['isActive']) : true,
+      isActive:
+          json.containsKey('isActive') ? _readBool(json['isActive']) : true,
       products: rawProducts
           .whereType<Map>()
           .map(

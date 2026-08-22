@@ -336,8 +336,7 @@ class _CartPageState extends State<CartPage> {
               total: total,
               isLoading: _isDeliveryLoading,
               isCheckoutStarting: _isCheckoutStarting,
-              isDisabled:
-                  isEmpty || _isDeliveryLoading,
+              isDisabled: isEmpty || _isDeliveryLoading,
               onCheckout: _handleCheckout,
             ),
           ],
@@ -485,8 +484,7 @@ class _CartItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitleParts = <String>[
-      if ((item.description ?? '').trim().isNotEmpty)
-        item.description!.trim(),
+      if ((item.description ?? '').trim().isNotEmpty) item.description!.trim(),
       if ((item.weight ?? '').trim().isNotEmpty) item.weight!.trim(),
     ];
 
@@ -950,7 +948,7 @@ class _EmptyCart extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onGoHome,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF489F2A),
+                    backgroundColor: const Color(0xFF489F2A),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
