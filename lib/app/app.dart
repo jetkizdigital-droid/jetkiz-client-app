@@ -311,7 +311,7 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF489F2A),
+              seedColor: const Color(0xFF4CAF50),
             ),
             appBarTheme: const AppBarTheme(
               centerTitle: false,
@@ -399,7 +399,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _onItemTapped,
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDDF2D6),
+        indicatorColor: const Color(0xFFCFF4D1),
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
