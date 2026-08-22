@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:jetkiz_mobile/core/support/supportLauncher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
@@ -136,7 +136,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     Navigator.of(context).pushNamed('/cart');
   }
 
-  void _leaveReview() {
+  Future<void> _leaveReview() async {
     final order = _order;
     if (order == null) return;
 
@@ -146,7 +146,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     final firstItem = order.items.isNotEmpty ? order.items.first : null;
 
-    Navigator.of(context).push(
+    final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => CreateReviewPage(
           orderId: order.id,
@@ -157,6 +157,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         ),
       ),
     );
+
+    if (created == true && mounted) {
+      await _load();
+    }
   }
 
   void _openRestaurant() {
@@ -175,15 +179,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   Future<void> _openSupport() async {
-    final opened = await launchUrl(
-      Uri.parse('https://jetkiz.asia'),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!opened && mounted) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text('Не удалось открыть поддержку')),
-      );
-    }
+    await SupportLauncher.openWhatsApp(context);
   }
 
   @override

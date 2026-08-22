@@ -610,8 +610,8 @@ class _CartAddressCard extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
-                Color(0xFF4CAF50),
-                Color(0xFF45A049),
+                Color(0xFF489F2A),
+                Color(0xFF489F2A),
               ],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
@@ -619,7 +619,7 @@ class _CartAddressCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x1A4CAF50),
+                color: Color(0x1A489F2A),
                 blurRadius: 18,
                 offset: Offset(0, 8),
               ),
@@ -956,7 +956,7 @@ class _QuantitySquareButton extends StatelessWidget {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: filled ? const Color(0xFF4CAF50) : Colors.white,
+          color: filled ? const Color(0xFF489F2A) : Colors.white,
           borderRadius: BorderRadius.circular(10),
           boxShadow: const [
             BoxShadow(
@@ -1049,8 +1049,8 @@ class _CartSummary extends StatelessWidget {
                       color: disabled ? const Color(0xFF9CA3AF) : null,
                       gradient: disabled ? null : const LinearGradient(
                         colors: [
-                          Color(0xFF4CAF50),
-                          Color(0xFF45A049),
+                          Color(0xFF489F2A),
+                          Color(0xFF489F2A),
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -1058,7 +1058,7 @@ class _CartSummary extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x1A4CAF50),
+                          color: Color(0x1A489F2A),
                           blurRadius: 16,
                           offset: Offset(0, 8),
                         ),

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
+import 'package:jetkiz_mobile/core/support/supportLauncher.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
@@ -31,7 +32,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  static const _green = Color(0xFF4CAF50);
+  static const _green = Color(0xFF489F2A);
   static const _background = Color(0xFFF9FAFB);
   static const _textLight = Color(0xFF9CA3AF);
 
@@ -227,7 +228,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _ProfileMenuItem(
         icon: Icons.location_on_outlined,
         label: strings.profileAddresses,
-        iconColor: const Color(0xFF22C55E),
+        iconColor: const Color(0xFF489F2A),
         onTap: () {
           Navigator.push(
             context,
@@ -254,7 +255,7 @@ class _ProfilePageState extends State<ProfilePage> {
         icon: Icons.support_agent_outlined,
         label: strings.profileSupport,
         iconColor: const Color(0xFF06B6D4),
-        onTap: () => _openWebPage('https://jetkiz.asia'),
+        onTap: () => SupportLauncher.openWhatsApp(context),
       ),
       _ProfileMenuItem(
         icon: Icons.description_outlined,
@@ -389,7 +390,7 @@ class _ProfileHeaderCard extends StatelessWidget {
   final bool isUploadingAvatar;
   final VoidCallback onAvatarTap;
 
-  static const _green = Color(0xFF4CAF50);
+  static const _green = Color(0xFF489F2A);
   static const _cardBorder = Color(0xFFF0F1F3);
   static const _textMain = Color(0xFF1F2937);
   static const _textMuted = Color(0xFF6B7280);
@@ -678,7 +679,7 @@ class _ActiveDot extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: const BoxDecoration(
-        color: Color(0xFF4CAF50),
+        color: Color(0xFF489F2A),
         shape: BoxShape.circle,
       ),
     );

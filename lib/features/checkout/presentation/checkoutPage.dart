@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
@@ -129,6 +130,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cartState = _cartRepository.state;
 
     if (_isSubmitting || _orderPlaced) return;
+
+    // Never allow the temporary client-side payment stub to create a real
+    // unpaid order in a production build.
+    if (kReleaseMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Оплата временно недоступна'),
+        ),
+      );
+      return;
+    }
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(

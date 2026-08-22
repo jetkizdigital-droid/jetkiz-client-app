@@ -513,7 +513,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final color = isOpen ? const Color(0xFF489F2A) : const Color(0xFFDC2626);
     final text = isOpen ? 'Открыто' : 'Закрыто';
 
     return Container(

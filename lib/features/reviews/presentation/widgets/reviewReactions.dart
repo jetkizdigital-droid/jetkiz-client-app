@@ -4,11 +4,13 @@ import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 class ReviewReactions extends StatelessWidget {
   const ReviewReactions({
     super.key,
-    required this.items,
+    this.items = const [],
+    this.summary = const [],
     this.onAddReaction,
   });
 
   final List<ReviewReactionItem> items;
+  final List<ReviewReactionSummaryItem> summary;
   final VoidCallback? onAddReaction;
 
   @override
@@ -16,6 +18,9 @@ class ReviewReactions extends StatelessWidget {
     final grouped = <String, int>{};
     for (final item in items) {
       grouped[item.type] = (grouped[item.type] ?? 0) + 1;
+    }
+    for (final item in summary) {
+      grouped[item.type] = item.count;
     }
 
     final entries = grouped.entries.toList()
@@ -43,23 +48,24 @@ class ReviewReactions extends StatelessWidget {
             ),
           ),
         ),
-        InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: onAddReaction,
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF3F4F6),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.add_rounded,
-              size: 18,
-              color: Color(0xFF4B5563),
+        if (onAddReaction != null)
+          InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onAddReaction,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.add_rounded,
+                size: 18,
+                color: Color(0xFF4B5563),
+              ),
             ),
           ),
-        ),
       ],
     );
   }

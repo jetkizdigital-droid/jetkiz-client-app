@@ -30,7 +30,7 @@ class NotificationCard extends StatelessWidget {
             border: Border.all(
               color: item.isRead
                   ? const Color(0xFFE7E7E7)
-                  : const Color(0xFF4CAF50),
+                  : const Color(0xFF489F2A),
               width: item.isRead ? 1 : 1.4,
             ),
           ),
@@ -57,7 +57,7 @@ class NotificationCard extends StatelessWidget {
                   height: 10,
                   margin: const EdgeInsets.only(top: 6),
                   decoration: const BoxDecoration(
-                    color: Color(0xFF4CAF50),
+                    color: Color(0xFF489F2A),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -198,7 +198,7 @@ class _OpenOrderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF4CAF50),
+      color: const Color(0xFF489F2A),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

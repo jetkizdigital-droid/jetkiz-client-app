@@ -1229,7 +1229,7 @@ class _ReviewsSummaryCard extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
+                color: Color(0xFF489F2A),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1390,7 +1390,7 @@ class _MenuCategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSelected ? const Color(0xFF4CAF50) : const Color(0xFFECECEC),
+      color: isSelected ? const Color(0xFF489F2A) : const Color(0xFFECECEC),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),

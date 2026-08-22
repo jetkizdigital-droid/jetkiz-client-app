@@ -66,7 +66,7 @@ class EditProfileSheet extends StatefulWidget {
 }
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
-  static const _green = Color(0xFF4CAF50);
+  static const _green = Color(0xFF489F2A);
   static const _titleColor = Color(0xFF1F2937);
 
   late final TextEditingController _firstNameController;
@@ -442,7 +442,7 @@ class _FormTextField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(
-            color: Color(0xFF4CAF50),
+            color: Color(0xFF489F2A),
             width: 1.6,
           ),
         ),

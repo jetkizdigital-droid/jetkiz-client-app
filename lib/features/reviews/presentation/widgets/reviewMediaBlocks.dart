@@ -260,13 +260,13 @@ class _ReviewAudioBlock extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [
-              Color(0x1A4CAF50),
-              Color(0x0D4CAF50),
+              Color(0x1A489F2A),
+              Color(0x0D489F2A),
             ],
           ),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: const Color(0x334CAF50),
+            color: const Color(0x33489F2A),
           ),
         ),
         child: Row(
@@ -275,7 +275,7 @@ class _ReviewAudioBlock extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
+                color: Color(0xFF489F2A),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -293,7 +293,7 @@ class _ReviewAudioBlock extends StatelessWidget {
                   value: 0.35,
                   backgroundColor: Color(0x66FFFFFF),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Color(0xFF4CAF50),
+                    Color(0xFF489F2A),
                   ),
                 ),
               ),

@@ -204,7 +204,7 @@ class _InAppNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accent = Color(0xFF4CAF50);
+    const accent = Color(0xFF489F2A);
 
     const softBg = Color(0xFFEAF7E5);
 

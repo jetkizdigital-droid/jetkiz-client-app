@@ -527,7 +527,7 @@ class _RestaurantsSectionHeader extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: const BoxDecoration(
-              color: Color(0xFF4FAF43),
+              color: Color(0xFF489F2A),
               shape: BoxShape.circle,
             ),
             child: const Icon(

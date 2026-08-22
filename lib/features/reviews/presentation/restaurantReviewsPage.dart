@@ -65,14 +65,6 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
     }
   }
 
-  void _onCreateReviewTap() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Экран создания отзыва подключим следующим шагом'),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final items = _data?.items ?? const <RestaurantReview>[];
@@ -103,12 +95,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
                               : ListView.separated(
                                   physics:
                                       const AlwaysScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    16,
-                                    16,
-                                    120,
-                                  ),
+                                  padding: const EdgeInsets.all(16),
                                   itemCount: items.length,
                                   separatorBuilder: (_, __) =>
                                       const SizedBox(height: 14),
@@ -121,29 +108,6 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
                         ),
             ),
           ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: SizedBox(
-          height: 56,
-          child: ElevatedButton(
-            onPressed: _onCreateReviewTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            child: const Text('Оставить отзыв'),
-          ),
         ),
       ),
     );
