@@ -36,7 +36,7 @@ class NotificationsErrorState extends StatelessWidget {
             ElevatedButton(
               onPressed: onRetry,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF489F2A),
+                backgroundColor: const Color(0xFF4CAF50),
                 foregroundColor: Colors.white,
               ),
               child: const Text('Повторить'),
