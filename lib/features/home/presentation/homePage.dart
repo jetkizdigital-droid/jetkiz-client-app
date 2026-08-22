@@ -35,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   String? _error;
   HomeData? _homeData;
+  Timer? _availabilityTimer;
 
   @override
   void initState() {
@@ -44,6 +45,12 @@ class _HomePageState extends State<HomePage> {
     _analyticsService = AnalyticsService(_apiClient);
 
     _addressRepository.addListener(_handleAddressChanged);
+    _availabilityTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _homeData != null) setState(() {});
+      },
+    );
 
     unawaited(
       _analyticsService.trackScreenView(
@@ -58,6 +65,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _availabilityTimer?.cancel();
     _addressRepository.removeListener(_handleAddressChanged);
     super.dispose();
   }
