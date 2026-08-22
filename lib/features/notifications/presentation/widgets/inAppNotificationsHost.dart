@@ -254,7 +254,7 @@ class _InAppNotificationCard extends StatelessWidget {
                   children: [
                     Text(
                       categoryText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: accent,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
@@ -299,7 +299,7 @@ class _InAppNotificationCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       actionText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: accent,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
