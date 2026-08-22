@@ -11,6 +11,8 @@
   - Do not use GET /restaurants for mobile client.
 */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/favorites/presentation/widgets/favoriteRestaurantButton.dart';
@@ -37,6 +39,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
   List<Restaurant> _restaurants = const [];
   String _query = '';
+  Timer? _availabilityTimer;
 
   @override
   void initState() {
@@ -44,12 +47,19 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
     _restaurantsApi = RestaurantsApi(ApiClient());
     _searchController.addListener(_handleSearchChanged);
+    _availabilityTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _restaurants.isNotEmpty) setState(() {});
+      },
+    );
 
     _loadRestaurants();
   }
 
   @override
   void dispose() {
+    _availabilityTimer?.cancel();
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
