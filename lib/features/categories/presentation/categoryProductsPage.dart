@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
-import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
@@ -22,14 +22,10 @@ class CategoryProductsPage extends StatefulWidget {
 }
 
 class _CategoryProductsPageState extends State<CategoryProductsPage> {
-  late final FavoritesApi _favoritesApi;
   late final FinanceConfigApi _financeConfigApi;
-
-  final Set<String> _favoriteProductIds = <String>{};
-  final Set<String> _favoritePendingProductIds = <String>{};
+  final FavoritesController _favorites = FavoritesController.instance;
 
   String? _selectedRestaurantId;
-  bool _favoritesLoading = false;
   int _deliveryFee = 0;
 
   @override
@@ -38,11 +34,21 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
     final apiClient = ApiClient();
 
-    _favoritesApi = FavoritesApi(apiClient);
     _financeConfigApi = FinanceConfigApi(apiClient);
+    _favorites.addListener(_handleFavoritesChanged);
+    _favorites.initialize();
 
-    _loadFavoriteIdsSilently();
     _loadDeliveryFeeSilently();
+  }
+
+  @override
+  void dispose() {
+    _favorites.removeListener(_handleFavoritesChanged);
+    super.dispose();
+  }
+
+  void _handleFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadDeliveryFeeSilently() async {
@@ -63,36 +69,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     }
   }
 
-  Future<void> _loadFavoriteIdsSilently() async {
-    setState(() {
-      _favoritesLoading = true;
-    });
-
-    try {
-      final ids = await _favoritesApi.getFavoriteIds();
-
-      if (!mounted) return;
-
-      setState(() {
-        _favoriteProductIds
-          ..clear()
-          ..addAll(ids.productIds);
-      });
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _favoriteProductIds.clear();
-      });
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _favoritesLoading = false;
-      });
-    }
-  }
-
   bool _isProductOrderable(HomeCategoryProductData product) {
     return product.isAvailable && product.restaurant.isOpenForOrders;
   }
@@ -105,8 +81,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     if (!_isProductOrderable(product)) {
       _showMessage(
         product.restaurant.isOpenForOrders
-            ? 'Товар сейчас недоступен'
-            : 'Ресторан сейчас закрыт',
+            ? 'РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ'
+            : 'Р РµСЃС‚РѕСЂР°РЅ СЃРµР№С‡Р°СЃ Р·Р°РєСЂС‹С‚',
       );
       return;
     }
@@ -129,50 +105,11 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   Future<void> _toggleFavorite(String productId) async {
-    if (_favoritePendingProductIds.contains(productId)) {
-      return;
-    }
-
-    final wasFavorite = _favoriteProductIds.contains(productId);
-
-    setState(() {
-      _favoritePendingProductIds.add(productId);
-
-      if (wasFavorite) {
-        _favoriteProductIds.remove(productId);
-      } else {
-        _favoriteProductIds.add(productId);
-      }
-    });
-
     try {
-      if (wasFavorite) {
-        await _favoritesApi.removeProductFavorite(productId);
-      } else {
-        await _favoritesApi.addProductFavorite(productId);
-      }
+      await _favorites.toggleProduct(productId);
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        if (wasFavorite) {
-          _favoriteProductIds.add(productId);
-        } else {
-          _favoriteProductIds.remove(productId);
-        }
-      });
-
-      _showMessage(
-        wasFavorite
-            ? 'Не удалось удалить товар из избранного'
-            : 'Не удалось добавить товар в избранное',
-      );
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _favoritePendingProductIds.remove(productId);
-      });
+      _showMessage('Не удалось обновить избранное');
     }
   }
 
@@ -211,8 +148,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     if (!_isProductOrderable(product)) {
       _showMessage(
         product.restaurant.isOpenForOrders
-            ? 'Товар сейчас недоступен'
-            : 'Ресторан сейчас закрыт',
+            ? 'РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ'
+            : 'Р РµСЃС‚РѕСЂР°РЅ СЃРµР№С‡Р°СЃ Р·Р°РєСЂС‹С‚',
       );
       return;
     }
@@ -305,7 +242,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Выберите ресторан',
+                  'Р’С‹Р±РµСЂРёС‚Рµ СЂРµСЃС‚РѕСЂР°РЅ',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -316,7 +253,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text(
-                    'Все рестораны',
+                    'Р’СЃРµ СЂРµСЃС‚РѕСЂР°РЅС‹',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -335,7 +272,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 14),
                     child: Text(
-                      'Нет доступных ресторанов',
+                      'РќРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… СЂРµСЃС‚РѕСЂР°РЅРѕРІ',
                       style: TextStyle(
                         fontSize: 14,
                         color: Color(0xFF777777),
@@ -421,9 +358,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
                         return _RestaurantSection(
                           group: group,
-                          favoriteProductIds: _favoriteProductIds,
-                          favoritePendingProductIds: _favoritePendingProductIds,
-                          favoritesLoading: _favoritesLoading,
+                          favoriteProductIds: _favorites.productIds,
+                          favoritePendingProductIds: _favorites.busyProductIds,
+                          favoritesLoading: _favorites.isInitializing,
                           getQuantity: _getQuantity,
                           onRestaurantTap: () {
                             Navigator.of(context).push(
@@ -555,7 +492,7 @@ class _CategoryHeader extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        'Фильтр по ресторану',
+                        'Р¤РёР»СЊС‚СЂ РїРѕ СЂРµСЃС‚РѕСЂР°РЅСѓ',
                         style: TextStyle(
                           color: Colors.black,
                           fontSize: 10,
@@ -755,7 +692,7 @@ class _CategoryProductCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${product.price} ₸',
+                      '${product.price} в‚ё',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -957,7 +894,7 @@ class _EmptyCategoryState extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const Text(
-          'В этой категории пока нет доступных товаров',
+          'Р’ СЌС‚РѕР№ РєР°С‚РµРіРѕСЂРёРё РїРѕРєР° РЅРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… С‚РѕРІР°СЂРѕРІ',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 17,

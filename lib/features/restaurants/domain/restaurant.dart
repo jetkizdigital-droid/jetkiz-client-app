@@ -16,6 +16,7 @@
 
 import 'package:equatable/equatable.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 class Restaurant extends Equatable {
   const Restaurant({
@@ -80,13 +81,17 @@ class Restaurant extends Equatable {
   final bool isPickupEnabled;
   final int? pickupPreparationMinutes;
 
-  bool get isOpen {
-    return status.trim().toUpperCase() == 'OPEN' && isAcceptingOrders;
+  RestaurantAvailability get availability {
+    return RestaurantAvailability(
+      status: status,
+      isInApp: isInApp,
+      isAcceptingOrders: isAcceptingOrders,
+    );
   }
 
-  bool get canOrder {
-    return isInApp && isOpen;
-  }
+  bool get isOpen => availability.isOpen;
+
+  bool get canOrder => availability.canOrder;
 
   bool get hasRating {
     return ratingAvg > 0 && ratingCount > 0;
@@ -119,8 +124,7 @@ class Restaurant extends Equatable {
   }
 
   String get statusText {
-    if (isOpen) return 'Открыто';
-    return 'Закрыто';
+    return availability.label;
   }
 
   String get ratingText {
@@ -144,7 +148,7 @@ class Restaurant extends Equatable {
       return addr;
     }
 
-    return isOpen ? 'Доставка 30–35 мин' : 'Сейчас закрыто';
+    return isOpen ? 'Доставка 30–35 мин' : availability.reason;
   }
 
   String? get fullCoverImageUrl => normalizeImageUrl(coverImageUrl);
@@ -191,7 +195,7 @@ class Restaurant extends Equatable {
       isInApp: _readBool(json['isInApp'], fallback: true),
       isAcceptingOrders: _readBool(
         json['isAcceptingOrders'],
-        fallback: true,
+        fallback: false,
       ),
       isPinned: _readBool(json['isPinned']),
       sortOrder: _readInt(json['sortOrder']),

@@ -15,6 +15,7 @@
 library;
 
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 class HomePromo {
   final String titleRu;
@@ -86,7 +87,7 @@ class HomeCategoryProductRestaurant {
       isInApp: json.containsKey('isInApp') ? _readBool(json['isInApp']) : true,
       isAcceptingOrders: json.containsKey('isAcceptingOrders')
           ? _readBool(json['isAcceptingOrders'])
-          : true,
+          : false,
       blockedAt: _readNullableString(json['blockedAt']),
       workingHours: _readNullableString(json['workingHours']),
     );
@@ -109,17 +110,19 @@ class HomeCategoryProductRestaurant {
     return runtimeStatusUpper == 'CLOSED';
   }
 
+  RestaurantAvailability get availability {
+    return RestaurantAvailability(
+      status: runtimeStatus.trim().isNotEmpty ? runtimeStatus : status,
+      isInApp: isInApp,
+      isAcceptingOrders: isAcceptingOrders,
+    );
+  }
+
   bool get isOpenForOrders {
-    if (!isInApp) return false;
-    if (!isAcceptingOrders) return false;
     if (blockedAt != null && blockedAt!.trim().isNotEmpty) return false;
     if (isAdminClosed) return false;
-
-    if (runtimeStatusUpper.isNotEmpty && isRuntimeClosed) {
-      return false;
-    }
-
-    return true;
+    if (runtimeStatusUpper.isNotEmpty && isRuntimeClosed) return false;
+    return availability.canOrder;
   }
 }
 
@@ -308,7 +311,7 @@ class HomeRestaurantData {
       isInApp: json.containsKey('isInApp') ? _readBool(json['isInApp']) : true,
       isAcceptingOrders: json.containsKey('isAcceptingOrders')
           ? _readBool(json['isAcceptingOrders'])
-          : true,
+          : false,
       blockedAt: _readNullableString(json['blockedAt']),
       isPinned: _readBool(json['isPinned']),
       sortOrder: _readInt(json['sortOrder']),
@@ -322,9 +325,15 @@ class HomeRestaurantData {
 
   String get runtimeStatusUpper => runtimeStatus.trim().toUpperCase();
 
+  RestaurantAvailability get availability {
+    return RestaurantAvailability(
+      status: runtimeStatus.trim().isNotEmpty ? runtimeStatus : status,
+      isInApp: isInApp,
+      isAcceptingOrders: isAcceptingOrders,
+    );
+  }
+
   bool get isOpenForOrders {
-    if (!isInApp) return false;
-    if (!isAcceptingOrders) return false;
     if (blockedAt != null && blockedAt!.trim().isNotEmpty) return false;
 
     if (statusUpper == 'CLOSED' ||
@@ -338,7 +347,7 @@ class HomeRestaurantData {
       return false;
     }
 
-    return true;
+    return availability.canOrder;
   }
 
   String? get fullCoverImageUrl => _resolveImageUrl(coverImageUrl);

@@ -5,6 +5,7 @@ import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/profileEntryPage.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartPage.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/favorites/presentation/favoritesPage.dart';
 import 'package:jetkiz_mobile/features/home/presentation/homePage.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
@@ -347,6 +348,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     setState(() {
       _currentIndex = index;
     });
+
+    if (index == 1) {
+      FavoritesController.instance.refreshIfStale();
+    }
   }
 
   @override

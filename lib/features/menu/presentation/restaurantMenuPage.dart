@@ -3,7 +3,7 @@ import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
-import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/data/restaurantMenuApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
@@ -38,7 +38,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   late final ApiClient _apiClient;
   late final RestaurantMenuApi _menuApi;
   late final FinanceConfigApi _financeConfigApi;
-  late final FavoritesApi _favoritesApi;
+  final FavoritesController _favorites = FavoritesController.instance;
 
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
@@ -52,13 +52,6 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   String _searchQuery = '';
   String _selectedTabId = 'all';
 
-  final Set<String> _favoriteProductIds = <String>{};
-  final Set<String> _favoritePendingProductIds = <String>{};
-
-  bool _isRestaurantFavorite = false;
-  bool _isRestaurantFavoriteLoading = false;
-  bool _isRestaurantFavoriteBusy = false;
-
   final _MenuLanguage _menuLanguage = _MenuLanguage.ru;
   int _deliveryFee = 0;
 
@@ -69,16 +62,22 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     _apiClient = ApiClient();
     _menuApi = RestaurantMenuApi(_apiClient);
     _financeConfigApi = FinanceConfigApi(_apiClient);
-    _favoritesApi = FavoritesApi(_apiClient);
+    _favorites.addListener(_handleFavoritesChanged);
+    _favorites.initialize();
 
     _load();
   }
 
   @override
   void dispose() {
+    _favorites.removeListener(_handleFavoritesChanged);
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _handleFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -105,12 +104,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       });
 
       _safeTrackRestaurantView(data);
-      await _loadFavoriteIdsSilently();
     } catch (_) {
       if (!mounted) return;
 
       setState(() {
-        _error = 'Не удалось загрузить меню ресторана';
+        _error =
+            'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РјРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР°';
       });
     } finally {
       if (!mounted) return;
@@ -145,40 +144,6 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return RestaurantReviewPageData.fromJson(json);
     } catch (_) {
       return null;
-    }
-  }
-
-  Future<void> _loadFavoriteIdsSilently() async {
-    if (!mounted) return;
-
-    setState(() {
-      _isRestaurantFavoriteLoading = true;
-    });
-
-    try {
-      final ids = await _favoritesApi.getFavoriteIds();
-
-      if (!mounted) return;
-
-      setState(() {
-        _favoriteProductIds
-          ..clear()
-          ..addAll(ids.productIds);
-        _isRestaurantFavorite = ids.restaurantIds.contains(widget.restaurantId);
-      });
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _favoriteProductIds.clear();
-        _isRestaurantFavorite = false;
-      });
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isRestaurantFavoriteLoading = false;
-      });
     }
   }
 
@@ -243,45 +208,45 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   String _allTabTitle() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Все';
+        return 'Р’СЃРµ';
       case _MenuLanguage.kk:
-        return 'Барлығы';
+        return 'Р‘Р°СЂР»С‹Т“С‹';
     }
   }
 
   String _searchHint() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Поиск по меню...';
+        return 'РџРѕРёСЃРє РїРѕ РјРµРЅСЋ...';
       case _MenuLanguage.kk:
-        return 'Мәзірден іздеу...';
+        return 'РњУ™Р·С–СЂРґРµРЅ С–Р·РґРµСѓ...';
     }
   }
 
   String _basketItemsLabel() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'В корзине';
+        return 'Р’ РєРѕСЂР·РёРЅРµ';
       case _MenuLanguage.kk:
-        return 'Себетте';
+        return 'РЎРµР±РµС‚С‚Рµ';
     }
   }
 
   String _deliveryLabel() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Доставка';
+        return 'Р”РѕСЃС‚Р°РІРєР°';
       case _MenuLanguage.kk:
-        return 'Жеткізу';
+        return 'Р–РµС‚РєС–Р·Сѓ';
     }
   }
 
   String _nextButtonLabel() {
     switch (_menuLanguage) {
       case _MenuLanguage.ru:
-        return 'Далее';
+        return 'Р”Р°Р»РµРµ';
       case _MenuLanguage.kk:
-        return 'Әрі қарай';
+        return 'УСЂС– Т›Р°СЂР°Р№';
     }
   }
 
@@ -336,9 +301,26 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     return CartRepository.instance.quantityOf(productId);
   }
 
-  void _addFirst(RestaurantMenuItem item) {
+  bool _canAddItemToCart(RestaurantMenuItem item) {
+    final restaurant = _menuData?.restaurant;
+    if (restaurant != null && !restaurant.canOrder) {
+      _showSnackBar(restaurant.availability.reason);
+      return false;
+    }
+
     if (!item.canAddToCart) {
-      _showSnackBar('Товар сейчас недоступен');
+      _showSnackBar('РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+      return false;
+    }
+
+    return true;
+  }
+
+  void _addFirst(RestaurantMenuItem item) {
+    if (!_canAddItemToCart(item)) return;
+
+    if (!item.canAddToCart) {
+      _showSnackBar('РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ');
       return;
     }
 
@@ -358,8 +340,10 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   }
 
   void _increment(RestaurantMenuItem item) {
+    if (!_canAddItemToCart(item)) return;
+
     if (!item.canAddToCart) {
-      _showSnackBar('Товар сейчас недоступен');
+      _showSnackBar('РўРѕРІР°СЂ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРµРЅ');
       return;
     }
 
@@ -384,89 +368,20 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   }
 
   Future<void> _toggleRestaurantFavorite() async {
-    if (_isRestaurantFavoriteBusy || _isRestaurantFavoriteLoading) {
-      return;
-    }
-
-    final wasFavorite = _isRestaurantFavorite;
-
-    setState(() {
-      _isRestaurantFavoriteBusy = true;
-      _isRestaurantFavorite = !wasFavorite;
-    });
-
     try {
-      if (wasFavorite) {
-        await _favoritesApi.removeRestaurantFavorite(widget.restaurantId);
-      } else {
-        await _favoritesApi.addRestaurantFavorite(widget.restaurantId);
-      }
+      await _favorites.toggleRestaurant(widget.restaurantId);
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        _isRestaurantFavorite = wasFavorite;
-      });
-
-      _showFavoriteError(
-        wasFavorite
-            ? 'Не удалось удалить ресторан из избранного'
-            : 'Не удалось добавить ресторан в избранное',
-      );
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isRestaurantFavoriteBusy = false;
-      });
+      _showFavoriteError('Не удалось обновить избранное');
     }
   }
 
   Future<void> _toggleProductFavorite(String productId) async {
-    if (_favoritePendingProductIds.contains(productId)) {
-      return;
-    }
-
-    final wasFavorite = _favoriteProductIds.contains(productId);
-
-    setState(() {
-      _favoritePendingProductIds.add(productId);
-
-      if (wasFavorite) {
-        _favoriteProductIds.remove(productId);
-      } else {
-        _favoriteProductIds.add(productId);
-      }
-    });
-
     try {
-      if (wasFavorite) {
-        await _favoritesApi.removeProductFavorite(productId);
-      } else {
-        await _favoritesApi.addProductFavorite(productId);
-      }
+      await _favorites.toggleProduct(productId);
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        if (wasFavorite) {
-          _favoriteProductIds.add(productId);
-        } else {
-          _favoriteProductIds.remove(productId);
-        }
-      });
-
-      _showFavoriteError(
-        wasFavorite
-            ? 'Не удалось удалить блюдо из избранного'
-            : 'Не удалось добавить блюдо в избранное',
-      );
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _favoritePendingProductIds.remove(productId);
-      });
+      _showFavoriteError('Не удалось обновить избранное');
     }
   }
 
@@ -511,7 +426,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     final data = _menuData;
 
     if (data == null) {
-      return widget.restaurantName ?? 'Ресторан';
+      return widget.restaurantName ?? 'Р РµСЃС‚РѕСЂР°РЅ';
     }
 
     final name = data.restaurant.displayName.trim();
@@ -519,7 +434,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return name;
     }
 
-    return widget.restaurantName ?? 'Ресторан';
+    return widget.restaurantName ?? 'Р РµСЃС‚РѕСЂР°РЅ';
   }
 
   String? get _restaurantImageUrl {
@@ -549,7 +464,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'tagline'),
           _readDynamicString(restaurant, 'shortDescription'),
         ]) ??
-        'Лучшие блюда с доставкой на дом';
+        'Р›СѓС‡С€РёРµ Р±Р»СЋРґР° СЃ РґРѕСЃС‚Р°РІРєРѕР№ РЅР° РґРѕРј';
   }
 
   String get _restaurantRatingText {
@@ -560,7 +475,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       _readDynamicString(restaurant, 'rating'),
     ]);
 
-    if (raw == null) return '—';
+    if (raw == null) return 'вЂ”';
 
     final parsed = double.tryParse(raw.replaceAll(',', '.'));
     if (parsed == null || parsed <= 0) return raw;
@@ -577,7 +492,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'estimatedDeliveryTime'),
           _readDynamicString(restaurant, 'deliveryDuration'),
         ]) ??
-        '30–35 мин';
+        '30вЂ“35 РјРёРЅ';
   }
 
   String get _restaurantAddressText {
@@ -589,7 +504,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'fullAddress'),
           widget.restaurantAddress,
         ]) ??
-        'Адрес уточняется';
+        'РђРґСЂРµСЃ СѓС‚РѕС‡РЅСЏРµС‚СЃСЏ';
   }
 
   int get _reviewsCount => _reviewsData?.total ?? 0;
@@ -669,7 +584,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                   )
                 : menuData == null
                     ? _RestaurantMenuErrorState(
-                        message: 'Меню ресторана не найдено',
+                        message:
+                            'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° РЅРµ РЅР°Р№РґРµРЅРѕ',
                         onRetry: _load,
                       )
                     : ScrollConfiguration(
@@ -739,12 +655,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                         top: top + 6,
                                         right: 14,
                                         child: _HeaderCircleButton(
-                                          onTap: (_isRestaurantFavoriteBusy ||
-                                                  _isRestaurantFavoriteLoading)
+                                          onTap: _favorites.isRestaurantBusy(
+                                                  widget.restaurantId)
                                               ? null
                                               : _toggleRestaurantFavorite,
-                                          child: (_isRestaurantFavoriteBusy ||
-                                                  _isRestaurantFavoriteLoading)
+                                          child: _favorites.isRestaurantBusy(
+                                                  widget.restaurantId)
                                               ? const SizedBox(
                                                   width: 18,
                                                   height: 18,
@@ -754,11 +670,17 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                                   ),
                                                 )
                                               : Icon(
-                                                  _isRestaurantFavorite
+                                                  _favorites
+                                                          .isRestaurantFavorite(
+                                                              widget
+                                                                  .restaurantId)
                                                       ? Icons.favorite_rounded
                                                       : Icons
                                                           .favorite_border_rounded,
-                                                  color: _isRestaurantFavorite
+                                                  color: _favorites
+                                                          .isRestaurantFavorite(
+                                                              widget
+                                                                  .restaurantId)
                                                       ? Colors.redAccent
                                                       : Colors.black87,
                                                   size: 21,
@@ -890,9 +812,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                       title: group.category.title,
                                       showTitle: _selectedTabId == 'all',
                                       items: group.items,
-                                      favoriteProductIds: _favoriteProductIds,
+                                      favoriteProductIds: _favorites.productIds,
                                       favoritePendingProductIds:
-                                          _favoritePendingProductIds,
+                                          _favorites.busyProductIds,
+                                      restaurantCanOrder:
+                                          _menuData?.restaurant.canOrder ??
+                                              false,
                                       getQuantity: _getQuantity,
                                       onProductTap: _openProductDetails,
                                       onFavoriteTap: _toggleProductFavorite,
@@ -1316,7 +1241,7 @@ class _ReviewsSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Отзывы ($reviewsCount)',
+                    'РћС‚Р·С‹РІС‹ ($reviewsCount)',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -1491,6 +1416,7 @@ class _MenuCategorySection extends StatelessWidget {
     required this.items,
     required this.favoriteProductIds,
     required this.favoritePendingProductIds,
+    required this.restaurantCanOrder,
     required this.getQuantity,
     required this.onProductTap,
     required this.onFavoriteTap,
@@ -1504,6 +1430,7 @@ class _MenuCategorySection extends StatelessWidget {
   final List<RestaurantMenuItem> items;
   final Set<String> favoriteProductIds;
   final Set<String> favoritePendingProductIds;
+  final bool restaurantCanOrder;
   final int Function(String productId) getQuantity;
   final void Function(RestaurantMenuItem item) onProductTap;
   final Future<void> Function(String productId) onFavoriteTap;
@@ -1551,6 +1478,7 @@ class _MenuCategorySection extends StatelessWidget {
               quantity: getQuantity(productId),
               isFavorite: favoriteProductIds.contains(productId),
               isFavoriteBusy: favoritePendingProductIds.contains(productId),
+              restaurantCanOrder: restaurantCanOrder,
               onTap: () => onProductTap(item),
               onFavoriteTap: () => onFavoriteTap(productId),
               onAddFirst: () => onAddFirst(productId),
@@ -1570,6 +1498,7 @@ class _MenuProductCard extends StatelessWidget {
     required this.quantity,
     required this.isFavorite,
     required this.isFavoriteBusy,
+    required this.restaurantCanOrder,
     required this.onTap,
     required this.onFavoriteTap,
     required this.onAddFirst,
@@ -1581,6 +1510,7 @@ class _MenuProductCard extends StatelessWidget {
   final int quantity;
   final bool isFavorite;
   final bool isFavoriteBusy;
+  final bool restaurantCanOrder;
   final VoidCallback onTap;
   final VoidCallback onFavoriteTap;
   final VoidCallback onAddFirst;
@@ -1589,7 +1519,7 @@ class _MenuProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAvailable = item.isAvailable;
+    final isAvailable = item.isAvailable && restaurantCanOrder;
 
     return Material(
       color: Colors.transparent,
@@ -1655,7 +1585,7 @@ class _MenuProductCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
-                            'Недоступно',
+                            'РќРµРґРѕСЃС‚СѓРїРЅРѕ',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -1913,7 +1843,7 @@ class _MenuEmptyState extends StatelessWidget {
             ),
             SizedBox(height: 12),
             Text(
-              'Ничего не найдено',
+              'РќРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -1923,7 +1853,7 @@ class _MenuEmptyState extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              'Попробуй изменить поиск или выбрать другую категорию.',
+              'РџРѕРїСЂРѕР±СѓР№ РёР·РјРµРЅРёС‚СЊ РїРѕРёСЃРє РёР»Рё РІС‹Р±СЂР°С‚СЊ РґСЂСѓРіСѓСЋ РєР°С‚РµРіРѕСЂРёСЋ.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -1982,7 +1912,7 @@ class _RestaurantMenuErrorState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('Повторить'),
+              child: const Text('РџРѕРІС‚РѕСЂРёС‚СЊ'),
             ),
           ],
         ),

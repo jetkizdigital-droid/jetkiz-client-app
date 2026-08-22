@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
@@ -55,7 +56,7 @@ class CategoryProductsPage extends StatefulWidget {
 }
 
 class _CategoryProductsPageState extends State<CategoryProductsPage> {
-  final Set<String> _favoriteProductIds = <String>{};
+  final FavoritesController _favorites = FavoritesController.instance;
   String? _selectedRestaurantId;
 
   late final FinanceConfigApi _financeConfigApi;
@@ -65,7 +66,19 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   void initState() {
     super.initState();
     _financeConfigApi = FinanceConfigApi(ApiClient());
+    _favorites.addListener(_handleFavoritesChanged);
+    _favorites.initialize();
     _loadDeliveryFee();
+  }
+
+  @override
+  void dispose() {
+    _favorites.removeListener(_handleFavoritesChanged);
+    super.dispose();
+  }
+
+  void _handleFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadDeliveryFee() async {
@@ -90,6 +103,11 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   void _incrementProduct(HomeCategoryProductData product) {
+    if (!product.isOrderable) {
+      _showSnackBar(_productUnavailableMessage(product));
+      return;
+    }
+
     CartRepository.instance.addItem(
       productId: product.id,
       restaurantId: product.restaurant.id,
@@ -107,14 +125,24 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     setState(() {});
   }
 
-  void _toggleFavorite(String productId) {
-    setState(() {
-      if (_favoriteProductIds.contains(productId)) {
-        _favoriteProductIds.remove(productId);
-      } else {
-        _favoriteProductIds.add(productId);
-      }
-    });
+  Future<void> _toggleFavorite(String productId) async {
+    try {
+      await _favorites.toggleProduct(productId);
+    } catch (_) {
+      if (!mounted) return;
+      _showSnackBar('Не удалось обновить избранное');
+    }
+  }
+
+  String _productUnavailableMessage(HomeCategoryProductData product) {
+    if (!product.isAvailable) return 'Блюдо сейчас недоступно';
+    return product.restaurant.availability.reason;
+  }
+
+  void _showSnackBar(String message) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 
   RestaurantMenuItem _mapHomeProductToMenuItem(
@@ -332,7 +360,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
                         return _RestaurantSection(
                           group: group,
-                          favoriteProductIds: _favoriteProductIds,
+                          favoriteProductIds: _favorites.productIds,
+                          favoriteBusyProductIds: _favorites.busyProductIds,
                           getQuantity: _getQuantity,
                           onRestaurantTap: () {
                             Navigator.of(context).push(
@@ -494,6 +523,7 @@ class _RestaurantSection extends StatelessWidget {
   const _RestaurantSection({
     required this.group,
     required this.favoriteProductIds,
+    required this.favoriteBusyProductIds,
     required this.getQuantity,
     required this.onRestaurantTap,
     required this.onProductTap,
@@ -505,6 +535,7 @@ class _RestaurantSection extends StatelessWidget {
 
   final _RestaurantGroup group;
   final Set<String> favoriteProductIds;
+  final Set<String> favoriteBusyProductIds;
   final int Function(String productId) getQuantity;
   final VoidCallback onRestaurantTap;
   final void Function(HomeCategoryProductData product) onProductTap;
@@ -550,6 +581,7 @@ class _RestaurantSection extends StatelessWidget {
               product: product,
               quantity: getQuantity(product.id),
               isFavorite: favoriteProductIds.contains(product.id),
+              isFavoriteBusy: favoriteBusyProductIds.contains(product.id),
               onProductTap: () => onProductTap(product),
               onFavoriteTap: () => onFavoriteTap(product.id),
               onAddTap: () => onAddTap(product.id),
@@ -568,6 +600,7 @@ class _CategoryProductCard extends StatelessWidget {
     required this.product,
     required this.quantity,
     required this.isFavorite,
+    required this.isFavoriteBusy,
     required this.onProductTap,
     required this.onFavoriteTap,
     required this.onAddTap,
@@ -578,6 +611,7 @@ class _CategoryProductCard extends StatelessWidget {
   final HomeCategoryProductData product;
   final int quantity;
   final bool isFavorite;
+  final bool isFavoriteBusy;
   final VoidCallback onProductTap;
   final VoidCallback onFavoriteTap;
   final VoidCallback onAddTap;
@@ -586,6 +620,8 @@ class _CategoryProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canOrder = product.isOrderable;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -611,16 +647,24 @@ class _CategoryProductCard extends StatelessWidget {
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
-                        onTap: onFavoriteTap,
+                        onTap: isFavoriteBusy ? null : onFavoriteTap,
                         child: Padding(
                           padding: const EdgeInsets.all(6),
-                          child: Icon(
-                            isFavorite
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            color: Colors.black,
-                            size: 22,
-                          ),
+                          child: isFavoriteBusy
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color: Colors.black,
+                                  size: 22,
+                                ),
                         ),
                       ),
                     ),
@@ -659,13 +703,15 @@ class _CategoryProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  quantity > 0
-                      ? _QuantityStepper(
-                          quantity: quantity,
-                          onIncrementTap: onIncrementTap,
-                          onDecrementTap: onDecrementTap,
-                        )
-                      : _CompactAddButton(onTap: onAddTap),
+                  !canOrder
+                      ? const SizedBox.shrink()
+                      : quantity > 0
+                          ? _QuantityStepper(
+                              quantity: quantity,
+                              onIncrementTap: onIncrementTap,
+                              onDecrementTap: onDecrementTap,
+                            )
+                          : _CompactAddButton(onTap: onAddTap),
                 ],
               ),
             ],

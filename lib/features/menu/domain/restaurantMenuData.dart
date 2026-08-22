@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 /// Jetkiz mobile
 /// Restaurant menu domain models.
@@ -188,6 +189,8 @@ class RestaurantMenuRestaurant extends Equatable {
     required this.id,
     required this.number,
     required this.status,
+    required this.isInApp,
+    required this.isAcceptingOrders,
     required this.nameRu,
     required this.nameKk,
     required this.slug,
@@ -198,13 +201,25 @@ class RestaurantMenuRestaurant extends Equatable {
   final String id;
   final int? number;
   final String status;
+  final bool isInApp;
+  final bool isAcceptingOrders;
   final String nameRu;
   final String nameKk;
   final String slug;
   final bool isPickupEnabled;
   final int? pickupPreparationMinutes;
 
-  bool get isOpen => status.trim().toUpperCase() == 'OPEN';
+  RestaurantAvailability get availability {
+    return RestaurantAvailability(
+      status: status,
+      isInApp: isInApp,
+      isAcceptingOrders: isAcceptingOrders,
+    );
+  }
+
+  bool get isOpen => availability.isOpen;
+
+  bool get canOrder => availability.canOrder;
 
   String get displayName {
     final ru = nameRu.trim();
@@ -224,6 +239,11 @@ class RestaurantMenuRestaurant extends Equatable {
       id: _readString(json['id']),
       number: _readNullableInt(json['number']),
       status: _readString(json['status'], fallback: 'CLOSED'),
+      isInApp: _readBool(json['isInApp'], fallback: false),
+      isAcceptingOrders: _readBool(
+        json['isAcceptingOrders'],
+        fallback: false,
+      ),
       nameRu: _readString(json['nameRu'] ?? json['name']),
       nameKk: _readString(json['nameKk']),
       slug: _readString(json['slug']),
@@ -238,6 +258,8 @@ class RestaurantMenuRestaurant extends Equatable {
         id,
         number,
         status,
+        isInApp,
+        isAcceptingOrders,
         nameRu,
         nameKk,
         slug,

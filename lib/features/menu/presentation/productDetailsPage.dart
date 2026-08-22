@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 
 /// Jetkiz mobile
@@ -57,10 +58,10 @@ class ProductDetailsPage extends StatefulWidget {
 
 class _ProductDetailsPageState extends State<ProductDetailsPage> {
   late final PageController _pageController;
+  final FavoritesController _favorites = FavoritesController.instance;
 
   int _quantity = 1;
   int _selectedImageIndex = 0;
-  bool _isFavorite = false;
 
   late RestaurantMenuItem _product;
   bool _isLoadingCanonical = false;
@@ -71,6 +72,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     super.initState();
     _pageController = PageController();
     _product = widget.product;
+    _favorites.addListener(_handleFavoritesChanged);
+    _favorites.initialize();
     _loadCanonicalProductIfNeeded();
   }
 
@@ -97,8 +100,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   @override
   void dispose() {
+    _favorites.removeListener(_handleFavoritesChanged);
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _handleFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   bool get _canFetchCanonical {
@@ -247,7 +255,25 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     });
   }
 
+  Future<void> _toggleFavorite(String productId) async {
+    try {
+      await _favorites.toggleProduct(productId);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось обновить избранное')),
+      );
+    }
+  }
+
   void _addToCart() {
+    if (!_product.canAddToCart) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Товар сейчас недоступен')),
+      );
+      return;
+    }
+
     final restaurantId = _resolvedRestaurantId;
 
     if (restaurantId == null || restaurantId.isEmpty) {
@@ -312,12 +338,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     children: [
                       _ProductDetailsTopBar(
                         onBackTap: () => Navigator.of(context).pop(),
-                        isFavorite: _isFavorite,
-                        onFavoriteTap: () {
-                          setState(() {
-                            _isFavorite = !_isFavorite;
-                          });
-                        },
+                        isFavorite: _favorites.isProductFavorite(_product.id),
+                        isFavoriteBusy: _favorites.isProductBusy(_product.id),
+                        onFavoriteTap: () => _toggleFavorite(_product.id),
                       ),
                       _ProductMainGallery(
                         imageUrls: gallery,
@@ -453,11 +476,13 @@ class _ProductDetailsTopBar extends StatelessWidget {
   const _ProductDetailsTopBar({
     required this.onBackTap,
     required this.isFavorite,
+    required this.isFavoriteBusy,
     required this.onFavoriteTap,
   });
 
   final VoidCallback onBackTap;
   final bool isFavorite;
+  final bool isFavoriteBusy;
   final VoidCallback onFavoriteTap;
 
   @override
@@ -475,13 +500,19 @@ class _ProductDetailsTopBar extends StatelessWidget {
           ),
           const Spacer(),
           IconButton(
-            onPressed: onFavoriteTap,
-            icon: Icon(
-              isFavorite
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color: isFavorite ? Colors.red : Colors.black,
-            ),
+            onPressed: isFavoriteBusy ? null : onFavoriteTap,
+            icon: isFavoriteBusy
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: isFavorite ? Colors.red : Colors.black,
+                  ),
           ),
         ],
       ),

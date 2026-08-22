@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:jetkiz_mobile/core/network/apiClient.dart';
-import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 
 class FavoriteRestaurantButton extends StatefulWidget {
   const FavoriteRestaurantButton({
@@ -25,78 +23,36 @@ class FavoriteRestaurantButton extends StatefulWidget {
 }
 
 class _FavoriteRestaurantButtonState extends State<FavoriteRestaurantButton> {
-  late final FavoritesApi _favoritesApi;
-
-  bool _isFavorite = false;
-  bool _isBusy = false;
-  bool _isInitialized = false;
+  final FavoritesController _favorites = FavoritesController.instance;
 
   @override
   void initState() {
     super.initState();
-    _favoritesApi = FavoritesApi(ApiClient());
-    _isFavorite = widget.initialIsFavorite;
-    _loadInitialState();
+    _favorites.addListener(_handleFavoritesChanged);
+    _favorites.initialize();
   }
 
-  Future<void> _loadInitialState() async {
-    try {
-      final ids = await _favoritesApi.getFavoriteIds();
-      if (!mounted) return;
+  @override
+  void dispose() {
+    _favorites.removeListener(_handleFavoritesChanged);
+    super.dispose();
+  }
 
-      setState(() {
-        _isFavorite = ids.restaurantIds.contains(widget.restaurantId);
-        _isInitialized = true;
-      });
-    } catch (_) {
-      if (!mounted) return;
-
-      setState(() {
-        _isFavorite = widget.initialIsFavorite;
-        _isInitialized = true;
-      });
-    }
+  void _handleFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _toggle() async {
-    if (_isBusy) return;
-
-    final nextValue = !_isFavorite;
-
-    setState(() {
-      _isBusy = true;
-      _isFavorite = nextValue;
-    });
+    if (_favorites.isRestaurantBusy(widget.restaurantId)) return;
 
     try {
-      await _favoritesApi.toggleRestaurantFavorite(
-        restaurantId: widget.restaurantId,
-        isFavorite: !nextValue,
+      await _favorites.toggleRestaurant(widget.restaurantId);
+      widget.onChanged?.call(
+        _favorites.isRestaurantFavorite(widget.restaurantId),
       );
-
-      widget.onChanged?.call(nextValue);
-    } on DioException catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isFavorite = !nextValue;
-      });
-
-      _showSnack(_favoritesApi.extractMessage(e));
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        _isFavorite = !nextValue;
-      });
-
       _showSnack('Не удалось обновить избранное');
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isBusy = false;
-      });
     }
   }
 
@@ -110,21 +66,25 @@ class _FavoriteRestaurantButtonState extends State<FavoriteRestaurantButton> {
   @override
   Widget build(BuildContext context) {
     final color = widget.filledColor ?? Colors.redAccent;
+    final isFavorite = _favorites.idsLoaded
+        ? _favorites.isRestaurantFavorite(widget.restaurantId)
+        : widget.initialIsFavorite;
+    final isBusy = _favorites.isRestaurantBusy(widget.restaurantId);
 
     return IconButton(
-      onPressed: _isBusy ? null : _toggle,
-      icon: _isBusy && _isInitialized
+      onPressed: isBusy ? null : _toggle,
+      icon: isBusy
           ? SizedBox(
               width: widget.iconSize,
               height: widget.iconSize,
               child: const CircularProgressIndicator(strokeWidth: 2),
             )
           : Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              isFavorite ? Icons.favorite : Icons.favorite_border,
               size: widget.iconSize,
-              color: _isFavorite ? color : null,
+              color: isFavorite ? color : null,
             ),
-      tooltip: _isFavorite ? 'Убрать из избранного' : 'Добавить в избранное',
+      tooltip: isFavorite ? 'Убрать из избранного' : 'Добавить в избранное',
     );
   }
 }

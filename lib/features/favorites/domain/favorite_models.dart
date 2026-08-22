@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 class FavoriteIdsResponse {
   const FavoriteIdsResponse({
@@ -203,6 +204,7 @@ class FavoriteRestaurant {
     required this.ratingCount,
     required this.status,
     required this.isInApp,
+    required this.isAcceptingOrders,
     this.slug,
     this.number,
     this.phone,
@@ -220,6 +222,7 @@ class FavoriteRestaurant {
   final int ratingCount;
   final String status;
   final bool isInApp;
+  final bool isAcceptingOrders;
 
   final String? slug;
   final int? number;
@@ -249,7 +252,12 @@ class FavoriteRestaurant {
       isInApp: _readBool(
         json,
         const ['isInApp'],
-        fallbackValue: true,
+        fallbackValue: false,
+      ),
+      isAcceptingOrders: _readBool(
+        json,
+        const ['isAcceptingOrders'],
+        fallbackValue: false,
       ),
       slug: _readNullableString(json, const ['slug']),
       number: _readNullableInt(json, const ['number']),
@@ -276,6 +284,16 @@ class FavoriteRestaurant {
       sortOrder: _readInt(json, const ['sortOrder']),
     );
   }
+
+  RestaurantAvailability get availability {
+    return RestaurantAvailability(
+      status: status,
+      isInApp: isInApp,
+      isAcceptingOrders: isAcceptingOrders,
+    );
+  }
+
+  bool get canOrder => availability.canOrder;
 }
 
 class FavoriteProduct {

@@ -1,7 +1,5 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:jetkiz_mobile/core/network/apiClient.dart';
-import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
+import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/favorites/domain/favorite_models.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 
@@ -15,201 +13,43 @@ class FavoritesPage extends StatefulWidget {
 class _FavoritesPageState extends State<FavoritesPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  late final FavoritesApi _favoritesApi;
-
-  bool _isInitialLoading = true;
-  bool _isRestaurantsLoading = false;
-  bool _isProductsLoading = false;
-
-  bool _restaurantsLoaded = false;
-  bool _productsLoaded = false;
-
-  String? _restaurantsError;
-  String? _productsError;
-
-  List<FavoriteRestaurantRecord> _restaurants = const [];
-  List<FavoriteProductRecord> _products = const [];
-
-  final Set<String> _restaurantBusyIds = <String>{};
-  final Set<String> _productBusyIds = <String>{};
+  final FavoritesController _favorites = FavoritesController.instance;
 
   @override
   void initState() {
     super.initState();
-    _favoritesApi = FavoritesApi(ApiClient());
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChanged);
-    _loadInitial();
+    _favorites.addListener(_handleFavoritesChanged);
+    _bootstrap();
   }
 
   @override
   void dispose() {
     _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
+    _favorites.removeListener(_handleFavoritesChanged);
     super.dispose();
+  }
+
+  Future<void> _bootstrap() async {
+    await _favorites.initialize();
+    await _favorites.refreshRestaurants();
+  }
+
+  void _handleFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   void _handleTabChanged() {
     if (_tabController.indexIsChanging) return;
-
-    if (_tabController.index == 1 && !_productsLoaded && !_isProductsLoading) {
-      _loadProducts();
+    if (_tabController.index == 1 && !_favorites.productsLoaded) {
+      _favorites.refreshProducts();
     }
   }
 
-  Future<void> _loadInitial() async {
-    if (!mounted) return;
-
-    setState(() {
-      _isInitialLoading = true;
-      _restaurantsError = null;
-    });
-
-    try {
-      await _loadRestaurants();
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isInitialLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadRestaurants() async {
-    if (!mounted || _isRestaurantsLoading) return;
-
-    setState(() {
-      _isRestaurantsLoading = true;
-      _restaurantsError = null;
-    });
-
-    try {
-      final response = await _favoritesApi.getFavoriteRestaurants();
-
-      if (!mounted) return;
-
-      setState(() {
-        _restaurants = response.items;
-        _restaurantsLoaded = true;
-      });
-    } on DioException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _restaurantsError = _favoritesApi.extractMessage(e);
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _restaurantsError = 'Не удалось загрузить избранные рестораны';
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isRestaurantsLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadProducts() async {
-    if (!mounted || _isProductsLoading) return;
-
-    setState(() {
-      _isProductsLoading = true;
-      _productsError = null;
-    });
-
-    try {
-      final response = await _favoritesApi.getFavoriteProducts();
-
-      if (!mounted) return;
-
-      setState(() {
-        _products = response.items;
-        _productsLoaded = true;
-      });
-    } on DioException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _productsError = _favoritesApi.extractMessage(e);
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _productsError = 'Не удалось загрузить избранные блюда';
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isProductsLoading = false;
-      });
-    }
-  }
-
-  Future<void> _refreshRestaurants() async {
-    await _loadRestaurants();
-  }
-
-  Future<void> _refreshProducts() async {
-    await _loadProducts();
-  }
-
-  Future<void> _removeRestaurant(String restaurantId) async {
-    if (_restaurantBusyIds.contains(restaurantId)) return;
-
-    setState(() {
-      _restaurantBusyIds.add(restaurantId);
-    });
-
-    try {
-      await _favoritesApi.removeRestaurantFavorite(restaurantId);
-
-      if (!mounted) return;
-
-      setState(() {
-        _restaurants =
-            _restaurants.where((x) => x.restaurant.id != restaurantId).toList();
-      });
-
-      _showSnack('Ресторан удалён из избранного');
-    } on DioException catch (e) {
-      _showSnack(_favoritesApi.extractMessage(e));
-    } catch (_) {
-      _showSnack('Не удалось удалить ресторан из избранного');
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _restaurantBusyIds.remove(restaurantId);
-      });
-    }
-  }
-
-  Future<void> _removeProduct(String productId) async {
-    if (_productBusyIds.contains(productId)) return;
-
-    setState(() {
-      _productBusyIds.add(productId);
-    });
-
-    try {
-      await _favoritesApi.removeProductFavorite(productId);
-
-      if (!mounted) return;
-
-      setState(() {
-        _products = _products.where((x) => x.product.id != productId).toList();
-      });
-
-      _showSnack('Блюдо удалено из избранного');
-    } on DioException catch (e) {
-      _showSnack(_favoritesApi.extractMessage(e));
-    } catch (_) {
-      _showSnack('Не удалось удалить блюдо из избранного');
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _productBusyIds.remove(productId);
-      });
-    }
+  Future<void> refreshIfStale() async {
+    await _favorites.refreshIfStale();
   }
 
   void _openRestaurant(FavoriteRestaurantRecord item) {
@@ -223,6 +63,24 @@ class _FavoritesPageState extends State<FavoritesPage>
     );
   }
 
+  Future<void> _removeRestaurant(String restaurantId) async {
+    try {
+      await _favorites.removeRestaurant(restaurantId);
+      _showSnack('Ресторан удален из избранного');
+    } catch (_) {
+      _showSnack('Не удалось удалить ресторан из избранного');
+    }
+  }
+
+  Future<void> _removeProduct(String productId) async {
+    try {
+      await _favorites.removeProduct(productId);
+      _showSnack('Блюдо удалено из избранного');
+    } catch (_) {
+      _showSnack('Не удалось удалить блюдо из избранного');
+    }
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -231,20 +89,23 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Widget _buildRestaurantsTab() {
-    if (_restaurantsError != null && !_restaurantsLoaded) {
+    final restaurants = _favorites.restaurants;
+    final error = _favorites.restaurantError;
+
+    if (error != null && !_favorites.restaurantsLoaded) {
       return _ErrorView(
-        message: _restaurantsError!,
-        onRetry: _loadRestaurants,
+        message: error,
+        onRetry: _favorites.refreshRestaurants,
       );
     }
 
-    if (_isRestaurantsLoading && !_restaurantsLoaded) {
+    if (_favorites.isRestaurantsLoading && !_favorites.restaurantsLoaded) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_restaurants.isEmpty) {
+    if (restaurants.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _refreshRestaurants,
+        onRefresh: _favorites.refreshRestaurants,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
@@ -261,14 +122,14 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
 
     return RefreshIndicator(
-      onRefresh: _refreshRestaurants,
+      onRefresh: _favorites.refreshRestaurants,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _restaurants.length,
+        itemCount: restaurants.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final item = _restaurants[index];
-          final busy = _restaurantBusyIds.contains(item.restaurant.id);
+          final item = restaurants[index];
+          final busy = _favorites.isRestaurantBusy(item.restaurant.id);
 
           return _RestaurantFavoriteCard(
             item: item,
@@ -282,18 +143,21 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Widget _buildProductsTab() {
-    if (_productsError != null && !_productsLoaded) {
+    final products = _favorites.products;
+    final error = _favorites.productError;
+
+    if (error != null && !_favorites.productsLoaded) {
       return _ErrorView(
-        message: _productsError!,
-        onRetry: _loadProducts,
+        message: error,
+        onRetry: _favorites.refreshProducts,
       );
     }
 
-    if (_isProductsLoading && !_productsLoaded) {
+    if (_favorites.isProductsLoading && !_favorites.productsLoaded) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (!_productsLoaded) {
+    if (!_favorites.productsLoaded) {
       return const Center(
         child: Text(
           'Открой вкладку, чтобы загрузить блюда',
@@ -302,9 +166,9 @@ class _FavoritesPageState extends State<FavoritesPage>
       );
     }
 
-    if (_products.isEmpty) {
+    if (products.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _refreshProducts,
+        onRefresh: _favorites.refreshProducts,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
@@ -320,14 +184,14 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
 
     return RefreshIndicator(
-      onRefresh: _refreshProducts,
+      onRefresh: _favorites.refreshProducts,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _products.length,
+        itemCount: products.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final item = _products[index];
-          final busy = _productBusyIds.contains(item.product.id);
+          final item = products[index];
+          final busy = _favorites.isProductBusy(item.product.id);
 
           return _ProductFavoriteCard(
             item: item,
@@ -341,20 +205,21 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isInitialLoading = _favorites.isInitializing ||
+        (_favorites.isRestaurantsLoading && !_favorites.restaurantsLoaded);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Избранное'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
-            Tab(text: 'Рестораны (${_restaurants.length})'),
-            Tab(text: 'Блюда (${_products.length})'),
+          tabs: <Widget>[
+            Tab(text: 'Рестораны (${_favorites.restaurants.length})'),
+            Tab(text: 'Блюда (${_favorites.products.length})'),
           ],
         ),
       ),
-      body: _isInitialLoading
+      body: isInitialLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
@@ -363,7 +228,6 @@ class _FavoritesPageState extends State<FavoritesPage>
                 _buildProductsTab(),
               ],
             ),
-      backgroundColor: theme.scaffoldBackgroundColor,
     );
   }
 }
@@ -384,6 +248,7 @@ class _RestaurantFavoriteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final restaurant = item.restaurant;
+    final availability = restaurant.availability;
     final subtitle = <String>[
       if ((restaurant.address ?? '').trim().isNotEmpty)
         restaurant.address!.trim(),
@@ -458,8 +323,10 @@ class _RestaurantFavoriteCard extends StatelessWidget {
                         text: '${restaurant.ratingCount}',
                       ),
                       _InfoChip(
-                        icon: Icons.circle,
-                        text: restaurant.status,
+                        icon: availability.canOrder
+                            ? Icons.check_circle_outline
+                            : Icons.info_outline,
+                        text: availability.label,
                       ),
                     ],
                   ),
@@ -496,13 +363,17 @@ class _ProductFavoriteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final product = item.product;
+    final restaurantAvailability = product.restaurant.availability;
+    final canOrder = product.isAvailable && restaurantAvailability.canOrder;
     final imageUrl = product.effectiveImageUrl ?? product.imageUrl;
     final priceText = '${product.price} ₸';
+    final disabledReason =
+        product.isAvailable ? restaurantAvailability.label : 'Недоступно';
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {},
+    return Opacity(
+      opacity: canOrder ? 1 : 0.58,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -560,24 +431,8 @@ class _ProductFavoriteCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          if (!product.isAvailable)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(999),
-                                color: Colors.orange.withOpacity(0.12),
-                              ),
-                              child: const Text(
-                                'Недоступно',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
+                          if (!canOrder)
+                            _AvailabilityPill(text: disabledReason),
                         ],
                       ),
                     ],
@@ -603,6 +458,34 @@ class _ProductFavoriteCard extends StatelessWidget {
   }
 }
 
+class _AvailabilityPill extends StatelessWidget {
+  const _AvailabilityPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: Colors.orange.withValues(alpha: 0.12),
+        ),
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _InfoChip extends StatelessWidget {
   const _InfoChip({
     required this.icon,
@@ -621,7 +504,7 @@ class _InfoChip extends StatelessWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withOpacity(0.7),
+            .withValues(alpha: 0.7),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -730,7 +613,7 @@ class _ImagePlaceholder extends StatelessWidget {
       color: Theme.of(context)
           .colorScheme
           .surfaceContainerHighest
-          .withOpacity(0.5),
+          .withValues(alpha: 0.5),
       child: const Center(
         child: Icon(Icons.image_outlined, size: 28),
       ),
