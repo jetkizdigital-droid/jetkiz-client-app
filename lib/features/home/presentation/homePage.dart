@@ -395,10 +395,6 @@ class _AddressCard extends StatelessWidget {
   final VoidCallback onTap;
 
   String _buildSubtitle() {
-    if (!restaurant.isOpenForOrders) {
-      final hours = restaurant.workingHours?.trim() ?? '';
-      return hours.isEmpty ? 'Закрыто' : 'Закрыто • $hours';
-    }
     if (selectedAddress == null) {
       return 'Укажите адрес доставки';
     }
