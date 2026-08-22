@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
+import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/phoneLoginPage.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/checkout/presentation/checkoutPage.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
+import 'package:jetkiz_mobile/features/restaurants/data/restaurantsApi.dart';
 
 import '../data/cartRepository.dart';
 import '../domain/cartItem.dart';
@@ -28,12 +30,14 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
   late final ApiClient _apiClient;
   late final FinanceConfigApi _financeConfigApi;
+  late final RestaurantsApi _restaurantsApi;
 
   int _deliveryFee = 0;
   bool _isDeliveryLoading = true;
   bool _isCheckoutStarting = false;
   bool _isCheckingAuth = true;
   bool _isAuthorized = false;
+  bool _restaurantClosed = false;
 
   bool get _requiresAddressBeforeCheckout => false;
 
@@ -44,9 +48,11 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
     _apiClient = ApiClient();
     _financeConfigApi = FinanceConfigApi(_apiClient);
+    _restaurantsApi = RestaurantsApi(_apiClient);
 
     _cart.addListener(_handleCartChanged);
     _addressRepository.addListener(_handleAddressChanged);
+    AuthSessionController.instance.addListener(_handleSessionChanged);
 
     _bootstrap();
   }
@@ -60,6 +66,25 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     });
     if (!authorized) return;
     await Future.wait([_loadDeliveryFee(), _syncCart(), _trackCartView()]);
+    await _loadRestaurantAvailability();
+  }
+
+  Future<void> _loadRestaurantAvailability() async {
+    final restaurantId = _cart.restaurantId?.trim() ?? '';
+    if (restaurantId.isEmpty) {
+      if (mounted) setState(() => _restaurantClosed = false);
+      return;
+    }
+    try {
+      final restaurants = await _restaurantsApi.getAllPublicRestaurants(random: false);
+      final matches = restaurants.where((item) => item.id == restaurantId);
+      final restaurant = matches.isEmpty ? null : matches.first;
+      if (mounted) {
+        setState(() => _restaurantClosed = restaurant == null || !restaurant.canOrder);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _restaurantClosed = _cart.hasBlockingItems);
+    }
   }
 
   Future<void> _openLogin() async {
@@ -81,7 +106,12 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _cart.removeListener(_handleCartChanged);
     _addressRepository.removeListener(_handleAddressChanged);
+    AuthSessionController.instance.removeListener(_handleSessionChanged);
     super.dispose();
+  }
+
+  void _handleSessionChanged() {
+    _bootstrap();
   }
 
   void _handleCartChanged() {
@@ -132,6 +162,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     await Future.wait([
       _loadDeliveryFee(),
       _syncCart(),
+      _loadRestaurantAvailability(),
     ]);
   }
 
@@ -285,6 +316,12 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
   Future<void> _handleCheckout() async {
     if (_cart.isEmpty || _isCheckoutStarting) return;
+
+    await _loadRestaurantAvailability();
+    if (!mounted || _restaurantClosed) {
+      _showSnackBar('Ресторан сейчас закрыт и не принимает заказы');
+      return;
+    }
 
     if (_isDeliveryLoading) {
       _showSnackBar('Подождите, загружается стоимость доставки');
@@ -453,7 +490,8 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
               isLoading: _isDeliveryLoading,
               isCheckoutStarting: _isCheckoutStarting,
               isDisabled:
-                  isEmpty || _isDeliveryLoading || _cart.hasBlockingItems,
+                  isEmpty || _isDeliveryLoading || _cart.hasBlockingItems || _restaurantClosed,
+              disabledReason: _restaurantClosed ? 'Ресторан закрыт' : null,
               onCheckout: _handleCheckout,
             ),
           ],
@@ -876,6 +914,7 @@ class _CartSummary extends StatelessWidget {
     required this.isLoading,
     required this.isCheckoutStarting,
     required this.isDisabled,
+    required this.disabledReason,
     required this.onCheckout,
   });
 
@@ -885,6 +924,7 @@ class _CartSummary extends StatelessWidget {
   final bool isLoading;
   final bool isCheckoutStarting;
   final bool isDisabled;
+  final String? disabledReason;
   final VoidCallback onCheckout;
 
   @override
@@ -936,7 +976,8 @@ class _CartSummary extends StatelessWidget {
                       vertical: 15,
                     ),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      color: disabled ? const Color(0xFF9CA3AF) : null,
+                      gradient: disabled ? null : const LinearGradient(
                         colors: [
                           Color(0xFF4CAF50),
                           Color(0xFF45A049),
@@ -968,9 +1009,9 @@ class _CartSummary extends StatelessWidget {
                           const SizedBox(width: 10),
                         ],
                         Text(
-                          isCheckoutStarting
+                          disabledReason ?? (isCheckoutStarting
                               ? 'Переходим...'
-                              : 'Оформить заказ',
+                              : 'Оформить заказ'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,

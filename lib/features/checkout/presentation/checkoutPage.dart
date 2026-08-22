@@ -408,7 +408,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             child: SafeArea(
               top: false,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 140),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
                 children: [
                   const _CheckoutSectionTitle(title: 'Способ получения'),
                   const SizedBox(height: 10),

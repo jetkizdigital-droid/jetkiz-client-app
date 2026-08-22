@@ -395,6 +395,10 @@ class _AddressCard extends StatelessWidget {
   final VoidCallback onTap;
 
   String _buildSubtitle() {
+    if (!restaurant.isOpenForOrders) {
+      final hours = restaurant.workingHours?.trim() ?? '';
+      return hours.isEmpty ? 'Закрыто' : 'Закрыто • $hours';
+    }
     if (selectedAddress == null) {
       return 'Укажите адрес доставки';
     }
@@ -661,6 +665,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
     final ratingText = restaurant.ratingAvg == 0
         ? '0,0'
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
+    final isOpen = restaurant.isOpenForOrders;
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -685,6 +690,21 @@ class _PinnedRestaurantCard extends StatelessWidget {
                           fit: BoxFit.cover,
                         )
                       : null,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isOpen ? const Color(0xFF489F2A) : const Color(0xFF6B7280),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  isOpen ? 'Открыто' : 'Закрыто',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

@@ -115,6 +115,7 @@ class HomeCategoryProductRestaurant {
       status: runtimeStatus.trim().isNotEmpty ? runtimeStatus : status,
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
+      workingHours: workingHours,
     );
   }
 
@@ -330,6 +331,7 @@ class HomeRestaurantData {
       status: runtimeStatus.trim().isNotEmpty ? runtimeStatus : status,
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
+      workingHours: workingHours,
     );
   }
 

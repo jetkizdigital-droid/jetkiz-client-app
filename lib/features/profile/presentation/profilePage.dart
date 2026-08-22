@@ -9,6 +9,7 @@ import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
+import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersPage.dart';
@@ -167,6 +168,7 @@ class _ProfilePageState extends State<ProfilePage> {
     CartRepository.instance.clear();
     AddressRepository.instance.clearSelectedAddress();
     FavoritesController.instance.reset();
+    AuthSessionController.instance.sessionChanged();
 
     if (!mounted) return;
 

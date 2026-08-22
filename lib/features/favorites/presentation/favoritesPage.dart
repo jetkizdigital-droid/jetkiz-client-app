@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
+import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/phoneLoginPage.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
@@ -30,6 +31,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChanged);
     _favorites.addListener(_handleFavoritesChanged);
+    AuthSessionController.instance.addListener(_handleSessionChanged);
     _bootstrap();
   }
 
@@ -38,7 +40,12 @@ class _FavoritesPageState extends State<FavoritesPage>
     _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
     _favorites.removeListener(_handleFavoritesChanged);
+    AuthSessionController.instance.removeListener(_handleSessionChanged);
     super.dispose();
+  }
+
+  void _handleSessionChanged() {
+    _bootstrap();
   }
 
   Future<void> _bootstrap() async {

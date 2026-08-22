@@ -202,11 +202,9 @@ class _InAppNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        isOrderNotification ? const Color(0xFF489F2A) : const Color(0xFFF59E0B);
+    const accent = Color(0xFF489F2A);
 
-    final softBg =
-        isOrderNotification ? const Color(0xFFEAF7E5) : const Color(0xFFFFF4DB);
+    const softBg = Color(0xFFEAF7E5);
 
     final actionText =
         isOrderNotification ? 'Открыть заказ' : 'Открыть уведомления';

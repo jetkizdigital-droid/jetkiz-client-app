@@ -290,6 +290,7 @@ class FavoriteRestaurant {
       status: status,
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
+      workingHours: workingHours,
     );
   }
 
