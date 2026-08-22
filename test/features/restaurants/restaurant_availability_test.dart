@@ -8,6 +8,7 @@ void main() {
         status: 'OPEN',
         isInApp: true,
         isAcceptingOrders: true,
+        allowMissingWorkingHours: true,
       );
 
       expect(availability.label, 'Открыто');
@@ -35,6 +36,7 @@ void main() {
         status: 'OPEN',
         isInApp: true,
         isAcceptingOrders: false,
+        allowMissingWorkingHours: true,
       );
 
       expect(availability.label, 'Временно не принимает заказы');
@@ -45,6 +47,7 @@ void main() {
         status: 'OPEN',
         isInApp: true,
         isAcceptingOrders: true,
+        allowMissingWorkingHours: true,
       );
       const closed = RestaurantAvailability(
         status: 'CLOSED',
@@ -60,12 +63,24 @@ void main() {
         status: 'OPEN',
         isInApp: true,
         isAcceptingOrders: false,
+        allowMissingWorkingHours: true,
       );
 
       expect(orderable.canOrder, isTrue);
       expect(closed.canOrder, isFalse);
       expect(unavailable.canOrder, isFalse);
       expect(paused.canOrder, isFalse);
+    });
+
+    test('missing working hours is closed by default', () {
+      const availability = RestaurantAvailability(
+        status: 'OPEN',
+        isInApp: true,
+        isAcceptingOrders: true,
+      );
+
+      expect(availability.canOrder, isFalse);
+      expect(availability.label, 'Закрыто');
     });
   });
 }
