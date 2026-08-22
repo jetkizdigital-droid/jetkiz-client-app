@@ -62,7 +62,7 @@ class _NotificationsTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final backgroundColor = selected ? const Color(0xFFEAF7E5) : Colors.white;
     final borderColor =
-        selected ? const Color(0xFF489F2A) : const Color(0xFFE0E0E0);
+        selected ? const Color(0xFF4CAF50) : const Color(0xFFE0E0E0);
     final textColor =
         selected ? const Color(0xFF2E7D32) : const Color(0xFF444444);
 
@@ -101,7 +101,7 @@ class _NotificationsTabButton extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF489F2A),
+                    color: const Color(0xFF4CAF50),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
