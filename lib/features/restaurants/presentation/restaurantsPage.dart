@@ -242,7 +242,7 @@ class RestaurantCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _StatusBadge(
-                      isOpen: restaurant.isOpen,
+                      isOpen: restaurant.canOrder,
                     ),
                   ),
                   Positioned(
