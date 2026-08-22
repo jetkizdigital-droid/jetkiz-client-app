@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -10,6 +12,7 @@ import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart
 import 'package:jetkiz_mobile/features/checkout/presentation/checkoutPage.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/restaurants/data/restaurantsApi.dart';
+import 'package:jetkiz_mobile/features/restaurants/domain/restaurant.dart';
 
 import '../data/cartRepository.dart';
 import '../domain/cartItem.dart';
@@ -38,6 +41,9 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   bool _isCheckingAuth = true;
   bool _isAuthorized = false;
   bool _restaurantClosed = false;
+  bool _isRestaurantAvailabilityLoading = false;
+  Restaurant? _cartRestaurant;
+  Timer? _availabilityTimer;
 
   bool get _requiresAddressBeforeCheckout => false;
 
@@ -53,6 +59,11 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     _cart.addListener(_handleCartChanged);
     _addressRepository.addListener(_handleAddressChanged);
     AuthSessionController.instance.addListener(_handleSessionChanged);
+
+    _availabilityTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _recalculateRestaurantAvailability(),
+    );
 
     _bootstrap();
   }
@@ -72,18 +83,45 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   Future<void> _loadRestaurantAvailability() async {
     final restaurantId = _cart.restaurantId?.trim() ?? '';
     if (restaurantId.isEmpty) {
-      if (mounted) setState(() => _restaurantClosed = false);
+      if (mounted) {
+        setState(() {
+          _cartRestaurant = null;
+          _restaurantClosed = false;
+          _isRestaurantAvailabilityLoading = false;
+        });
+      }
       return;
+    }
+    if (mounted) {
+      setState(() => _isRestaurantAvailabilityLoading = true);
     }
     try {
       final restaurants = await _restaurantsApi.getAllPublicRestaurants(random: false);
       final matches = restaurants.where((item) => item.id == restaurantId);
       final restaurant = matches.isEmpty ? null : matches.first;
       if (mounted) {
-        setState(() => _restaurantClosed = restaurant == null || !restaurant.canOrder);
+        setState(() {
+          _cartRestaurant = restaurant;
+          _restaurantClosed = restaurant == null || !restaurant.canOrder;
+          _isRestaurantAvailabilityLoading = false;
+        });
       }
     } catch (_) {
-      if (mounted) setState(() => _restaurantClosed = _cart.hasBlockingItems);
+      if (mounted) {
+        setState(() {
+          _cartRestaurant = null;
+          _restaurantClosed = true;
+          _isRestaurantAvailabilityLoading = false;
+        });
+      }
+    }
+  }
+
+  void _recalculateRestaurantAvailability() {
+    if (!mounted || _cart.isEmpty) return;
+    final closed = _cartRestaurant == null || !_cartRestaurant!.canOrder;
+    if (closed != _restaurantClosed) {
+      setState(() => _restaurantClosed = closed);
     }
   }
 
@@ -103,6 +141,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _availabilityTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _cart.removeListener(_handleCartChanged);
     _addressRepository.removeListener(_handleAddressChanged);
@@ -117,13 +156,20 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   void _handleCartChanged() {
     if (!mounted) return;
     setState(() {});
+    final currentId = _cartRestaurant?.id;
+    if (_cart.restaurantId != currentId) {
+      unawaited(_loadRestaurantAvailability());
+    } else {
+      _recalculateRestaurantAvailability();
+    }
     _showPendingPriceUpdateDialog();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _cart.isNotEmpty) {
-      _syncCart();
+      unawaited(_syncCart());
+      unawaited(_loadRestaurantAvailability());
     }
   }
 
@@ -490,8 +536,16 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
               isLoading: _isDeliveryLoading,
               isCheckoutStarting: _isCheckoutStarting,
               isDisabled:
-                  isEmpty || _isDeliveryLoading || _cart.hasBlockingItems || _restaurantClosed,
-              disabledReason: _restaurantClosed ? 'Ресторан закрыт' : null,
+                  isEmpty ||
+                  _isDeliveryLoading ||
+                  _isRestaurantAvailabilityLoading ||
+                  _cart.hasBlockingItems ||
+                  _restaurantClosed,
+              disabledReason: _isRestaurantAvailabilityLoading
+                  ? 'Проверяем ресторан'
+                  : _restaurantClosed
+                      ? 'Ресторан закрыт'
+                      : null,
               onCheckout: _handleCheckout,
             ),
           ],
@@ -698,7 +752,7 @@ class _CartItemCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: SizedBox(
               width: 96,
-              height: 96,
+              height: 112,
               child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                   ? Image.network(
                       item.imageUrl!,
@@ -711,7 +765,7 @@ class _CartItemCard extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: SizedBox(
-              height: 96,
+              height: 112,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -756,15 +810,31 @@ class _CartItemCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Expanded(
-                        child: Text(
-                          '${item.totalPrice} ₸',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF111827),
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${item.totalPrice} ₸',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            Text(
+                              '${item.price} ₸ за штуку',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF6B7280),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
