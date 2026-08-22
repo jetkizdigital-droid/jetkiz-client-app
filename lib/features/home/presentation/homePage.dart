@@ -478,19 +478,6 @@ class _PromoBanner extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.34),
-                  Colors.black.withValues(alpha: 0.14),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Align(

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
+import 'package:jetkiz_mobile/features/auth/presentation/phoneLoginPage.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressesPage.dart';
@@ -29,6 +32,8 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   int _deliveryFee = 0;
   bool _isDeliveryLoading = true;
   bool _isCheckoutStarting = false;
+  bool _isCheckingAuth = true;
+  bool _isAuthorized = false;
 
   bool get _requiresAddressBeforeCheckout => false;
 
@@ -43,9 +48,32 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     _cart.addListener(_handleCartChanged);
     _addressRepository.addListener(_handleAddressChanged);
 
-    _loadDeliveryFee();
-    _syncCart();
-    _trackCartView();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    final authorized = await AuthStorage().hasAccessToken();
+    if (!mounted) return;
+    setState(() {
+      _isAuthorized = authorized;
+      _isCheckingAuth = false;
+    });
+    if (!authorized) return;
+    await Future.wait([_loadDeliveryFee(), _syncCart(), _trackCartView()]);
+  }
+
+  Future<void> _openLogin() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhoneLoginPage(
+          onAuthorized: () async {
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _bootstrap();
   }
 
   @override
@@ -342,6 +370,17 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
+    if (_isCheckingAuth) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_isAuthorized) {
+      return Scaffold(
+        backgroundColor: _bg,
+        appBar: AppBar(title: Text(strings.cartTitle), centerTitle: true),
+        body: _GuestCart(onLogin: _openLogin, onGoHome: _goToHomeTab),
+      );
+    }
     final items = _cart.items;
     final selectedAddress = _addressRepository.selectedAddress;
     final subtotal = _cart.subtotal;
@@ -355,9 +394,9 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
         foregroundColor: _text,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          'Корзина',
-          style: TextStyle(
+        title: Text(
+          strings.cartTitle,
+          style: const TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -417,6 +456,38 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
                   isEmpty || _isDeliveryLoading || _cart.hasBlockingItems,
               onCheckout: _handleCheckout,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GuestCart extends StatelessWidget {
+  const _GuestCart({required this.onLogin, required this.onGoHome});
+  final VoidCallback onLogin;
+  final VoidCallback onGoHome;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.shopping_cart_outlined, size: 72),
+            const SizedBox(height: 20),
+            Text(strings.guestCartTitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            Text(strings.guestCartSubtitle,
+                textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            FilledButton(onPressed: onLogin, child: Text(strings.loginToAccount)),
+            TextButton(onPressed: onGoHome, child: Text(strings.browseRestaurants)),
           ],
         ),
       ),

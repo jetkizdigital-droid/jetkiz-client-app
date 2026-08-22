@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
 
@@ -77,6 +78,12 @@ class _InAppNotificationsHostState extends State<InAppNotificationsHost>
 
   Future<void> _poll({bool silent = false}) async {
     if (_polling || !_isForeground) return;
+
+    if (!await AuthStorage().hasAccessToken()) {
+      _initialized = false;
+      _knownIds.clear();
+      return;
+    }
 
     _polling = true;
 

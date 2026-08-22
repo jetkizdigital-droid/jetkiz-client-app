@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
+import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
+import 'package:jetkiz_mobile/features/auth/presentation/phoneLoginPage.dart';
+import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
+import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/favorites/domain/favorite_models.dart';
+import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -14,6 +21,8 @@ class _FavoritesPageState extends State<FavoritesPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final FavoritesController _favorites = FavoritesController.instance;
+  bool _isCheckingAuth = true;
+  bool _isAuthorized = false;
 
   @override
   void initState() {
@@ -33,8 +42,29 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Future<void> _bootstrap() async {
+    final authorized = await AuthStorage().hasAccessToken();
+    if (!mounted) return;
+    setState(() {
+      _isAuthorized = authorized;
+      _isCheckingAuth = false;
+    });
+    if (!authorized) return;
     await _favorites.initialize();
     await _favorites.refreshRestaurants();
+  }
+
+  Future<void> _openLogin() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhoneLoginPage(
+          onAuthorized: () async {
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          },
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _bootstrap();
   }
 
   void _handleFavoritesChanged() {
@@ -79,6 +109,64 @@ class _FavoritesPageState extends State<FavoritesPage>
     } catch (_) {
       _showSnack('Не удалось удалить блюдо из избранного');
     }
+  }
+
+  RestaurantMenuItem _menuItem(FavoriteProduct product) {
+    return RestaurantMenuItem(
+      id: product.id,
+      titleRu: product.title,
+      titleKk: '',
+      price: product.price,
+      imageUrl: product.effectiveImageUrl ?? product.imageUrl,
+      isAvailable: product.isAvailable,
+      categoryId: product.categoryId,
+      categoryNameRu: product.category?.title,
+      categoryNameKk: null,
+      categoryCode: null,
+      categorySortOrder: null,
+      weight: product.weight,
+      composition: product.composition,
+      description: product.description,
+      isDrink: product.isDrink,
+      images: product.images
+          .map((image) => RestaurantMenuItemImage(
+                id: image.id,
+                url: image.url,
+                isMain: image.isMain,
+                sortOrder: image.sortOrder,
+              ))
+          .toList(),
+    );
+  }
+
+  void _openProduct(FavoriteProductRecord item) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailsPage(
+          product: _menuItem(item.product),
+          restaurantId: item.product.restaurantId,
+          restaurantName: item.product.restaurant.name,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addProduct(FavoriteProductRecord item) async {
+    final product = item.product;
+    final result = await addItemWithRestaurantConfirmation(
+      context: context,
+      productId: product.id,
+      restaurantId: product.restaurantId,
+      restaurantName: product.restaurant.name,
+      title: product.title,
+      price: product.price,
+      quantity: 1,
+      imageUrl: product.effectiveImageUrl ?? product.imageUrl,
+      description: product.description,
+      weight: product.weight,
+    );
+    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
+    _showSnack('Добавлено в корзину');
   }
 
   void _showSnack(String message) {
@@ -196,6 +284,8 @@ class _FavoritesPageState extends State<FavoritesPage>
           return _ProductFavoriteCard(
             item: item,
             isBusy: busy,
+            onOpen: () => _openProduct(item),
+            onAdd: () => _addProduct(item),
             onRemove: () => _removeProduct(item.product.id),
           );
         },
@@ -205,17 +295,27 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
+    if (_isCheckingAuth) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_isAuthorized) {
+      return Scaffold(
+        appBar: AppBar(title: Text(strings.favoritesTitle)),
+        body: _GuestFavorites(onLogin: _openLogin),
+      );
+    }
     final isInitialLoading = _favorites.isInitializing ||
         (_favorites.isRestaurantsLoading && !_favorites.restaurantsLoaded);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Избранное'),
+        title: Text(strings.favoritesTitle),
         bottom: TabBar(
           controller: _tabController,
           tabs: <Widget>[
-            Tab(text: 'Рестораны (${_favorites.restaurants.length})'),
-            Tab(text: 'Блюда (${_favorites.products.length})'),
+            Tab(text: '${strings.favoriteRestaurants} (${_favorites.restaurants.length})'),
+            Tab(text: '${strings.favoriteProducts} (${_favorites.products.length})'),
           ],
         ),
       ),
@@ -353,11 +453,15 @@ class _ProductFavoriteCard extends StatelessWidget {
   const _ProductFavoriteCard({
     required this.item,
     required this.isBusy,
+    required this.onOpen,
+    required this.onAdd,
     required this.onRemove,
   });
 
   final FavoriteProductRecord item;
   final bool isBusy;
+  final VoidCallback onOpen;
+  final VoidCallback onAdd;
   final VoidCallback onRemove;
 
   @override
@@ -374,7 +478,9 @@ class _ProductFavoriteCard extends StatelessWidget {
       opacity: canOrder ? 1 : 0.58,
       child: Card(
         clipBehavior: Clip.antiAlias,
-        child: Padding(
+        child: InkWell(
+          onTap: onOpen,
+          child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,18 +546,58 @@ class _ProductFavoriteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
-                onPressed: isBusy ? null : onRemove,
-                icon: isBusy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.favorite),
+              Column(
+                children: [
+                  IconButton(
+                    onPressed: isBusy ? null : onRemove,
+                    icon: isBusy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.favorite),
+                  ),
+                  IconButton.filled(
+                    onPressed: canOrder ? onAdd : null,
+                    tooltip: 'Добавить в корзину',
+                    icon: const Icon(Icons.add_shopping_cart_rounded),
+                  ),
+                ],
               ),
             ],
           ),
+        ),
+      ),
+    ),
+    );
+  }
+}
+
+class _GuestFavorites extends StatelessWidget {
+  const _GuestFavorites({required this.onLogin});
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.favorite_border_rounded, size: 72),
+            const SizedBox(height: 20),
+            Text(strings.guestFavoritesTitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            Text(strings.guestFavoritesSubtitle,
+                textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            FilledButton(onPressed: onLogin, child: Text(strings.loginToAccount)),
+          ],
         ),
       ),
     );

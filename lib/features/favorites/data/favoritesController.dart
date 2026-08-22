@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesApi.dart';
 import 'package:jetkiz_mobile/features/favorites/domain/favorite_models.dart';
 
@@ -82,6 +83,7 @@ class FavoritesController extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_idsLoaded || _isInitializing) return;
+    if (!await AuthStorage().hasAccessToken()) return;
 
     _isInitializing = true;
     notifyListeners();
@@ -108,6 +110,7 @@ class FavoritesController extends ChangeNotifier {
   }
 
   Future<void> refreshAll() async {
+    if (!await AuthStorage().hasAccessToken()) return;
     await Future.wait([
       refreshRestaurants(),
       refreshProducts(),
@@ -116,6 +119,7 @@ class FavoritesController extends ChangeNotifier {
 
   Future<void> refreshRestaurants() async {
     if (_isRestaurantsLoading) return;
+    if (!await AuthStorage().hasAccessToken()) return;
 
     _isRestaurantsLoading = true;
     _restaurantError = null;
@@ -143,6 +147,7 @@ class FavoritesController extends ChangeNotifier {
 
   Future<void> refreshProducts() async {
     if (_isProductsLoading) return;
+    if (!await AuthStorage().hasAccessToken()) return;
 
     _isProductsLoading = true;
     _productError = null;
@@ -169,6 +174,9 @@ class FavoritesController extends ChangeNotifier {
   }
 
   Future<void> toggleRestaurant(String id) async {
+    if (!await AuthStorage().hasAccessToken()) {
+      throw StateError('AUTH_REQUIRED');
+    }
     if (_busyRestaurantIds.contains(id)) return;
 
     if (_restaurantIds.contains(id)) {
@@ -179,6 +187,9 @@ class FavoritesController extends ChangeNotifier {
   }
 
   Future<void> toggleProduct(String id) async {
+    if (!await AuthStorage().hasAccessToken()) {
+      throw StateError('AUTH_REQUIRED');
+    }
     if (_busyProductIds.contains(id)) return;
 
     if (_productIds.contains(id)) {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/notificationsPage.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/widgets/notificationBadge.dart';
@@ -99,6 +100,11 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
 
   Future<void> _load() async {
     if (_loading) return;
+
+    if (!await AuthStorage().hasAccessToken()) {
+      if (mounted && _unreadCount != 0) setState(() => _unreadCount = 0);
+      return;
+    }
 
     _loading = true;
 

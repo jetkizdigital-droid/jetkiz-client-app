@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
+import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
@@ -315,7 +316,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     return true;
   }
 
-  void _addFirst(RestaurantMenuItem item) {
+  Future<void> _addFirst(RestaurantMenuItem item) async {
     if (!_canAddItemToCart(item)) return;
 
     if (!item.canAddToCart) {
@@ -323,9 +324,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return;
     }
 
-    CartRepository.instance.addItem(
+    final result = await addItemWithRestaurantConfirmation(
+      context: context,
       productId: item.id,
       restaurantId: widget.restaurantId,
+      restaurantName:
+          widget.restaurantName ?? _menuData?.restaurant.name ?? '',
       title: item.title,
       price: item.price,
       quantity: 1,
@@ -334,11 +338,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       weight: item.weight,
     );
 
+    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     _safeTrackAddToCart(item);
     setState(() {});
   }
 
-  void _increment(RestaurantMenuItem item) {
+  Future<void> _increment(RestaurantMenuItem item) async {
     if (!_canAddItemToCart(item)) return;
 
     if (!item.canAddToCart) {
@@ -346,9 +351,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return;
     }
 
-    CartRepository.instance.addItem(
+    final result = await addItemWithRestaurantConfirmation(
+      context: context,
       productId: item.id,
       restaurantId: widget.restaurantId,
+      restaurantName:
+          widget.restaurantName ?? _menuData?.restaurant.name ?? '',
       title: item.title,
       price: item.price,
       quantity: 1,
@@ -357,6 +365,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       weight: item.weight,
     );
 
+    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     _safeTrackAddToCart(item);
     setState(() {});
   }
