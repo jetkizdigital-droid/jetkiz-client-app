@@ -145,6 +145,8 @@ class CartRepository extends ChangeNotifier {
     required String productId,
     required String restaurantId,
     required String title,
+    String? titleRu,
+    String? titleKk,
     required int price,
     required int quantity,
     String? imageUrl,
@@ -153,7 +155,13 @@ class CartRepository extends ChangeNotifier {
   }) {
     final normalizedProductId = productId.trim();
     final normalizedRestaurantId = restaurantId.trim();
-    final normalizedTitle = title.trim();
+    final normalizedTitleRu = _firstNonEmpty([titleRu, title, titleKk]);
+    final normalizedTitleKk = _firstNonEmpty([titleKk]);
+    final normalizedTitle = _firstNonEmpty([
+      title,
+      normalizedTitleRu,
+      normalizedTitleKk,
+    ]);
 
     if (normalizedProductId.isEmpty ||
         normalizedRestaurantId.isEmpty ||
@@ -181,6 +189,8 @@ class CartRepository extends ChangeNotifier {
       }
 
       nextItems[existingIndex] = existing.copyWith(
+        titleRu: normalizedTitleRu.isEmpty ? existing.titleRu : normalizedTitleRu,
+        titleKk: normalizedTitleKk.isEmpty ? existing.titleKk : normalizedTitleKk,
         quantity: existing.quantity + quantity,
         imageUrl: _normalizeOptional(imageUrl) ?? existing.imageUrl,
         description: _normalizeOptional(description) ?? existing.description,
@@ -199,6 +209,8 @@ class CartRepository extends ChangeNotifier {
         productId: normalizedProductId,
         restaurantId: normalizedRestaurantId,
         title: normalizedTitle,
+        titleRu: normalizedTitleRu,
+        titleKk: normalizedTitleKk,
         price: price,
         quantity: quantity,
         imageUrl: _normalizeOptional(imageUrl),
@@ -218,6 +230,8 @@ class CartRepository extends ChangeNotifier {
     required String productId,
     required String restaurantId,
     required String title,
+    String? titleRu,
+    String? titleKk,
     required int price,
     required int quantity,
     String? imageUrl,
@@ -230,6 +244,8 @@ class CartRepository extends ChangeNotifier {
       productId: productId,
       restaurantId: restaurantId,
       title: title,
+      titleRu: titleRu,
+      titleKk: titleKk,
       price: price,
       quantity: quantity,
       imageUrl: imageUrl,
@@ -371,7 +387,8 @@ class CartRepository extends ChangeNotifier {
   }
 
   Future<List<ProductSyncItem>?> _safeSyncProducts(
-      List<String> productIds) async {
+    List<String> productIds,
+  ) async {
     try {
       return await _productSyncClient.syncProducts(productIds);
     } catch (_) {
@@ -398,7 +415,8 @@ class CartRepository extends ChangeNotifier {
         synced.restaurantId?.trim() ?? restaurant?.id.trim() ?? '';
     final resolvedRestaurantId =
         responseRestaurantId.isEmpty ? item.restaurantId : responseRestaurantId;
-    final title = _firstNonEmpty([synced.titleRu, synced.titleKk, item.title]);
+    final titleRu = _firstNonEmpty([synced.titleRu, item.titleRu, item.title]);
+    final titleKk = _firstNonEmpty([synced.titleKk, item.titleKk]);
     final imageUrl = _firstNonEmpty([synced.effectiveImageUrl, item.imageUrl]);
     final price = synced.price ?? item.price;
 
@@ -411,7 +429,8 @@ class CartRepository extends ChangeNotifier {
         synced.isAvailable;
 
     return item.copyWith(
-      title: title,
+      titleRu: titleRu,
+      titleKk: titleKk,
       price: price < 0 ? item.price : price,
       imageUrl: imageUrl,
       syncState: productAvailable
@@ -514,7 +533,8 @@ class CartRepository extends ChangeNotifier {
   static bool _cartItemsEquivalent(CartItem left, CartItem right) {
     return left.productId == right.productId &&
         left.restaurantId == right.restaurantId &&
-        left.title == right.title &&
+        left.titleRu == right.titleRu &&
+        left.titleKk == right.titleKk &&
         left.price == right.price &&
         left.quantity == right.quantity &&
         left.imageUrl == right.imageUrl &&
