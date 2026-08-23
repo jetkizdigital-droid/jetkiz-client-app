@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:http/http.dart' as http;
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
@@ -262,7 +263,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось обновить избранное')),
+        const SnackBar(content: LocalizedText('Не удалось обновить избранное')),
       );
     }
   }
@@ -270,7 +271,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Future<void> _addToCart() async {
     if (!_product.canAddToCart) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Товар сейчас недоступен')),
+        const SnackBar(content: LocalizedText('Товар сейчас недоступен')),
       );
       return;
     }
@@ -280,7 +281,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (restaurantId == null || restaurantId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
+          content: LocalizedText(
             'Не удалось определить restaurantId. Передай restaurantId при открытии ProductDetailsPage.',
           ),
         ),
@@ -304,7 +305,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     if (result == CartAddResult.rejectedInvalidItem) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось добавить товар в корзину')),
+        const SnackBar(
+            content: LocalizedText('Не удалось добавить товар в корзину')),
       );
       return;
     }
@@ -313,7 +315,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: LocalizedText(message),
         action: SnackBarAction(
           label: 'Корзина',
           onPressed: () {
@@ -381,7 +383,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             if ((widget.restaurantName ?? '')
                                 .trim()
                                 .isNotEmpty) ...[
-                              Text(
+                              LocalizedText(
                                 widget.restaurantName!.trim(),
                                 style: const TextStyle(
                                   fontSize: 13,
@@ -391,7 +393,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               ),
                               const SizedBox(height: 8),
                             ],
-                            Text(
+                            LocalizedText(
                               _title,
                               style: const TextStyle(
                                 fontSize: 28,
@@ -401,7 +403,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            Text(
+                            LocalizedText(
                               '${_product.price}₸',
                               style: const TextStyle(
                                 fontSize: 24,
@@ -578,7 +580,7 @@ class _ProductMainGallery extends StatelessWidget {
                               color: Colors.black.withValues(alpha: 0.55),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text(
+                            child: LocalizedText(
                               '${selectedIndex + 1}/${imageUrls.length}',
                               style: const TextStyle(
                                 color: Colors.white,
@@ -690,7 +692,7 @@ class _InfoBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          LocalizedText(
             title,
             style: const TextStyle(
               fontSize: 13,
@@ -699,7 +701,7 @@ class _InfoBlock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          LocalizedText(
             value,
             style: const TextStyle(
               fontSize: 15,
@@ -730,7 +732,7 @@ class _AvailabilityBlock extends StatelessWidget {
         color: isAvailable ? const Color(0xFFEFF8EA) : const Color(0xFFF8ECEC),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(
+      child: LocalizedText(
         isAvailable ? 'Доступно к заказу' : 'Временно недоступно',
         style: TextStyle(
           fontSize: 14,
@@ -762,7 +764,7 @@ class _CanonicalLoadWarning extends StatelessWidget {
       child: Row(
         children: [
           const Expanded(
-            child: Text(
+            child: LocalizedText(
               'Не удалось обновить полные данные товара',
               style: TextStyle(
                 fontSize: 13,
@@ -777,7 +779,7 @@ class _CanonicalLoadWarning extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Text(
+              child: LocalizedText(
                 'Повторить',
                 style: TextStyle(
                   fontSize: 13,
@@ -849,7 +851,7 @@ class _BottomActionBar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  child: Text(
+                  child: LocalizedText(
                     'Добавить · $totalPrice₸',
                     style: const TextStyle(
                       fontSize: 17,
@@ -894,7 +896,7 @@ class _QuantityBox extends StatelessWidget {
           ),
           Expanded(
             child: Center(
-              child: Text(
+              child: LocalizedText(
                 '$quantity',
                 style: const TextStyle(
                   color: Colors.white,
@@ -932,7 +934,7 @@ class _QtyButton extends StatelessWidget {
         width: 34,
         height: 54,
         child: Center(
-          child: Text(
+          child: LocalizedText(
             label,
             style: const TextStyle(
               color: Colors.white,

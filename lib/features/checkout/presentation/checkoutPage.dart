@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
@@ -136,7 +137,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (kReleaseMode) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Оплата временно недоступна'),
+          content: LocalizedText('Оплата временно недоступна'),
         ),
       );
       return;
@@ -144,28 +145,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось рассчитать доставку')),
+        const SnackBar(
+            content: LocalizedText('Не удалось рассчитать доставку')),
       );
       return;
     }
 
     if (cartState.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Корзина пуста')),
+        const SnackBar(content: LocalizedText('Корзина пуста')),
       );
       return;
     }
 
     if (!_isPickup && address == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите адрес доставки')),
+        const SnackBar(content: LocalizedText('Выберите адрес доставки')),
       );
       return;
     }
 
     if (_selectedCardId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите карту для оплаты')),
+        const SnackBar(content: LocalizedText('Выберите карту для оплаты')),
       );
       return;
     }
@@ -173,7 +175,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final restaurantId = cartState.restaurantId;
     if (restaurantId == null || restaurantId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось определить ресторан заказа')),
+        const SnackBar(
+            content: LocalizedText('Не удалось определить ресторан заказа')),
       );
       return;
     }
@@ -181,7 +184,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final addressId = _addressRepository.selectedAddressId;
     if (!_isPickup && (addressId == null || addressId.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось определить адрес доставки')),
+        const SnackBar(
+            content: LocalizedText('Не удалось определить адрес доставки')),
       );
       return;
     }
@@ -283,19 +287,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
+        SnackBar(content: LocalizedText(error.message)),
       );
     } on CreateOrderException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
+        SnackBar(content: LocalizedText(error.message)),
       );
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Не удалось создать заказ'),
+          content: LocalizedText('Не удалось создать заказ'),
         ),
       );
     } finally {
@@ -316,12 +320,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Цены обновились'),
-          content: const Text('Цены на некоторые позиции изменились.'),
+          title: const LocalizedText('Цены обновились'),
+          content: const LocalizedText('Цены на некоторые позиции изменились.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Понятно'),
+              child: const LocalizedText('Понятно'),
             ),
           ],
         );
@@ -334,14 +338,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Не все блюда доступны'),
-          content: const Text(
+          title: const LocalizedText('Не все блюда доступны'),
+          content: const LocalizedText(
             'Удалите недоступные позиции из корзины, чтобы продолжить.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Понятно'),
+              child: const LocalizedText('Понятно'),
             ),
           ],
         );
@@ -402,7 +406,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
                 ),
                 const Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     'Оформление заказа',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -470,7 +474,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text(
+                          content: LocalizedText(
                             'Экран добавления карты подключим после подтверждения payment flow',
                           ),
                         ),
@@ -491,7 +495,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     OutlinedButton.icon(
                       onPressed: _isDeliveryLoading ? null : _loadDeliveryFee,
                       icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Повторить расчёт доставки'),
+                      label: const LocalizedText('Повторить расчёт доставки'),
                     ),
                   ],
                 ],
@@ -525,7 +529,7 @@ class _CheckoutSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    return LocalizedText(
       title,
       style: const TextStyle(
         fontSize: 17,
@@ -554,12 +558,12 @@ class _FulfillmentSelector extends StatelessWidget {
         ButtonSegment(
           value: OrderFulfillmentType.delivery,
           icon: Icon(Icons.delivery_dining_rounded),
-          label: Text('Доставка'),
+          label: LocalizedText('Доставка'),
         ),
         ButtonSegment(
           value: OrderFulfillmentType.pickup,
           icon: Icon(Icons.shopping_bag_outlined),
-          label: Text('Самовывоз'),
+          label: LocalizedText('Самовывоз'),
         ),
       ],
       selected: {value},
@@ -593,7 +597,7 @@ class _PickupInfoCard extends StatelessWidget {
           ),
           SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: LocalizedText(
               'Вы заберёте заказ из ресторана',
               style: TextStyle(
                 fontSize: 14,
@@ -661,7 +665,7 @@ class _CheckoutAddressCard extends StatelessWidget {
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          LocalizedText(
                             address!.title,
                             style: const TextStyle(
                               fontSize: 15,
@@ -670,7 +674,7 @@ class _CheckoutAddressCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(
+                          LocalizedText(
                             address!.fullSubtitle,
                             style: const TextStyle(
                               fontSize: 13,
@@ -683,7 +687,7 @@ class _CheckoutAddressCard extends StatelessWidget {
                     : const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          LocalizedText(
                             'Адрес не выбран',
                             style: TextStyle(
                               fontSize: 15,
@@ -692,7 +696,7 @@ class _CheckoutAddressCard extends StatelessWidget {
                             ),
                           ),
                           SizedBox(height: 6),
-                          Text(
+                          LocalizedText(
                             'Нажмите, чтобы выбрать адрес доставки',
                             style: TextStyle(
                               fontSize: 13,
@@ -734,7 +738,7 @@ class _CheckoutItemsCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
-        child: const Text(
+        child: const LocalizedText(
           'Корзина пуста',
           style: TextStyle(
             fontSize: 14,
@@ -788,7 +792,7 @@ class _CheckoutItemRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(
+          child: LocalizedText(
             item.title,
             style: const TextStyle(
               fontSize: 14,
@@ -801,7 +805,7 @@ class _CheckoutItemRow extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
+            LocalizedText(
               '${item.totalPrice} ₸',
               style: const TextStyle(
                 fontSize: 14,
@@ -810,7 +814,7 @@ class _CheckoutItemRow extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
+            LocalizedText(
               '${item.quantity} × ${item.price} ₸',
               style: const TextStyle(
                 fontSize: 12,
@@ -875,7 +879,7 @@ class _CheckoutCardTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    LocalizedText(
                       card.type,
                       style: const TextStyle(
                         fontSize: 14,
@@ -884,7 +888,7 @@ class _CheckoutCardTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    LocalizedText(
                       '${card.maskedNumber} • ${card.expiry}',
                       style: const TextStyle(
                         fontSize: 13,
@@ -962,7 +966,7 @@ class _AddNewCardTile extends StatelessWidget {
                 color: Color(0xFF6B7280),
               ),
               SizedBox(width: 8),
-              Text(
+              LocalizedText(
                 'Добавить новую карту',
                 style: TextStyle(
                   fontSize: 14,
@@ -1043,7 +1047,7 @@ class _CheckoutSummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
+        LocalizedText(
           label,
           style: TextStyle(
             fontSize: isTotal ? 16 : 14,
@@ -1052,7 +1056,7 @@ class _CheckoutSummaryRow extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        Text(
+        LocalizedText(
           value,
           style: TextStyle(
             fontSize: isTotal ? 18 : 14,
@@ -1121,7 +1125,7 @@ class _CheckoutBottomBar extends StatelessWidget {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      const LocalizedText(
                         'Подтвердить заказ',
                         style: TextStyle(
                           fontSize: 16,
@@ -1129,7 +1133,7 @@ class _CheckoutBottomBar extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
+                      LocalizedText(
                         '$total ₸',
                         style: const TextStyle(
                           fontSize: 16,
@@ -1203,7 +1207,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              const LocalizedText(
                 'Заказ оформлен',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1213,7 +1217,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
+              const LocalizedText(
                 'Ожидайте звонка от ресторана для подтверждения',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1234,7 +1238,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
                   ),
                   child: Column(
                     children: [
-                      Text(
+                      LocalizedText(
                         'Код самовывоза: $pickupCode',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
@@ -1244,7 +1248,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      const LocalizedText(
                         'Покажите этот код сотруднику ресторана',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -1271,7 +1275,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
+                child: const LocalizedText(
                   'На главную',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),

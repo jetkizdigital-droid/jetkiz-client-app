@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter/services.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
@@ -254,7 +255,7 @@ class _InAppNotificationCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    LocalizedText(
                       categoryText,
                       style: const TextStyle(
                         color: accent,
@@ -263,7 +264,7 @@ class _InAppNotificationCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    LocalizedText(
                       item.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -274,7 +275,7 @@ class _InAppNotificationCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    LocalizedText(
                       item.body,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -299,7 +300,7 @@ class _InAppNotificationCard extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 8),
-                    Text(
+                    LocalizedText(
                       actionText,
                       style: const TextStyle(
                         color: accent,
@@ -367,7 +368,7 @@ class _MiniChip extends StatelessWidget {
         color: const Color(0xFFF3F3F3),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
+      child: LocalizedText(
         label,
         style: const TextStyle(
           color: Color(0xFF4B4B4B),

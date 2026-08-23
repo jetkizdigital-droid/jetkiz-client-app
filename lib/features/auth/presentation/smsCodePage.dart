@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -225,7 +226,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Код отправлен повторно.'),
+          content: LocalizedText('Код отправлен повторно.'),
         ),
       );
     } on AuthApiException catch (error) {
@@ -289,7 +290,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
               width: isActive || _errorText != null ? 2 : 1,
             ),
           ),
-          child: Text(
+          child: LocalizedText(
             hasValue ? digits[index] : '',
             style: TextStyle(
               color: Colors.black,
@@ -344,7 +345,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                                 ),
                               ),
                               const Center(
-                                child: Text(
+                                child: LocalizedText(
                                   'Подтверждение кода',
                                   style: TextStyle(
                                     color: Colors.black,
@@ -363,7 +364,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 34),
-                        const Text(
+                        const LocalizedText(
                           'Код был отправлен\nна ваш номер',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -374,7 +375,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        Text(
+                        LocalizedText(
                           formattedPhone,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
@@ -437,7 +438,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                         else if (_errorText != null)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
+                            child: LocalizedText(
                               _errorText!,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
@@ -467,7 +468,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                                       color: Color(0xFF489F2A),
                                     ),
                                   )
-                                : const Text(
+                                : const LocalizedText(
                                     'Отправить код повторно',
                                     style: TextStyle(
                                       fontSize: 15,
@@ -477,7 +478,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
                                   ),
                           )
                         else
-                          Text(
+                          LocalizedText(
                             'запросить через ${_formatSeconds(_secondsLeft)}',
                             style: const TextStyle(
                               color: Colors.black,

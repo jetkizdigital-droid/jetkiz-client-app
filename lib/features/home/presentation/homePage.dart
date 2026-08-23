@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
@@ -351,7 +352,7 @@ class _SearchRow extends StatelessWidget {
                   Icon(Icons.search, color: Color(0xFF7B7F87)),
                   SizedBox(width: 12),
                   Expanded(
-                    child: Text(
+                    child: LocalizedText(
                       'Поиск блюд и ресторанов',
                       style: TextStyle(
                         fontSize: 16,
@@ -429,7 +430,7 @@ class _AddressCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  LocalizedText(
                     hasAddress ? selectedAddress!.title : 'Адрес доставки',
                     style: const TextStyle(
                       fontSize: 17,
@@ -438,7 +439,7 @@ class _AddressCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  LocalizedText(
                     _buildSubtitle(),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -490,7 +491,7 @@ class _PromoBanner extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Align(
               alignment: Alignment.topLeft,
-              child: Text(
+              child: LocalizedText(
                 promo.title.isNotEmpty ? promo.title : 'Акция дня',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -537,7 +538,7 @@ class _RestaurantsSectionHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          const Text(
+          const LocalizedText(
             'Рестораны',
             style: TextStyle(
               fontSize: 18,
@@ -622,7 +623,7 @@ class _CategoryCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
+                  child: LocalizedText(
                     category.titleRu,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -701,14 +702,18 @@ class _PinnedRestaurantCard extends StatelessWidget {
               top: 8,
               left: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
-                  color: isOpen ? const Color(0xFF489F2A) : const Color(0xFF6B7280),
+                  color: isOpen
+                      ? const Color(0xFF489F2A)
+                      : const Color(0xFF6B7280),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
+                child: LocalizedText(
                   isOpen ? 'Открыто' : 'Закрыто',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
@@ -729,7 +734,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
+                    LocalizedText(
                       ratingText,
                       style: const TextStyle(
                         color: Colors.black,
@@ -764,7 +769,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: LocalizedText(
                         restaurant.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -777,7 +782,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Flexible(
-                      child: Text(
+                      child: LocalizedText(
                         _buildSubtitle(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -814,7 +819,7 @@ class _EmptyBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
       ),
       child: Center(
-        child: Text(
+        child: LocalizedText(
           text,
           style: const TextStyle(
             fontSize: 14,
@@ -849,7 +854,7 @@ class _HomeErrorState extends StatelessWidget {
           color: Color(0xFF97A0AA),
         ),
         const SizedBox(height: 12),
-        Text(
+        LocalizedText(
           message,
           textAlign: TextAlign.center,
           style: const TextStyle(
@@ -862,7 +867,7 @@ class _HomeErrorState extends StatelessWidget {
         Center(
           child: FilledButton(
             onPressed: onRetry,
-            child: const Text('Повторить'),
+            child: const LocalizedText('Повторить'),
           ),
         ),
       ],

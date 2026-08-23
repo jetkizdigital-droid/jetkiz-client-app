@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class ReviewQuickReactionsSection extends StatefulWidget {
   const ReviewQuickReactionsSection({super.key});
@@ -32,7 +33,7 @@ class _ReviewQuickReactionsSectionState
               color: active ? const Color(0xFF489F2A) : Colors.grey[200],
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(reactions[i]),
+            child: LocalizedText(reactions[i]),
           ),
         );
       }),

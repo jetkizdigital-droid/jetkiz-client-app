@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class ReviewRatingSection extends StatelessWidget {
   final int rating;
@@ -14,7 +15,7 @@ class ReviewRatingSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Text(
+        const LocalizedText(
           'Оцените заказ',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),

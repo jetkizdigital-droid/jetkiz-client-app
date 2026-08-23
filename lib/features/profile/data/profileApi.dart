@@ -97,6 +97,19 @@ class ProfileApi {
     }
   }
 
+  Future<void> deleteMyAccount() async {
+    try {
+      await _apiClient.dio.delete<void>('/users/me');
+    } on DioException catch (error) {
+      throw _mapDioError(
+        error,
+        fallback: 'Не удалось удалить аккаунт',
+      );
+    } catch (_) {
+      throw const ProfileApiException('Не удалось удалить аккаунт');
+    }
+  }
+
   ProfileData _extractProfile(dynamic raw) {
     final data = _asMap(raw);
 

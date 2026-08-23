@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
@@ -189,7 +190,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 
@@ -264,7 +265,7 @@ class _FavoritesPageState extends State<FavoritesPage>
 
     if (!_favorites.productsLoaded) {
       return const Center(
-        child: Text(
+        child: LocalizedText(
           'Открой вкладку, чтобы загрузить блюда',
           style: TextStyle(fontSize: 15),
         ),
@@ -318,7 +319,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
     if (!_isAuthorized) {
       return Scaffold(
-        appBar: AppBar(title: Text(strings.favoritesTitle)),
+        appBar: AppBar(title: LocalizedText(strings.favoritesTitle)),
         body: _GuestFavorites(onLogin: _openLogin),
       );
     }
@@ -327,12 +328,16 @@ class _FavoritesPageState extends State<FavoritesPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(strings.favoritesTitle),
+        title: LocalizedText(strings.favoritesTitle),
         bottom: TabBar(
           controller: _tabController,
           tabs: <Widget>[
-            Tab(text: '${strings.favoriteRestaurants} (${_favorites.restaurants.length})'),
-            Tab(text: '${strings.favoriteProducts} (${_favorites.products.length})'),
+            Tab(
+                text:
+                    '${strings.favoriteRestaurants} (${_favorites.restaurants.length})'),
+            Tab(
+                text:
+                    '${strings.favoriteProducts} (${_favorites.products.length})'),
           ],
         ),
       ),
@@ -404,7 +409,7 @@ class _RestaurantFavoriteCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: LocalizedText(
                           restaurant.name,
                           style: const TextStyle(
                             fontSize: 17,
@@ -449,7 +454,7 @@ class _RestaurantFavoriteCard extends StatelessWidget {
                   ),
                   if (subtitle.isNotEmpty) ...[
                     const SizedBox(height: 10),
-                    Text(
+                    LocalizedText(
                       subtitle,
                       style: TextStyle(
                         color: Theme.of(context).textTheme.bodySmall?.color,
@@ -498,95 +503,97 @@ class _ProductFavoriteCard extends StatelessWidget {
         child: InkWell(
           onTap: onOpen,
           child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 92,
-                  height: 92,
-                  child: imageUrl != null && imageUrl.trim().isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              const _ImagePlaceholder(),
-                        )
-                      : const _ImagePlaceholder(),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 92,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        product.restaurant.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            priceText,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (!canOrder)
-                            _AvailabilityPill(text: disabledReason),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                children: [
-                  IconButton(
-                    onPressed: isBusy ? null : onRemove,
-                    icon: isBusy
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 92,
+                    height: 92,
+                    child: imageUrl != null && imageUrl.trim().isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const _ImagePlaceholder(),
                           )
-                        : const Icon(Icons.favorite),
+                        : const _ImagePlaceholder(),
                   ),
-                  IconButton.filled(
-                    onPressed: canOrder ? onAdd : null,
-                    tooltip: 'Добавить в корзину',
-                    icon: const Icon(Icons.add_shopping_cart_rounded),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 92,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LocalizedText(
+                          product.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        LocalizedText(
+                          product.restaurant.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodySmall?.color,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            LocalizedText(
+                              priceText,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (!canOrder)
+                              _AvailabilityPill(text: disabledReason),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  children: [
+                    IconButton(
+                      onPressed: isBusy ? null : onRemove,
+                      icon: isBusy
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.favorite),
+                    ),
+                    IconButton.filled(
+                      onPressed: canOrder ? onAdd : null,
+                      tooltip: AppLocalizationScope.of(context)
+                          .strings
+                          .localize('Добавить в корзину'),
+                      icon: const Icon(Icons.add_shopping_cart_rounded),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }
@@ -606,14 +613,17 @@ class _GuestFavorites extends StatelessWidget {
           children: [
             const Icon(Icons.favorite_border_rounded, size: 72),
             const SizedBox(height: 20),
-            Text(strings.guestFavoritesTitle,
+            LocalizedText(strings.guestFavoritesTitle,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
-            Text(strings.guestFavoritesSubtitle,
+            LocalizedText(strings.guestFavoritesSubtitle,
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            FilledButton(onPressed: onLogin, child: Text(strings.loginToAccount)),
+            FilledButton(
+                onPressed: onLogin,
+                child: LocalizedText(strings.loginToAccount)),
           ],
         ),
       ),
@@ -635,7 +645,7 @@ class _AvailabilityPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           color: Colors.orange.withValues(alpha: 0.12),
         ),
-        child: Text(
+        child: LocalizedText(
           text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -674,7 +684,7 @@ class _InfoChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14),
           const SizedBox(width: 6),
-          Text(
+          LocalizedText(
             text,
             style: const TextStyle(
               fontSize: 12,
@@ -708,7 +718,7 @@ class _EmptyView extends StatelessWidget {
           children: [
             Icon(icon, size: 56),
             const SizedBox(height: 14),
-            Text(
+            LocalizedText(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -717,7 +727,7 @@ class _EmptyView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            LocalizedText(
               subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -750,7 +760,7 @@ class _ErrorView extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 54),
             const SizedBox(height: 12),
-            Text(
+            LocalizedText(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 15),
@@ -758,7 +768,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 14),
             ElevatedButton(
               onPressed: onRetry,
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ],
         ),

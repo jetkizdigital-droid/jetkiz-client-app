@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderHistoryItem.dart';
@@ -271,7 +272,7 @@ class _OrdersPageState extends State<OrdersPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                const LocalizedText(
                   'Фильтр по ресторану',
                   style: TextStyle(
                     fontSize: 18,
@@ -296,7 +297,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 if (options.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text(
+                    child: LocalizedText(
                       'Рестораны пока не найдены',
                       style: TextStyle(
                         fontSize: 14,
@@ -352,7 +353,7 @@ class _OrdersPageState extends State<OrdersPage> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(text)),
+      SnackBar(content: LocalizedText(text)),
     );
   }
 
@@ -502,7 +503,7 @@ class _Header extends StatelessWidget {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 56),
-            child: Text(
+            child: LocalizedText(
               'Мои заказы',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -580,7 +581,7 @@ class _ActiveRestaurantFilterBar extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Flexible(
-                child: Text(
+                child: LocalizedText(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -641,7 +642,7 @@ class _RestaurantFilterTile extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
+                child: LocalizedText(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -762,7 +763,7 @@ class _TabsBar extends StatelessWidget {
                         ]
                       : null,
                 ),
-                child: Text(
+                child: LocalizedText(
                   item.label,
                   style: TextStyle(
                     color: selected ? Colors.white : const Color(0xFF374151),
@@ -920,7 +921,7 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
+          LocalizedText(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -930,7 +931,7 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Text(
+          LocalizedText(
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -945,7 +946,7 @@ class _EmptyState extends StatelessWidget {
             Center(
               child: OutlinedButton(
                 onPressed: onClearRestaurantFilter,
-                child: const Text('Убрать фильтр'),
+                child: const LocalizedText('Убрать фильтр'),
               ),
             ),
           ] else if (onPrimaryTap != null) ...[
@@ -965,7 +966,7 @@ class _EmptyState extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: const Text(
+                child: const LocalizedText(
                   'Перейти к ресторанам',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
@@ -1006,7 +1007,7 @@ class _ErrorState extends StatelessWidget {
               color: Colors.redAccent,
             ),
             const SizedBox(height: 12),
-            Text(
+            LocalizedText(
               text,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -1018,7 +1019,7 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ],
         ),

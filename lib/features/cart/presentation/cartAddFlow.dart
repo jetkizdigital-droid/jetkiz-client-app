@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 
 Future<CartAddResult> addItemWithRestaurantConfirmation({
@@ -36,19 +37,19 @@ Future<CartAddResult> addItemWithRestaurantConfirmation({
   final replace = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('В корзине другой ресторан'),
-      content: Text(
+      title: const LocalizedText('В корзине другой ресторан'),
+      content: LocalizedText(
         'В корзине уже есть блюда из другого ресторана. '
         'Очистить корзину и добавить блюда из $normalizedRestaurantName?',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Отмена'),
+          child: const LocalizedText('Отмена'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Очистить и добавить'),
+          child: const LocalizedText('Очистить и добавить'),
         ),
       ],
     ),

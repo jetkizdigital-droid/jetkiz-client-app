@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressesApi.dart';
@@ -120,14 +122,14 @@ class _AddressesPageState extends State<AddressesPage> {
           context: context,
           builder: (context) {
             return AlertDialog(
-              title: const Text('Удалить адрес?'),
-              content: Text(
+              title: const LocalizedText('Удалить адрес?'),
+              content: LocalizedText(
                 'Адрес "${address.displayTitle}" будет удалён из сохранённых.',
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Отмена'),
+                  child: const LocalizedText('Отмена'),
                 ),
                 FilledButton(
                   style: FilledButton.styleFrom(
@@ -135,7 +137,7 @@ class _AddressesPageState extends State<AddressesPage> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Удалить'),
+                  child: const LocalizedText('Удалить'),
                 ),
               ],
             );
@@ -167,7 +169,7 @@ class _AddressesPageState extends State<AddressesPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Не удалось удалить адрес'),
+          content: LocalizedText('Не удалось удалить адрес'),
         ),
       );
     } finally {
@@ -198,7 +200,7 @@ class _AddressesPageState extends State<AddressesPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: Text(title),
+        title: LocalizedText(title),
       ),
       body: Column(
         children: [
@@ -208,7 +210,7 @@ class _AddressesPageState extends State<AddressesPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     widget.selectionMode
                         ? 'Выберите сохранённый адрес или добавьте новый'
                         : 'Управляйте своими адресами доставки',
@@ -236,7 +238,7 @@ class _AddressesPageState extends State<AddressesPage> {
                     ),
                   ),
                   icon: const Icon(Icons.add),
-                  label: const Text(
+                  label: const LocalizedText(
                     'Добавить',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
@@ -277,7 +279,7 @@ class _AddressesPageState extends State<AddressesPage> {
             color: Color(0xFFE53935),
           ),
           const SizedBox(height: 16),
-          Text(
+          LocalizedText(
             _error!,
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -295,7 +297,7 @@ class _AddressesPageState extends State<AddressesPage> {
                 backgroundColor: _green,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ),
         ],
@@ -314,7 +316,7 @@ class _AddressesPageState extends State<AddressesPage> {
             color: Color(0xFF9CA3AF),
           ),
           const SizedBox(height: 16),
-          const Text(
+          const LocalizedText(
             'Сохранённых адресов пока нет',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -324,7 +326,7 @@ class _AddressesPageState extends State<AddressesPage> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          const LocalizedText(
             'Добавьте адрес сейчас, чтобы потом выбирать его одним нажатием при заказе.',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -341,7 +343,7 @@ class _AddressesPageState extends State<AddressesPage> {
                 backgroundColor: _green,
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Добавить адрес'),
+              child: const LocalizedText('Добавить адрес'),
             ),
           ),
         ],
@@ -504,7 +506,7 @@ class _AddressInfo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        LocalizedText(
           address.displayTitle,
           style: const TextStyle(
             fontSize: 16,
@@ -513,7 +515,7 @@ class _AddressInfo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(
+        LocalizedText(
           address.address,
           style: const TextStyle(
             fontSize: 14,
@@ -524,7 +526,7 @@ class _AddressInfo extends StatelessWidget {
         ),
         if (details.isNotEmpty) ...[
           const SizedBox(height: 6),
-          Text(
+          LocalizedText(
             details,
             style: const TextStyle(
               fontSize: 13,
@@ -535,7 +537,7 @@ class _AddressInfo extends StatelessWidget {
         ],
         if (intercom.isNotEmpty) ...[
           const SizedBox(height: 6),
-          Text(
+          LocalizedText(
             'Домофон: $intercom',
             style: const TextStyle(
               fontSize: 13,
@@ -546,7 +548,7 @@ class _AddressInfo extends StatelessWidget {
         ],
         if (contactPhone.isNotEmpty) ...[
           const SizedBox(height: 6),
-          Text(
+          LocalizedText(
             'Телефон: $contactPhone',
             style: const TextStyle(
               fontSize: 13,
@@ -557,7 +559,7 @@ class _AddressInfo extends StatelessWidget {
         ],
         if (comment.isNotEmpty) ...[
           const SizedBox(height: 6),
-          Text(
+          LocalizedText(
             comment,
             style: const TextStyle(
               fontSize: 13,
@@ -589,12 +591,14 @@ class _AddressActions extends StatelessWidget {
         IconButton(
           onPressed: isDeleting ? null : onEditTap,
           icon: const Icon(Icons.edit_outlined),
-          tooltip: 'Редактировать',
+          tooltip: AppLocalizationScope.of(context)
+              .strings
+              .localize('Редактировать'),
         ),
         IconButton(
           onPressed: isDeleting ? null : onDeleteTap,
           icon: const Icon(Icons.delete_outline),
-          tooltip: 'Удалить',
+          tooltip: AppLocalizationScope.of(context).strings.localize('Удалить'),
         ),
       ],
     );

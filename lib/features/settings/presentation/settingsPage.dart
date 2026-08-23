@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -66,7 +67,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось открыть страницу')),
+        const SnackBar(content: LocalizedText('Не удалось открыть страницу')),
       );
     }
   }
@@ -97,7 +98,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         onPressed: () => Navigator.pop(context),
                       ),
                     ),
-                    Text(
+                    LocalizedText(
                       strings.settingsTitle,
                       style: const TextStyle(
                         fontSize: 16,
@@ -120,7 +121,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     _icon(Icons.security),
                     const SizedBox(width: 14),
-                    Expanded(child: Text(strings.settingsSecurity)),
+                    Expanded(child: LocalizedText(strings.settingsSecurity)),
                     const Icon(Icons.chevron_right),
                   ],
                 ),
@@ -132,7 +133,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     _icon(Icons.notifications),
                     const SizedBox(width: 14),
-                    Expanded(child: Text(strings.settingsNotifications)),
+                    Expanded(
+                        child: LocalizedText(strings.settingsNotifications)),
                     Switch(
                       value: notificationsEnabled,
                       activeThumbColor: _green,
@@ -147,7 +149,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     _icon(Icons.language),
                     const SizedBox(width: 14),
-                    Expanded(child: Text(strings.settingsLanguage)),
+                    Expanded(child: LocalizedText(strings.settingsLanguage)),
                     _languageButton(
                       label: 'Рус',
                       selected: language == AppLanguage.ru,
@@ -210,7 +212,7 @@ class _SettingsPageState extends State<SettingsPage> {
           color: selected ? _green : Colors.white,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Text(
+        child: LocalizedText(
           label,
           style: TextStyle(
             color: selected ? Colors.white : Colors.black,

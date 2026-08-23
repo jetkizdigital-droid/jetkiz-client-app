@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/smsCodePage.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,15 +43,67 @@ class PhoneLoginPage extends StatefulWidget {
   State<PhoneLoginPage> createState() => _PhoneLoginPageState();
 }
 
+class _LanguageSwitch extends StatelessWidget {
+  const _LanguageSwitch({
+    required this.language,
+    required this.onChanged,
+  });
+
+  final AppLanguage language;
+  final ValueChanged<AppLanguage> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F2F2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _item('RU', AppLanguage.ru),
+          _item('ҚАЗ', AppLanguage.kk),
+        ],
+      ),
+    );
+  }
+
+  Widget _item(String label, AppLanguage value) {
+    final selected = language == value;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => onChanged(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        margin: const EdgeInsets.all(3),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF489F2A) : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: LocalizedText(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.black87,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PhoneLoginPageState extends State<PhoneLoginPage> {
   final TextEditingController _phoneController = TextEditingController();
 
-  static final Uri _legalDocumentsUri =
-      Uri.parse('https://jetkiz.asia/privacy');
+  static final Uri _termsUri = Uri.parse('https://jetkiz.asia/offer');
+  static final Uri _privacyUri = Uri.parse('https://jetkiz.asia/privacy');
 
-  Future<void> _openLegalDocuments() async {
+  Future<void> _openLegalDocument(Uri uri) async {
     await launchUrl(
-      _legalDocumentsUri,
+      uri,
       mode: LaunchMode.externalApplication,
     );
   }
@@ -145,15 +200,17 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_requestCodeErrorMessage(error)),
+          content: LocalizedText(_requestCodeErrorMessage(error)),
         ),
       );
     } catch (_) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Не удалось отправить код. Попробуйте позже.'),
+        SnackBar(
+          content: LocalizedText(
+            AppLocalizationScope.of(context).strings.loginCodeSendFailed,
+          ),
         ),
       );
     } finally {
@@ -166,20 +223,23 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   }
 
   String _requestCodeErrorMessage(AuthApiException error) {
+    final strings = AppLocalizationScope.of(context).strings;
     switch (error.type) {
       case AuthApiErrorType.tooManyAttempts:
-        return 'Слишком много запросов. Попробуйте позже.';
+        return strings.loginTooManyAttempts;
       case AuthApiErrorType.noInternet:
         return error.userMessage;
       case AuthApiErrorType.invalidCode:
       case AuthApiErrorType.expiredCode:
       case AuthApiErrorType.serverError:
-        return 'Не удалось отправить код. Попробуйте позже.';
+        return strings.loginCodeSendFailed;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final localization = AppLocalizationScope.of(context);
+    final strings = localization.strings;
     const primaryGreen = Color(0xFF489F2A);
     const lightGreenBorder = Color(0xFF7DC963);
     const lightGray = Color(0xFFF2F2F2);
@@ -191,18 +251,29 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SvgPicture.asset(
-                'assets/images/Vector.svg',
-                height: 68,
-                fit: BoxFit.contain,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SvgPicture.asset(
+                      'assets/images/Vector.svg',
+                      height: 68,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                _LanguageSwitch(
+                  language: localization.language,
+                  onChanged: localization.onLanguageChanged,
+                ),
+              ],
             ),
             const SizedBox(height: 56),
-            const Text(
-              'Телефон',
-              style: TextStyle(
+            LocalizedText(
+              strings.loginPhoneTitle,
+              style: const TextStyle(
                 fontSize: 42,
                 fontWeight: FontWeight.w800,
                 color: Colors.black,
@@ -220,7 +291,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
               child: Row(
                 children: [
                   const SizedBox(width: 16),
-                  const Text(
+                  const LocalizedText(
                     '+7',
                     style: TextStyle(
                       color: subtitleGray,
@@ -292,7 +363,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text.rich(
+                  child: LocalizedText.rich(
                     TextSpan(
                       style: const TextStyle(
                         color: Colors.black,
@@ -301,17 +372,17 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                         height: 1.35,
                       ),
                       children: [
-                        const TextSpan(
-                          text: 'Настоящим я подтверждаю своё согласие с условиями ',
+                        TextSpan(
+                          text: strings.loginConsentPrefix,
                         ),
                         WidgetSpan(
                           alignment: PlaceholderAlignment.baseline,
                           baseline: TextBaseline.alphabetic,
                           child: GestureDetector(
-                            onTap: _openLegalDocuments,
-                            child: const Text(
-                              'Пользовательского соглашения',
-                              style: TextStyle(
+                            onTap: () => _openLegalDocument(_termsUri),
+                            child: LocalizedText(
+                              strings.loginTerms,
+                              style: const TextStyle(
                                 color: Color(0xFF1565C0),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -320,15 +391,15 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                             ),
                           ),
                         ),
-                        const TextSpan(text: ', а также с '),
+                        TextSpan(text: strings.loginConsentMiddle),
                         WidgetSpan(
                           alignment: PlaceholderAlignment.baseline,
                           baseline: TextBaseline.alphabetic,
                           child: GestureDetector(
-                            onTap: _openLegalDocuments,
-                            child: const Text(
-                              'Политикой конфиденциальности',
-                              style: TextStyle(
+                            onTap: () => _openLegalDocument(_privacyUri),
+                            child: LocalizedText(
+                              strings.loginPrivacy,
+                              style: const TextStyle(
                                 color: Color(0xFF1565C0),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -337,9 +408,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                             ),
                           ),
                         ),
-                        const TextSpan(
-                          text: ' и даю согласие на сбор и обработку персональных данных.',
-                        ),
+                        TextSpan(text: strings.loginConsentSuffix),
                       ],
                     ),
                   ),
@@ -369,9 +438,9 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
-                        'Отправить код',
-                        style: TextStyle(
+                    : LocalizedText(
+                        strings.loginSendCode,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),

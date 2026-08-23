@@ -14,6 +14,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/favorites/presentation/widgets/favoriteRestaurantButton.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
@@ -142,7 +144,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
-        title: const Text(
+        title: const LocalizedText(
           'Все рестораны',
           style: TextStyle(
             fontWeight: FontWeight.w800,
@@ -275,7 +277,7 @@ class RestaurantCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    LocalizedText(
                       restaurant.displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -286,7 +288,7 @@ class RestaurantCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
+                    LocalizedText(
                       restaurant.displayDescription,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -365,8 +367,10 @@ class _SearchBox extends StatelessWidget {
             child: TextField(
               controller: controller,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
-                hintText: 'Поиск ресторанов',
+              decoration: InputDecoration(
+                hintText: AppLocalizationScope.of(context)
+                    .strings
+                    .localize('Поиск ресторанов'),
                 border: InputBorder.none,
                 isCollapsed: true,
               ),
@@ -412,7 +416,7 @@ class _ResultHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(
+          child: LocalizedText(
             hasQuery ? 'Найдено: $visibleCount' : 'Ресторанов: $totalCount',
             style: const TextStyle(
               color: Color(0xFF111827),
@@ -422,7 +426,7 @@ class _ResultHeader extends StatelessWidget {
           ),
         ),
         if (hasQuery)
-          Text(
+          LocalizedText(
             'по запросу “${query.trim()}”',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -522,7 +526,7 @@ class _StatusBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
+      child: LocalizedText(
         text,
         style: const TextStyle(
           color: Colors.white,
@@ -567,7 +571,7 @@ class _InfoChip extends StatelessWidget {
           ),
           const SizedBox(width: 5),
           Flexible(
-            child: Text(
+            child: LocalizedText(
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -623,7 +627,7 @@ class _PageError extends StatelessWidget {
           color: Color(0xFFDC2626),
         ),
         const SizedBox(height: 16),
-        Text(
+        LocalizedText(
           text,
           textAlign: TextAlign.center,
           style: const TextStyle(
@@ -640,7 +644,7 @@ class _PageError extends StatelessWidget {
               backgroundColor: const Color(0xFF489F2A),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Повторить'),
+            child: const LocalizedText('Повторить'),
           ),
         ),
       ],
@@ -671,7 +675,7 @@ class _PageEmpty extends StatelessWidget {
             color: const Color(0xFF9CA3AF),
           ),
           const SizedBox(height: 16),
-          Text(
+          LocalizedText(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -681,7 +685,7 @@ class _PageEmpty extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          LocalizedText(
             text,
             textAlign: TextAlign.center,
             style: const TextStyle(

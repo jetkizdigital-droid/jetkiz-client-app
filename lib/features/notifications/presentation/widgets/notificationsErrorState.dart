@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class NotificationsErrorState extends StatelessWidget {
   const NotificationsErrorState({
@@ -24,7 +25,7 @@ class NotificationsErrorState extends StatelessWidget {
               color: Colors.redAccent,
             ),
             const SizedBox(height: 14),
-            Text(
+            LocalizedText(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -39,7 +40,7 @@ class NotificationsErrorState extends StatelessWidget {
                 backgroundColor: const Color(0xFF489F2A),
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ],
         ),

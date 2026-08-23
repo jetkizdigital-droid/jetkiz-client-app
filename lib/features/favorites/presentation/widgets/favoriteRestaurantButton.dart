@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 
 class FavoriteRestaurantButton extends StatefulWidget {
@@ -59,7 +60,7 @@ class _FavoriteRestaurantButtonState extends State<FavoriteRestaurantButton> {
   void _showSnack(String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 

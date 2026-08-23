@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
@@ -337,7 +338,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 
@@ -351,7 +352,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.white,
-        title: Text(
+        title: LocalizedText(
           'Уведомления${_unreadCount > 0 ? ' ($_unreadCount)' : ''}',
           style: const TextStyle(
             color: Colors.black,
@@ -368,7 +369,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Прочитать все'),
+                  : const LocalizedText('Прочитать все'),
             ),
         ],
       ),

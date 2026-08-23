@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class ReviewSubmitBar extends StatelessWidget {
   final VoidCallback onSubmit;
@@ -17,7 +18,7 @@ class ReviewSubmitBar extends StatelessWidget {
         onPressed: loading ? null : onSubmit,
         child: loading
             ? const CircularProgressIndicator()
-            : const Text('Отправить отзыв'),
+            : const LocalizedText('Отправить отзыв'),
       ),
     );
   }

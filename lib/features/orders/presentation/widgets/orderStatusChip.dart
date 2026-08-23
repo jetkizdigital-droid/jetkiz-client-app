@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class OrderStatusChip extends StatelessWidget {
   const OrderStatusChip({
@@ -20,7 +21,7 @@ class OrderStatusChip extends StatelessWidget {
         color: ui.backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
+      child: LocalizedText(
         ui.label,
         style: TextStyle(
           color: ui.textColor,

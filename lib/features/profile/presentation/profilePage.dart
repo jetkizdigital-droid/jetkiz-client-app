@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -45,6 +46,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   bool _isUploadingAvatar = false;
   bool _isLoggingOut = false;
+  bool _isDeletingAccount = false;
   String? _errorText;
 
   @override
@@ -161,6 +163,50 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _confirmAndDeleteAccount() async {
+    if (_isDeletingAccount) return;
+
+    final strings = AppLocalizationScope.of(context).strings;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: LocalizedText(strings.deleteAccountTitle),
+        content: LocalizedText(strings.deleteAccountWarning),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: LocalizedText(strings.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: LocalizedText(strings.deleteForever),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeletingAccount = true);
+
+    try {
+      await PushNotificationService(_apiClient).unregisterCurrentToken();
+      await _profileApi.deleteMyAccount();
+      await _clearLocalSessionAndExit();
+    } on ProfileApiException catch (error) {
+      if (!mounted) return;
+      final message = error.statusCode == 409
+          ? strings.accountDeleteBlocked
+          : strings.accountDeleteFailed;
+      _showSnack(message);
+    } catch (_) {
+      if (mounted) _showSnack(strings.accountDeleteFailed);
+    } finally {
+      if (mounted) setState(() => _isDeletingAccount = false);
+    }
+  }
+
   Future<void> _clearLocalSessionAndExit() async {
     final authStorage = AuthStorage();
 
@@ -191,7 +237,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: LocalizedText(message),
       ),
     );
   }
@@ -275,7 +321,7 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             children: [
               Center(
-                child: Text(
+                child: LocalizedText(
                   strings.profileTitle,
                   style: const TextStyle(
                     color: Colors.black,
@@ -326,7 +372,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           )
                         : const Icon(Icons.logout_rounded, size: 24),
-                    label: Text(
+                    label: LocalizedText(
                       _isLoggingOut ? strings.loggingOut : strings.logout,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
@@ -346,8 +392,35 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed:
+                      _isDeletingAccount ? null : _confirmAndDeleteAccount,
+                  icon: _isDeletingAccount
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.red,
+                          ),
+                        )
+                      : const Icon(Icons.delete_outline_rounded),
+                  label: LocalizedText(
+                    _isDeletingAccount
+                        ? strings.deletingAccount
+                        : strings.deleteAccount,
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Center(
-                  child: Text(
+                  child: LocalizedText(
                     strings.appVersion,
                     style: const TextStyle(
                       fontSize: 13,
@@ -492,7 +565,7 @@ class _ProfileHeaderCard extends StatelessWidget {
               const SizedBox(height: 10),
               SizedBox(
                 width: 96,
-                child: Text(
+                child: LocalizedText(
                   strings.profileEditPhoto,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -512,7 +585,7 @@ class _ProfileHeaderCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  LocalizedText(
                     profile?.displayTitle ?? strings.profileDefaultName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -533,8 +606,9 @@ class _ProfileHeaderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(
-                          profile?.displaySubtitle ?? strings.profileDefaultSubtitle,
+                        child: LocalizedText(
+                          profile?.displaySubtitle ??
+                              strings.profileDefaultSubtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -561,7 +635,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                       children: [
                         const _ActiveDot(),
                         const SizedBox(width: 6),
-                        Text(
+                        LocalizedText(
                           strings.profileActive,
                           style: const TextStyle(
                             color: _green,
@@ -630,7 +704,7 @@ class _ProfileMenuTile extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Text(
+                child: LocalizedText(
                   item.label,
                   style: const TextStyle(
                     color: _textMain,
@@ -716,7 +790,7 @@ class _ProfileErrorCard extends StatelessWidget {
             color: Colors.redAccent,
           ),
           const SizedBox(height: 10),
-          Text(
+          LocalizedText(
             message,
             textAlign: TextAlign.center,
             style: const TextStyle(
@@ -728,7 +802,7 @@ class _ProfileErrorCard extends StatelessWidget {
           const SizedBox(height: 14),
           OutlinedButton(
             onPressed: onRetry,
-            child: Text(retryText),
+            child: LocalizedText(retryText),
           ),
         ],
       ),

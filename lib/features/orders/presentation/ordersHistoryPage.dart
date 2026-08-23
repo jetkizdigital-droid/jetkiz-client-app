@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderHistoryItem.dart';
@@ -350,7 +351,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 
@@ -462,7 +463,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           const Expanded(
-            child: Text(
+            child: LocalizedText(
               'История заказов',
               style: TextStyle(
                 fontSize: 28,
@@ -515,7 +516,7 @@ class _Tabs extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Center(
-                child: Text(
+                child: LocalizedText(
                   item.label,
                   style: TextStyle(
                     color: active ? Colors.white : Colors.black87,
@@ -567,7 +568,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Center(
-            child: Text(
+            child: LocalizedText(
               'У вас пока нет заказов',
               style: TextStyle(
                 fontSize: 20,
@@ -578,7 +579,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Center(
-            child: Text(
+            child: LocalizedText(
               'Сделайте первый заказ',
               style: TextStyle(
                 fontSize: 14,
@@ -611,7 +612,7 @@ class _FilteredEmptyState extends StatelessWidget {
         children: [
           const SizedBox(height: 140),
           const Center(
-            child: Text(
+            child: LocalizedText(
               'В этой вкладке пока нет заказов',
               style: TextStyle(
                 fontSize: 15,
@@ -625,7 +626,7 @@ class _FilteredEmptyState extends StatelessWidget {
             Center(
               child: OutlinedButton(
                 onPressed: onLoadMore,
-                child: const Text('Загрузить ещё'),
+                child: const LocalizedText('Загрузить ещё'),
               ),
             ),
           ],
@@ -658,7 +659,7 @@ class _ErrorState extends StatelessWidget {
               color: Colors.redAccent,
             ),
             const SizedBox(height: 14),
-            Text(
+            LocalizedText(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -673,7 +674,7 @@ class _ErrorState extends StatelessWidget {
                 backgroundColor: const Color(0xFF489F2A),
                 foregroundColor: Colors.white,
               ),
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ],
         ),

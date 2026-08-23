@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 /// Jetkiz mobile
 /// Shared bottom cart summary bar.
@@ -127,7 +128,7 @@ class _SummaryRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(
+          child: LocalizedText(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -139,7 +140,7 @@ class _SummaryRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Text(
+        LocalizedText(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -205,7 +206,7 @@ class _NextButton extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                 ],
-                Text(
+                LocalizedText(
                   label,
                   style: const TextStyle(
                     fontSize: 23,
@@ -219,10 +220,10 @@ class _NextButton extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(
+                  child: LocalizedText(
                     totalText,
                     style: const TextStyle(
                       fontSize: 18,

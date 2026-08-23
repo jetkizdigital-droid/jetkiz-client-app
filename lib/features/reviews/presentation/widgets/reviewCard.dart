@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 import 'package:jetkiz_mobile/features/reviews/presentation/widgets/reviewMediaBlocks.dart';
 import 'package:jetkiz_mobile/features/reviews/presentation/widgets/reviewReactions.dart';
@@ -43,7 +44,7 @@ class ReviewCard extends StatelessWidget {
                       color: const Color(0xFFF9FAFB),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
+                    child: LocalizedText(
                       review.text!,
                       style: const TextStyle(
                         fontSize: 14,
@@ -124,7 +125,7 @@ class _ReviewHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
+                    child: LocalizedText(
                       user?.displayName ?? 'Пользователь',
                       style: const TextStyle(
                         fontSize: 16,
@@ -133,7 +134,7 @@ class _ReviewHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text(
+                  LocalizedText(
                     _formatRelativeOrDate(review.createdAt),
                     style: const TextStyle(
                       fontSize: 12,
@@ -232,7 +233,7 @@ class _RestaurantReplySection extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: const Text(
+                child: const LocalizedText(
                   'R',
                   style: TextStyle(
                     color: Colors.white,
@@ -245,7 +246,7 @@ class _RestaurantReplySection extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    const Text(
+                    const LocalizedText(
                       'Ответ ресторана',
                       style: TextStyle(
                         fontSize: 14,
@@ -254,7 +255,7 @@ class _RestaurantReplySection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
+                    LocalizedText(
                       _formatDate(response.createdAt),
                       style: const TextStyle(
                         fontSize: 12,
@@ -287,7 +288,7 @@ class _RestaurantReplySection extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Text(
+                    child: LocalizedText(
                       response.text!,
                       style: const TextStyle(
                         fontSize: 14,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/notifications/presentation/models/notificationsTab.dart';
 
 class NotificationsTabs extends StatelessWidget {
@@ -82,7 +83,7 @@ class _NotificationsTabButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
-                child: Text(
+                child: LocalizedText(
                   label,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -103,7 +104,7 @@ class _NotificationsTabButton extends StatelessWidget {
                     color: const Color(0xFF489F2A),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(
+                  child: LocalizedText(
                     '$unreadCount',
                     style: const TextStyle(
                       color: Colors.white,
