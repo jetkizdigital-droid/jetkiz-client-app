@@ -92,7 +92,7 @@ class _NotificationContent extends StatelessWidget {
           children: [
             Expanded(
               child: LocalizedText(
-                item.title,
+                item.displayTitle,
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 15,
@@ -113,7 +113,7 @@ class _NotificationContent extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         LocalizedText(
-          item.body,
+          item.displayBody,
           style: const TextStyle(
             color: Color(0xFF2B2B2B),
             fontSize: 14,
