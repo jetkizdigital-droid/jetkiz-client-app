@@ -194,6 +194,8 @@ class RestaurantMenuRestaurant extends Equatable {
     required this.slug,
     required this.isPickupEnabled,
     required this.pickupPreparationMinutes,
+    this.descriptionRu,
+    this.descriptionKk,
     this.serverIsOpenNow,
     this.serverCanAcceptOrders,
   });
@@ -209,6 +211,8 @@ class RestaurantMenuRestaurant extends Equatable {
   final String slug;
   final bool isPickupEnabled;
   final int? pickupPreparationMinutes;
+  final String? descriptionRu;
+  final String? descriptionKk;
   final bool? serverIsOpenNow;
   final bool? serverCanAcceptOrders;
 
@@ -241,6 +245,13 @@ class RestaurantMenuRestaurant extends Equatable {
     return 'Ресторан';
   }
 
+  /// Restaurant description is localized content, unlike its brand name.
+  String get description => LocalizedValue.select(
+        ru: descriptionRu,
+        kk: descriptionKk,
+        fallback: '',
+      );
+
   factory RestaurantMenuRestaurant.fromJson(Map<String, dynamic> json) {
     return RestaurantMenuRestaurant(
       id: _readString(json['id']),
@@ -258,6 +269,8 @@ class RestaurantMenuRestaurant extends Equatable {
       isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: false),
       pickupPreparationMinutes:
           _readNullableInt(json['pickupPreparationMinutes']),
+      descriptionRu: _readNullableString(json['descriptionRu']),
+      descriptionKk: _readNullableString(json['descriptionKk']),
       serverIsOpenNow: _readNullableBool(json['isOpenNow']),
       serverCanAcceptOrders: _readNullableBool(json['canAcceptOrders']),
     );
@@ -276,6 +289,8 @@ class RestaurantMenuRestaurant extends Equatable {
         slug,
         isPickupEnabled,
         pickupPreparationMinutes,
+        descriptionRu,
+        descriptionKk,
         serverIsOpenNow,
         serverCanAcceptOrders,
       ];
@@ -301,7 +316,8 @@ class RestaurantMenuCategory extends Equatable {
   String get title => LocalizedValue.select(
         ru: titleRu,
         kk: titleKk,
-        fallback: LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
+        fallback:
+            LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
       );
 
   factory RestaurantMenuCategory.fromJson(Map<String, dynamic> json) {
@@ -375,7 +391,8 @@ class RestaurantMenuItem extends Equatable {
   String get categoryTitle => LocalizedValue.select(
         ru: categoryNameRu,
         kk: categoryNameKk,
-        fallback: LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
+        fallback:
+            LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
       );
 
   String? get mainImageUrl {
