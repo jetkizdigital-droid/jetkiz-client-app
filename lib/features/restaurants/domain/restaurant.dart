@@ -5,13 +5,9 @@
   - GET /restaurants/public/list
   - GET /restaurants/public/all
 
-  Real backend fields:
-  id, number, slug, nameRu, nameKk, phone, address, workingHours,
-  coverImageUrl, ratingAvg, ratingCount, status, isInApp,
-  restaurantCommissionPctOverride, isPinned, sortOrder, useRandom.
-
-  Do not require logo/banner/deliveryFee/minOrderAmount.
-  They are optional/future fields.
+  Real backend fields include server-authoritative availability flags.
+  The client may fall back to local working-hours parsing only for backward
+  compatibility with an older backend response.
 */
 
 import 'package:equatable/equatable.dart';
@@ -44,6 +40,8 @@ class Restaurant extends Equatable {
     required this.minOrderAmount,
     required this.isPickupEnabled,
     required this.pickupPreparationMinutes,
+    this.serverIsOpenNow,
+    this.serverCanAcceptOrders,
   });
 
   final String id;
@@ -68,6 +66,8 @@ class Restaurant extends Equatable {
   final String status;
   final bool isInApp;
   final bool isAcceptingOrders;
+  final bool? serverIsOpenNow;
+  final bool? serverCanAcceptOrders;
 
   final bool isPinned;
   final int sortOrder;
@@ -75,7 +75,6 @@ class Restaurant extends Equatable {
 
   final num? restaurantCommissionPctOverride;
 
-  /// Future-safe optional fields. Current backend may not return them.
   final int? deliveryFee;
   final int? minOrderAmount;
   final bool isPickupEnabled;
@@ -87,6 +86,8 @@ class Restaurant extends Equatable {
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
       workingHours: workingHours,
+      serverIsOpenNow: serverIsOpenNow,
+      serverCanAcceptOrders: serverCanAcceptOrders,
     );
   }
 
@@ -198,6 +199,8 @@ class Restaurant extends Equatable {
         json['isAcceptingOrders'],
         fallback: false,
       ),
+      serverIsOpenNow: _readNullableBool(json['isOpenNow']),
+      serverCanAcceptOrders: _readNullableBool(json['canAcceptOrders']),
       isPinned: _readBool(json['isPinned']),
       sortOrder: _readInt(json['sortOrder']),
       useRandom: _readBool(json['useRandom']),
@@ -209,7 +212,7 @@ class Restaurant extends Equatable {
             json['baseDeliveryFee'],
       ),
       minOrderAmount: _readNullableInt(json['minOrderAmount']),
-      isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: true),
+      isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: false),
       pickupPreparationMinutes:
           _readNullableInt(json['pickupPreparationMinutes']),
     );
@@ -233,6 +236,8 @@ class Restaurant extends Equatable {
       'status': status,
       'isInApp': isInApp,
       'isAcceptingOrders': isAcceptingOrders,
+      'isOpenNow': serverIsOpenNow,
+      'canAcceptOrders': serverCanAcceptOrders,
       'isPinned': isPinned,
       'sortOrder': sortOrder,
       'useRandom': useRandom,
@@ -261,6 +266,8 @@ class Restaurant extends Equatable {
     String? status,
     bool? isInApp,
     bool? isAcceptingOrders,
+    bool? serverIsOpenNow,
+    bool? serverCanAcceptOrders,
     bool? isPinned,
     int? sortOrder,
     bool? useRandom,
@@ -287,6 +294,9 @@ class Restaurant extends Equatable {
       status: status ?? this.status,
       isInApp: isInApp ?? this.isInApp,
       isAcceptingOrders: isAcceptingOrders ?? this.isAcceptingOrders,
+      serverIsOpenNow: serverIsOpenNow ?? this.serverIsOpenNow,
+      serverCanAcceptOrders:
+          serverCanAcceptOrders ?? this.serverCanAcceptOrders,
       isPinned: isPinned ?? this.isPinned,
       sortOrder: sortOrder ?? this.sortOrder,
       useRandom: useRandom ?? this.useRandom,
@@ -395,6 +405,17 @@ class Restaurant extends Equatable {
     return fallback;
   }
 
+  static bool? _readNullableBool(dynamic value) {
+    if (value == null) return null;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+
+    final text = value.toString().trim().toLowerCase();
+    if (text == 'true' || text == '1' || text == 'yes') return true;
+    if (text == 'false' || text == '0' || text == 'no') return false;
+    return null;
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -413,6 +434,8 @@ class Restaurant extends Equatable {
         status,
         isInApp,
         isAcceptingOrders,
+        serverIsOpenNow,
+        serverCanAcceptOrders,
         isPinned,
         sortOrder,
         useRandom,
