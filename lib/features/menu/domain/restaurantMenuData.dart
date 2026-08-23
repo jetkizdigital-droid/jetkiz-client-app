@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 /// Jetkiz mobile
@@ -95,7 +96,7 @@ class RestaurantMenuData extends Equatable {
             id: entry.key,
             code: firstItem.categoryCode ?? '',
             titleRu: firstItem.categoryNameRu ?? 'Без названия',
-            titleKk: firstItem.categoryNameKk ?? firstItem.categoryNameRu ?? '',
+            titleKk: firstItem.categoryNameKk ?? '',
             sortOrder: firstItem.categorySortOrder ?? 999999,
             iconUrl: null,
           );
@@ -226,6 +227,7 @@ class RestaurantMenuRestaurant extends Equatable {
 
   bool get canOrder => availability.canOrder;
 
+  /// Restaurant name is a brand/proper name and is not translated by locale.
   String get displayName {
     final ru = nameRu.trim();
     if (ru.isNotEmpty) return ru;
@@ -296,15 +298,11 @@ class RestaurantMenuCategory extends Equatable {
   final int sortOrder;
   final String? iconUrl;
 
-  String get title {
-    final ru = titleRu.trim();
-    if (ru.isNotEmpty) return ru;
-
-    final kk = titleKk.trim();
-    if (kk.isNotEmpty) return kk;
-
-    return 'Без категории';
-  }
+  String get title => LocalizedValue.select(
+        ru: titleRu,
+        kk: titleKk,
+        fallback: LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
+      );
 
   factory RestaurantMenuCategory.fromJson(Map<String, dynamic> json) {
     return RestaurantMenuCategory(
@@ -362,15 +360,11 @@ class RestaurantMenuItem extends Equatable {
     return id.trim().isNotEmpty && isAvailable && price >= 0;
   }
 
-  String get title {
-    final ru = titleRu.trim();
-    if (ru.isNotEmpty) return ru;
-
-    final kk = titleKk.trim();
-    if (kk.isNotEmpty) return kk;
-
-    return 'Товар';
-  }
+  String get title => LocalizedValue.select(
+        ru: titleRu,
+        kk: titleKk,
+        fallback: LocalizedValue.language.name == 'kk' ? 'Тауар' : 'Товар',
+      );
 
   String get priceText => '$price ₸';
 
@@ -378,15 +372,11 @@ class RestaurantMenuItem extends Equatable {
     return isAvailable ? 'В наличии' : 'Недоступно';
   }
 
-  String get categoryTitle {
-    final ru = categoryNameRu?.trim() ?? '';
-    if (ru.isNotEmpty) return ru;
-
-    final kk = categoryNameKk?.trim() ?? '';
-    if (kk.isNotEmpty) return kk;
-
-    return 'Без категории';
-  }
+  String get categoryTitle => LocalizedValue.select(
+        ru: categoryNameRu,
+        kk: categoryNameKk,
+        fallback: LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
+      );
 
   String? get mainImageUrl {
     if (images.isNotEmpty) {
