@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderHistoryItem.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/widgets/orderStatusChip.dart';
 
@@ -42,7 +43,7 @@ class OrderHistoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     'Заказ №${item.number}',
                     style: const TextStyle(
                       fontSize: 17,
@@ -63,7 +64,7 @@ class OrderHistoryCard extends StatelessWidget {
                 _RestaurantImage(url: item.restaurant.coverImageUrl),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     item.restaurant.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -77,7 +78,7 @@ class OrderHistoryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Text(
+            LocalizedText(
               _formatDate(item.createdAt),
               style: const TextStyle(
                 fontSize: 12,
@@ -86,7 +87,7 @@ class OrderHistoryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            LocalizedText(
               previewText,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -118,7 +119,7 @@ class OrderHistoryCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     '${item.total} ₸',
                     style: const TextStyle(
                       fontSize: 18,
@@ -140,7 +141,7 @@ class OrderHistoryCard extends StatelessWidget {
                       vertical: 10,
                     ),
                   ),
-                  child: const Text(
+                  child: const LocalizedText(
                     'Подробнее',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
@@ -185,7 +186,7 @@ class _MetaChip extends StatelessWidget {
             color: const Color(0xFF6B7280),
           ),
           const SizedBox(width: 5),
-          Text(
+          LocalizedText(
             text,
             style: const TextStyle(
               fontSize: 11,

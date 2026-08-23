@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
@@ -217,7 +218,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     strings.profileMyData,
                     style: const TextStyle(
                       fontSize: 22,
@@ -299,7 +300,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                     color: const Color(0xFFFECDD3),
                   ),
                 ),
-                child: Text(
+                child: LocalizedText(
                   _submitError!,
                   style: const TextStyle(
                     color: Color(0xFFBE123C),
@@ -335,7 +336,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                           ),
                         ),
                       )
-                    : Text(
+                    : LocalizedText(
                         _kk ? 'Сақтау' : 'Сохранить',
                         style: const TextStyle(
                           fontSize: 16,
@@ -364,7 +365,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
+        LocalizedText(
           title,
           style: const TextStyle(
             color: Color(0xFF374151),
@@ -373,7 +374,7 @@ class _FieldLabel extends StatelessWidget {
           ),
         ),
         if (required)
-          const Text(
+          const LocalizedText(
             ' *',
             style: TextStyle(
               color: Color(0xFFEF4444),

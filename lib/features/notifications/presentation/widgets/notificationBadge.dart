@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class NotificationBadge extends StatelessWidget {
   const NotificationBadge({
@@ -44,7 +45,7 @@ class NotificationBadge extends StatelessWidget {
               ),
             ),
             child: Center(
-              child: Text(
+              child: LocalizedText(
                 label,
                 style: const TextStyle(
                   color: Colors.white,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 
 class ReviewTextInputSection extends StatelessWidget {
   final ValueChanged<String> onChanged;
@@ -13,8 +14,10 @@ class ReviewTextInputSection extends StatelessWidget {
     return TextField(
       maxLines: 5,
       onChanged: onChanged,
-      decoration: const InputDecoration(
-        hintText: 'Поделитесь впечатлениями...',
+      decoration: InputDecoration(
+        hintText: AppLocalizationScope.of(context)
+            .strings
+            .localize('Поделитесь впечатлениями...'),
         border: OutlineInputBorder(),
       ),
     );

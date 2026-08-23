@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -366,7 +367,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(text)),
+      SnackBar(content: LocalizedText(text)),
     );
   }
 
@@ -483,7 +484,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                                 color: Color(0xFFFBBF24),
                                               ),
                                               const SizedBox(width: 5),
-                                              Text(
+                                              LocalizedText(
                                                 ((widget.restaurantRating ??
                                                         4.9))
                                                     .toStringAsFixed(1),
@@ -515,7 +516,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                                 color: Colors.white,
                                               ),
                                               SizedBox(width: 5),
-                                              Text(
+                                              LocalizedText(
                                                 'Доставлен',
                                                 style: TextStyle(
                                                   color: Colors.white,
@@ -529,7 +530,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                       ],
                                     ),
                                     const Spacer(),
-                                    Text(
+                                    LocalizedText(
                                       widget.restaurantName,
                                       style: const TextStyle(
                                         color: Colors.white,
@@ -539,7 +540,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                       ),
                                     ),
                                     const SizedBox(height: 6),
-                                    const Text(
+                                    const LocalizedText(
                                       'Ваш заказ успешно доставлен',
                                       style: TextStyle(
                                         color: Color(0xE5FFFFFF),
@@ -558,7 +559,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                       _SectionCard(
                         child: Column(
                           children: [
-                            const Text(
+                            const LocalizedText(
                               'Оцените ваш заказ',
                               style: TextStyle(
                                 fontSize: 18,
@@ -627,7 +628,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                   ? Padding(
                                       key: ValueKey(_rating),
                                       padding: const EdgeInsets.only(top: 10),
-                                      child: Text(
+                                      child: LocalizedText(
                                         _ratingLabel,
                                         style: const TextStyle(
                                           fontSize: 15,
@@ -646,7 +647,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            const LocalizedText(
                               'Вы заказали:',
                               style: TextStyle(
                                 fontSize: 13,
@@ -685,7 +686,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
+                                      LocalizedText(
                                         ((widget.orderItemTitle ?? '')
                                                 .trim()
                                                 .isEmpty)
@@ -699,7 +700,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                       ),
                                       const SizedBox(height: 6),
                                       if (widget.orderItemPrice != null)
-                                        Text(
+                                        LocalizedText(
                                           '${widget.orderItemPrice} ₸',
                                           style: const TextStyle(
                                             fontSize: 18,
@@ -720,7 +721,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            const LocalizedText(
                               'Ваше впечатление',
                               style: TextStyle(
                                 fontSize: 18,
@@ -776,7 +777,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            const LocalizedText(
                               'Быстрые реакции',
                               style: TextStyle(
                                 fontSize: 18,
@@ -840,14 +841,14 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                           duration:
                                               const Duration(milliseconds: 220),
                                           scale: active ? 1.2 : 1,
-                                          child: Text(
+                                          child: LocalizedText(
                                             option.emoji,
                                             style:
                                                 const TextStyle(fontSize: 22),
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        Text(
+                                        LocalizedText(
                                           option.label,
                                           style: TextStyle(
                                             fontSize: 14,
@@ -871,7 +872,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            const LocalizedText(
                               'Добавить фото',
                               style: TextStyle(
                                 fontSize: 18,
@@ -1007,7 +1008,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                               ),
                             ),
                             const SizedBox(height: 20),
-                            const Text(
+                            const LocalizedText(
                               'Спасибо!',
                               style: TextStyle(
                                 fontSize: 28,
@@ -1016,7 +1017,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                               ),
                             ),
                             const SizedBox(height: 10),
-                            const Text(
+                            const LocalizedText(
                               'Ваш отзыв успешно отправлен',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -1026,7 +1027,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            const LocalizedText(
                               'Он поможет другим сделать выбор',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -1087,7 +1088,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(
+                      LocalizedText(
                         _isUploading ? 'Загрузка фото...' : 'Отправка...',
                         style: const TextStyle(
                           color: Colors.white,
@@ -1097,7 +1098,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                       ),
                     ],
                   )
-                : Text(
+                : LocalizedText(
                     'Отправить отзыв',
                     style: TextStyle(
                       color:
@@ -1144,7 +1145,7 @@ class _Header extends StatelessWidget {
             ),
           ),
           const Expanded(
-            child: Text(
+            child: LocalizedText(
               'Оставить отзыв',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -1231,7 +1232,7 @@ class _MediaActionButton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          LocalizedText(
             label,
             style: const TextStyle(
               fontSize: 12,
@@ -1264,7 +1265,7 @@ class _HeroPlaceholder extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: Text(
+      child: LocalizedText(
         title,
         textAlign: TextAlign.center,
         style: const TextStyle(

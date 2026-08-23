@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
@@ -230,12 +231,12 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text('Цены обновились'),
-            content: const Text('Цены на некоторые позиции изменились.'),
+            title: const LocalizedText('Цены обновились'),
+            content: const LocalizedText('Цены на некоторые позиции изменились.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Понятно'),
+                child: const LocalizedText('Понятно'),
               ),
             ],
           );
@@ -307,16 +308,16 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Удалить товар?'),
-          content: Text('Удалить "${item.title}" из корзины?'),
+          title: const LocalizedText('Удалить товар?'),
+          content: LocalizedText('Удалить "${item.title}" из корзины?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Нет'),
+              child: const LocalizedText('Нет'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Удалить'),
+              child: const LocalizedText('Удалить'),
             ),
           ],
         );
@@ -335,16 +336,16 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Очистить корзину?'),
-          content: const Text('Все товары будут удалены из корзины.'),
+          title: const LocalizedText('Очистить корзину?'),
+          content: const LocalizedText('Все товары будут удалены из корзины.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Отмена'),
+              child: const LocalizedText('Отмена'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Очистить'),
+              child: const LocalizedText('Очистить'),
             ),
           ],
         );
@@ -447,7 +448,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 
@@ -460,7 +461,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     if (!_isAuthorized) {
       return Scaffold(
         backgroundColor: _bg,
-        appBar: AppBar(title: Text(strings.cartTitle), centerTitle: true),
+        appBar: AppBar(title: LocalizedText(strings.cartTitle), centerTitle: true),
         body: _GuestCart(onLogin: _openLogin, onGoHome: _goToHomeTab),
       );
     }
@@ -477,7 +478,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
         foregroundColor: _text,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: Text(
+        title: LocalizedText(
           strings.cartTitle,
           style: const TextStyle(
             fontWeight: FontWeight.w800,
@@ -490,7 +491,9 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
             IconButton(
               onPressed: _confirmClearCart,
               icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: 'Очистить корзину',
+              tooltip: AppLocalizationScope.of(context)
+                  .strings
+                  .localize('Очистить корзину'),
             ),
         ],
       ),
@@ -571,15 +574,15 @@ class _GuestCart extends StatelessWidget {
           children: [
             const Icon(Icons.shopping_cart_outlined, size: 72),
             const SizedBox(height: 20),
-            Text(strings.guestCartTitle,
+            LocalizedText(strings.guestCartTitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
-            Text(strings.guestCartSubtitle,
+            LocalizedText(strings.guestCartSubtitle,
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            FilledButton(onPressed: onLogin, child: Text(strings.loginToAccount)),
-            TextButton(onPressed: onGoHome, child: Text(strings.browseRestaurants)),
+            FilledButton(onPressed: onLogin, child: LocalizedText(strings.loginToAccount)),
+            TextButton(onPressed: onGoHome, child: LocalizedText(strings.browseRestaurants)),
           ],
         ),
       ),
@@ -646,7 +649,7 @@ class _CartAddressCard extends StatelessWidget {
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          LocalizedText(
                             selectedAddress!.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -657,7 +660,7 @@ class _CartAddressCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
+                          LocalizedText(
                             selectedAddress!.fullSubtitle,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -673,7 +676,7 @@ class _CartAddressCard extends StatelessWidget {
                     : const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          LocalizedText(
                             'Адрес доставки',
                             style: TextStyle(
                               color: Colors.white,
@@ -682,7 +685,7 @@ class _CartAddressCard extends StatelessWidget {
                             ),
                           ),
                           SizedBox(height: 4),
-                          Text(
+                          LocalizedText(
                             'Укажите адрес доставки',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -769,7 +772,7 @@ class _CartItemCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  LocalizedText(
                     item.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -781,7 +784,7 @@ class _CartItemCard extends StatelessWidget {
                   ),
                   if (subtitleParts.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Text(
+                    LocalizedText(
                       subtitleParts.join(' • '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -794,7 +797,7 @@ class _CartItemCard extends StatelessWidget {
                   ],
                   if (!item.canOrder) ...[
                     const SizedBox(height: 6),
-                    Text(
+                    LocalizedText(
                       item.blockingReason,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -814,7 +817,7 @@ class _CartItemCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            LocalizedText(
                               '${item.totalPrice} ₸',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -824,7 +827,7 @@ class _CartItemCard extends StatelessWidget {
                                 color: Color(0xFF111827),
                               ),
                             ),
-                            Text(
+                            LocalizedText(
                               '${item.price} ₸ за штуку',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -915,7 +918,7 @@ class _QuantityControl extends StatelessWidget {
           ),
           SizedBox(
             width: 28,
-            child: Text(
+            child: LocalizedText(
               '$quantity',
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -1078,7 +1081,7 @@ class _CartSummary extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                         ],
-                        Text(
+                        LocalizedText(
                           disabledReason ?? (isCheckoutStarting
                               ? 'Переходим...'
                               : 'Оформить заказ'),
@@ -1098,7 +1101,7 @@ class _CartSummary extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          child: Text(
+                          child: LocalizedText(
                             totalValue,
                             style: const TextStyle(
                               color: Colors.white,
@@ -1133,7 +1136,7 @@ class _CompactSummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(
+        LocalizedText(
           label,
           style: const TextStyle(
             fontSize: 14,
@@ -1141,7 +1144,7 @@ class _CompactSummaryRow extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        Text(
+        LocalizedText(
           value,
           style: const TextStyle(
             fontSize: 14,
@@ -1198,7 +1201,7 @@ class _EmptyCart extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
+              const LocalizedText(
                 'Корзина пуста',
                 style: TextStyle(
                   fontSize: 20,
@@ -1207,7 +1210,7 @@ class _EmptyCart extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              const LocalizedText(
                 'Добавьте блюда из меню',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1229,7 +1232,7 @@ class _EmptyCart extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
-                  child: const Text(
+                  child: const LocalizedText(
                     'На главную',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class ReviewOrderContextCard extends StatelessWidget {
   final String restaurantName;
@@ -18,7 +19,7 @@ class ReviewOrderContextCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
+          LocalizedText(
             restaurantName,
             style: const TextStyle(
               fontSize: 18,
@@ -26,7 +27,7 @@ class ReviewOrderContextCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text('Ваш заказ доставлен'),
+          const LocalizedText('Ваш заказ доставлен'),
         ],
       ),
     );

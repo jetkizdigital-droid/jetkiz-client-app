@@ -9,6 +9,7 @@
 */
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 
 class StartPage extends StatelessWidget {
@@ -19,21 +20,21 @@ class StartPage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Jetkiz')),
+      appBar: AppBar(title: const LocalizedText('Jetkiz')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              LocalizedText(
                 'Новый клиент Jetkiz запущен',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
+              LocalizedText(
                 'Следующий этап — подключение реального backend endpoint и создание первого рабочего экрана.',
                 style: theme.textTheme.bodyLarge,
               ),
@@ -61,7 +62,7 @@ class StartPage extends StatelessWidget {
                     // Например:
                     // Navigator.push(... RestaurantsPage());
                   },
-                  child: const Text('Продолжить разработку'),
+                  child: const LocalizedText('Продолжить разработку'),
                 ),
               ),
             ],
@@ -95,9 +96,9 @@ class _InfoBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: theme.textTheme.labelLarge),
+          LocalizedText(title, style: theme.textTheme.labelLarge),
           const SizedBox(height: 6),
-          Text(
+          LocalizedText(
             value,
             style: theme.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w600,

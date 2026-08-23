@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
@@ -121,7 +122,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 
@@ -245,7 +246,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                const LocalizedText(
                   'Выберите ресторан',
                   style: TextStyle(
                     fontSize: 18,
@@ -256,7 +257,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                 const SizedBox(height: 14),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text(
+                  title: const LocalizedText(
                     'Все рестораны',
                     style: TextStyle(
                       fontSize: 16,
@@ -275,7 +276,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                 if (restaurants.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text(
+                    child: LocalizedText(
                       'Нет доступных ресторанов',
                       style: TextStyle(
                         fontSize: 14,
@@ -288,7 +289,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   ...restaurants.map(
                     (restaurant) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(
+                      title: LocalizedText(
                         restaurant.name,
                         style: const TextStyle(
                           fontSize: 16,
@@ -461,7 +462,7 @@ class _CategoryHeader extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
+                child: LocalizedText(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -478,7 +479,7 @@ class _CategoryHeader extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Text(
+              const LocalizedText(
                 'jetkiz',
                 style: TextStyle(
                   color: Color(0xFF489F2A),
@@ -495,7 +496,7 @@ class _CategoryHeader extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   child: Row(
                     children: [
-                      Text(
+                      LocalizedText(
                         'Фильтр по ресторану',
                         style: TextStyle(
                           color: Colors.black,
@@ -556,7 +557,7 @@ class _RestaurantSection extends StatelessWidget {
       children: [
         InkWell(
           onTap: onRestaurantTap,
-          child: Text(
+          child: LocalizedText(
             group.restaurant.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -678,7 +679,7 @@ class _CategoryProductCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Expanded(
-                child: Text(
+                child: LocalizedText(
                   product.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -695,7 +696,7 @@ class _CategoryProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: Text(
+                    child: LocalizedText(
                       '${product.price} ₸',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -841,7 +842,7 @@ class _QuantityStepper extends StatelessWidget {
           ),
           Expanded(
             child: Center(
-              child: Text(
+              child: LocalizedText(
                 '$quantity',
                 style: const TextStyle(
                   color: Colors.white,
@@ -897,7 +898,7 @@ class _EmptyCategoryState extends StatelessWidget {
           color: Color(0xFF8B8B8B),
         ),
         const SizedBox(height: 16),
-        const Text(
+        const LocalizedText(
           'В этой категории пока нет доступных товаров',
           textAlign: TextAlign.center,
           style: TextStyle(

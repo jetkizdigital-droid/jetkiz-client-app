@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressesApi.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
@@ -235,7 +236,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   ),
                 ),
                 Expanded(
-                  child: Text(
+                  child: LocalizedText(
                     widget.isEditing ? 'Редактировать адрес' : 'Адрес доставки',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -259,7 +260,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        const LocalizedText(
                           'Тип адреса',
                           style: TextStyle(
                             color: _text,
@@ -405,7 +406,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   const SizedBox(height: 18),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
+                    child: LocalizedText(
                       'Доставка осуществляется только в зоне обслуживания JETKIZ',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -418,7 +419,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   ),
                   if (_submitError != null) ...[
                     const SizedBox(height: 14),
-                    Text(
+                    LocalizedText(
                       _submitError!,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
@@ -460,7 +461,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                             color: Colors.white,
                           ),
                         )
-                      : Text(
+                      : LocalizedText(
                           widget.isEditing
                               ? 'Сохранить изменения'
                               : 'Сохранить адрес',
@@ -535,7 +536,7 @@ class _AddressTypeChip extends StatelessWidget {
             color: selected ? green : const Color(0xFFE5E7EB),
           ),
         ),
-        child: Text(
+        child: LocalizedText(
           label,
           style: TextStyle(
             color: selected ? Colors.white : const Color(0xFF111827),
@@ -581,7 +582,7 @@ class _AppTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        LocalizedText(
           label,
           style: const TextStyle(
             color: text,
@@ -638,7 +639,7 @@ class _AppTextField extends StatelessWidget {
         ),
         if (errorText != null) ...[
           const SizedBox(height: 6),
-          Text(
+          LocalizedText(
             errorText!,
             style: const TextStyle(
               color: error,

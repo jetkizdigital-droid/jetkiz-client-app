@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
@@ -153,7 +154,9 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: _open,
-      tooltip: 'Уведомления',
+      tooltip: AppLocalizationScope.of(context)
+          .strings
+          .localize('Уведомления'),
       icon: NotificationBadge(
         count: _unreadCount,
         child: Icon(

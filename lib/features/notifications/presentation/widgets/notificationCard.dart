@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
 
 class NotificationCard extends StatelessWidget {
@@ -90,7 +91,7 @@ class _NotificationContent extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
+              child: LocalizedText(
                 item.title,
                 style: TextStyle(
                   color: Colors.black,
@@ -100,7 +101,7 @@ class _NotificationContent extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
+            LocalizedText(
               _formatDateTime(item.createdAt),
               style: const TextStyle(
                 color: Color(0xFF777777),
@@ -111,7 +112,7 @@ class _NotificationContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
-        Text(
+        LocalizedText(
           item.body,
           style: const TextStyle(
             color: Color(0xFF2B2B2B),
@@ -205,7 +206,7 @@ class _OpenOrderButton extends StatelessWidget {
         onTap: onTap,
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          child: Text(
+          child: LocalizedText(
             'Открыть заказ',
             style: TextStyle(
               color: Colors.white,

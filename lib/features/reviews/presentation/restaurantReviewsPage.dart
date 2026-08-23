@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/reviews/data/restaurantReviewsApi.dart';
 import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
@@ -147,7 +148,7 @@ class _ReviewsHeader extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
+            child: LocalizedText(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -179,7 +180,7 @@ class _ReviewsEmptyState extends StatelessWidget {
           color: Color(0xFF9CA3AF),
         ),
         SizedBox(height: 16),
-        Text(
+        LocalizedText(
           'Пока нет отзывов',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -189,7 +190,7 @@ class _ReviewsEmptyState extends StatelessWidget {
           ),
         ),
         SizedBox(height: 8),
-        Text(
+        LocalizedText(
           'Когда клиенты оставят отзывы, они появятся здесь.',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -226,7 +227,7 @@ class _ReviewsErrorState extends StatelessWidget {
               color: Color(0xFFEF4444),
             ),
             const SizedBox(height: 12),
-            Text(
+            LocalizedText(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -238,7 +239,7 @@ class _ReviewsErrorState extends StatelessWidget {
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ],
         ),

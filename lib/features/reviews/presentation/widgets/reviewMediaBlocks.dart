@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -120,7 +121,7 @@ class _ReviewVideoBlock extends StatelessWidget {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(text)),
+      SnackBar(content: LocalizedText(text)),
     );
   }
 
@@ -195,7 +196,7 @@ class _ReviewVideoBlock extends StatelessWidget {
                         color: Colors.white,
                       ),
                       SizedBox(width: 6),
-                      Text(
+                      LocalizedText(
                         'Открыть видео',
                         style: TextStyle(
                           color: Colors.white,
@@ -246,7 +247,7 @@ class _ReviewAudioBlock extends StatelessWidget {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(text)),
+      SnackBar(content: LocalizedText(text)),
     );
   }
 
@@ -314,7 +315,7 @@ class _ReviewAudioBlock extends StatelessWidget {
                     color: Color(0xFF374151),
                   ),
                   SizedBox(width: 6),
-                  Text(
+                  LocalizedText(
                     'Открыть аудио',
                     style: TextStyle(
                       fontSize: 12,

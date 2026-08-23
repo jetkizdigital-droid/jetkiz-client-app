@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 
 class NotificationsEmptyState extends StatelessWidget {
   const NotificationsEmptyState({
@@ -22,7 +23,7 @@ class NotificationsEmptyState extends StatelessWidget {
           color: Color(0xFF489F2A),
         ),
         const SizedBox(height: 16),
-        Text(
+        LocalizedText(
           title,
           textAlign: TextAlign.center,
           style: const TextStyle(
@@ -32,7 +33,7 @@ class NotificationsEmptyState extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
+        LocalizedText(
           subtitle,
           textAlign: TextAlign.center,
           style: const TextStyle(

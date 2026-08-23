@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
@@ -397,7 +398,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
     messenger?.showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: LocalizedText(message)),
     );
   }
 
@@ -700,7 +701,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                               milliseconds: 120,
                                             ),
                                             opacity: collapseT > 0.55 ? 1 : 0,
-                                            child: Text(
+                                            child: LocalizedText(
                                               _restaurantName,
                                               maxLines: 1,
                                               textAlign: TextAlign.center,
@@ -1079,7 +1080,7 @@ class _RestaurantInfoCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: LocalizedText(
                   restaurantName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1107,7 +1108,7 @@ class _RestaurantInfoCard extends StatelessWidget {
                       color: Color(0xFF489F2A),
                     ),
                     const SizedBox(width: 4),
-                    Text(
+                    LocalizedText(
                       ratingText,
                       style: const TextStyle(
                         fontSize: 15,
@@ -1121,7 +1122,7 @@ class _RestaurantInfoCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
+          LocalizedText(
             restaurantDescription,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -1179,7 +1180,7 @@ class _MiniMetaItem extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Flexible(
-            child: Text(
+            child: LocalizedText(
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1243,7 +1244,7 @@ class _ReviewsSummaryCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  LocalizedText(
                     'Отзывы ($reviewsCount)',
                     style: const TextStyle(
                       fontSize: 15,
@@ -1306,7 +1307,7 @@ class _ReviewStat extends StatelessWidget {
           color: const Color(0xFF5A5A5A),
         ),
         const SizedBox(width: 4),
-        Text(
+        LocalizedText(
           '$value',
           style: const TextStyle(
             fontSize: 12,
@@ -1397,7 +1398,7 @@ class _MenuCategoryChip extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
+          child: LocalizedText(
             title,
             style: TextStyle(
               color: isSelected ? Colors.white : const Color(0xFF555555),
@@ -1451,7 +1452,7 @@ class _MenuCategorySection extends StatelessWidget {
         if (showTitle) ...[
           Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 12),
-            child: Text(
+            child: LocalizedText(
               title,
               style: const TextStyle(
                 fontSize: 22,
@@ -1587,7 +1588,7 @@ class _MenuProductCard extends StatelessWidget {
                             color: const Color(0xB3000000),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Text(
+                          child: const LocalizedText(
                             'Недоступно',
                             style: TextStyle(
                               color: Colors.white,
@@ -1604,7 +1605,7 @@ class _MenuProductCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      LocalizedText(
                         item.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1617,7 +1618,7 @@ class _MenuProductCard extends StatelessWidget {
                       ),
                       if ((item.description ?? '').trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
-                        Text(
+                        LocalizedText(
                           item.description!.trim(),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -1637,7 +1638,7 @@ class _MenuProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: Text(
+                      child: LocalizedText(
                         item.priceText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1782,7 +1783,7 @@ class _MenuQuantityControl extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
+            child: LocalizedText(
               '$quantity',
               style: const TextStyle(
                 color: Colors.white,
@@ -1845,7 +1846,7 @@ class _MenuEmptyState extends StatelessWidget {
               color: Color(0xFFB0B0B0),
             ),
             SizedBox(height: 12),
-            Text(
+            LocalizedText(
               'Ничего не найдено',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -1855,7 +1856,7 @@ class _MenuEmptyState extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8),
-            Text(
+            LocalizedText(
               'Попробуй изменить поиск или выбрать другую категорию.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -1894,7 +1895,7 @@ class _RestaurantMenuErrorState extends StatelessWidget {
               color: Colors.black45,
             ),
             const SizedBox(height: 12),
-            Text(
+            LocalizedText(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -1915,7 +1916,7 @@ class _RestaurantMenuErrorState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text('Повторить'),
+              child: const LocalizedText('Повторить'),
             ),
           ],
         ),

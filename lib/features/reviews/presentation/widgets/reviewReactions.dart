@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 
 class ReviewReactions extends StatelessWidget {
@@ -38,7 +39,7 @@ class ReviewReactions extends StatelessWidget {
               color: const Color(0xFFF3F4F6),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: Text(
+            child: LocalizedText(
               '${_emoji(entry.key)} ${entry.value}',
               style: const TextStyle(
                 fontSize: 13,

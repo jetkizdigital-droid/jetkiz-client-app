@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 import 'package:jetkiz_mobile/features/search/data/searchApi.dart';
@@ -434,7 +436,7 @@ class _SearchPageState extends State<SearchPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         titleSpacing: 0,
-        title: const Text(
+        title: const LocalizedText(
           'Поиск',
           style: TextStyle(
             color: Color(0xFF14181F),
@@ -469,8 +471,10 @@ class _SearchPageState extends State<SearchPage> {
                       onChanged: _onChanged,
                       onSubmitted: _onSubmitted,
                       textInputAction: TextInputAction.search,
-                      decoration: const InputDecoration(
-                        hintText: 'Блюда, напитки, рестораны',
+                      decoration: InputDecoration(
+                        hintText: AppLocalizationScope.of(context)
+                            .strings
+                            .localize('Блюда, напитки, рестораны'),
                         border: InputBorder.none,
                         isCollapsed: true,
                       ),
@@ -618,7 +622,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
+    return LocalizedText(
       title,
       style: const TextStyle(
         fontSize: 18,
@@ -680,7 +684,7 @@ class _RestaurantTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  LocalizedText(
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -691,7 +695,7 @@ class _RestaurantTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  LocalizedText(
                     item.address?.trim().isNotEmpty == true
                         ? item.address!
                         : (item.workingHours?.trim().isNotEmpty == true
@@ -714,7 +718,7 @@ class _RestaurantTile extends StatelessWidget {
                         color: Color(0xFF489F2A),
                       ),
                       const SizedBox(width: 4),
-                      Text(
+                      LocalizedText(
                         ratingText,
                         style: const TextStyle(
                           fontSize: 14,
@@ -794,7 +798,7 @@ class _ProductTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  LocalizedText(
                     item.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -805,7 +809,7 @@ class _ProductTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  LocalizedText(
                     subtitleParts.isEmpty
                         ? 'Открыть ресторан'
                         : subtitleParts.join(' • '),
@@ -819,7 +823,7 @@ class _ProductTile extends StatelessWidget {
                   ),
                   if (item.description?.trim().isNotEmpty == true) ...[
                     const SizedBox(height: 4),
-                    Text(
+                    LocalizedText(
                       item.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -831,7 +835,7 @@ class _ProductTile extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 8),
-                  Text(
+                  LocalizedText(
                     '${item.price} ₸',
                     style: const TextStyle(
                       fontSize: 15,
@@ -912,7 +916,7 @@ class _InfoState extends StatelessWidget {
               color: const Color(0xFF97A0AA),
             ),
             const SizedBox(height: 14),
-            Text(
+            LocalizedText(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -922,7 +926,7 @@ class _InfoState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            LocalizedText(
               subtitle,
               textAlign: TextAlign.center,
               style: const TextStyle(
