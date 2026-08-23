@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 class FavoriteIdsResponse {
@@ -19,16 +20,12 @@ class FavoriteIdsResponse {
 }
 
 class FavoriteMeta {
-  const FavoriteMeta({
-    required this.total,
-  });
+  const FavoriteMeta({required this.total});
 
   final int total;
 
   factory FavoriteMeta.fromJson(Map<String, dynamic> json) {
-    return FavoriteMeta(
-      total: _readInt(json, const ['total']),
-    );
+    return FavoriteMeta(total: _readInt(json, const ['total']));
   }
 }
 
@@ -217,6 +214,9 @@ class FavoriteRestaurant {
   });
 
   final String id;
+
+  /// Restaurant names are brand/proper names and are intentionally not
+  /// switched by the app language.
   final String name;
   final double ratingAvg;
   final int ratingCount;
@@ -300,7 +300,9 @@ class FavoriteRestaurant {
 class FavoriteProduct {
   const FavoriteProduct({
     required this.id,
-    required this.title,
+    String? title,
+    this.titleRu = '',
+    this.titleKk = '',
     required this.price,
     required this.isAvailable,
     required this.restaurantId,
@@ -314,10 +316,12 @@ class FavoriteProduct {
     this.effectiveImageUrl,
     this.category,
     this.images = const [],
-  });
+  }) : _legacyTitle = title ?? '';
 
   final String id;
-  final String title;
+  final String titleRu;
+  final String titleKk;
+  final String _legacyTitle;
   final int price;
   final bool isAvailable;
   final String restaurantId;
@@ -332,6 +336,14 @@ class FavoriteProduct {
   final String? effectiveImageUrl;
   final FavoriteProductCategory? category;
   final List<FavoriteProductImage> images;
+
+  String get title => LocalizedValue.select(
+        ru: titleRu.isNotEmpty ? titleRu : _legacyTitle,
+        kk: titleKk,
+        fallback: _legacyTitle.isNotEmpty
+            ? _legacyTitle
+            : (LocalizedValue.language.name == 'kk' ? 'Тауар' : 'Товар'),
+      );
 
   factory FavoriteProduct.fromJson(Map<String, dynamic> json) {
     final imagesRaw = _extractList(json, const ['images']) ?? const [];
@@ -368,10 +380,15 @@ class FavoriteProduct {
 
     return FavoriteProduct(
       id: _readString(json, const ['id']),
-      title: _readString(
+      titleRu: _readString(
         json,
         const ['titleRu'],
-        fallbackKeys: ['title', 'name', 'titleKk', 'nameRu'],
+        fallbackKeys: ['title', 'name', 'nameRu'],
+      ),
+      titleKk: _readString(
+        json,
+        const ['titleKk'],
+        fallbackValue: '',
       ),
       price: _readInt(json, const ['price']),
       isAvailable: _readBool(
@@ -437,25 +454,42 @@ class FavoriteProductImage {
 class FavoriteProductCategory {
   const FavoriteProductCategory({
     required this.id,
-    required this.title,
+    String? title,
+    this.titleRu = '',
+    this.titleKk = '',
     this.code,
     this.iconUrl,
     this.sortOrder = 0,
-  });
+  }) : _legacyTitle = title ?? '';
 
   final String id;
-  final String title;
+  final String titleRu;
+  final String titleKk;
+  final String _legacyTitle;
   final String? code;
   final String? iconUrl;
   final int sortOrder;
 
+  String get title => LocalizedValue.select(
+        ru: titleRu.isNotEmpty ? titleRu : _legacyTitle,
+        kk: titleKk,
+        fallback: _legacyTitle.isNotEmpty
+            ? _legacyTitle
+            : (LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории'),
+      );
+
   factory FavoriteProductCategory.fromJson(Map<String, dynamic> json) {
     return FavoriteProductCategory(
       id: _readString(json, const ['id']),
-      title: _readString(
+      titleRu: _readString(
         json,
         const ['titleRu'],
-        fallbackKeys: ['title', 'titleKk', 'name'],
+        fallbackKeys: ['title', 'name'],
+      ),
+      titleKk: _readString(
+        json,
+        const ['titleKk'],
+        fallbackValue: '',
       ),
       code: _readNullableString(json, const ['code']),
       iconUrl: _normalizeImageUrl(_readNullableString(json, const ['iconUrl'])),
@@ -479,7 +513,9 @@ List<dynamic>? _extractList(Map<String, dynamic> json, List<String> path) {
 }
 
 Map<String, dynamic>? _extractMap(
-    Map<String, dynamic> json, List<String> path) {
+  Map<String, dynamic> json,
+  List<String> path,
+) {
   dynamic current = json;
 
   for (final part in path) {
