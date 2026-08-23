@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 
 class SearchResult {
   const SearchResult({
@@ -31,8 +32,11 @@ class SearchResult {
     return SearchResult(
       restaurants: restaurantsRaw
           .whereType<Map>()
-          .map((e) =>
-              SearchRestaurantItem.fromJson(Map<String, dynamic>.from(e)))
+          .map(
+            (e) => SearchRestaurantItem.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
           .toList(),
       products: productsRaw
           .whereType<Map>()
@@ -70,6 +74,9 @@ class SearchRestaurantItem {
   });
 
   final String id;
+
+  /// Restaurant names are brand/proper names and intentionally do not switch
+  /// with the UI language.
   final String name;
   final double ratingAvg;
   final String? address;
@@ -82,7 +89,7 @@ class SearchRestaurantItem {
       name: _readString(
         json,
         const ['name'],
-        fallbackKeys: ['titleRu', 'nameRu', 'title'],
+        fallbackKeys: ['nameRu', 'nameKk', 'titleRu', 'title'],
       ),
       ratingAvg: _readDouble(
         json,
@@ -109,27 +116,48 @@ class SearchRestaurantItem {
 class SearchProductItem {
   const SearchProductItem({
     required this.id,
-    required this.title,
+    required this.titleRu,
     required this.price,
     required this.restaurantId,
     required this.restaurantName,
+    this.titleKk,
     this.imageUrl,
-    this.categoryTitle,
+    this.categoryTitleRu,
+    this.categoryTitleKk,
     this.description,
     this.weight,
     this.isDrink = false,
   });
 
   final String id;
-  final String title;
+  final String titleRu;
+  final String? titleKk;
   final int price;
   final String restaurantId;
   final String restaurantName;
   final String? imageUrl;
-  final String? categoryTitle;
+  final String? categoryTitleRu;
+  final String? categoryTitleKk;
   final String? description;
   final String? weight;
   final bool isDrink;
+
+  String get title => LocalizedValue.select(
+        ru: titleRu,
+        kk: titleKk,
+        fallback: 'Товар',
+      );
+
+  String? get categoryTitle {
+    final ru = categoryTitleRu?.trim() ?? '';
+    final kk = categoryTitleKk?.trim() ?? '';
+    if (ru.isEmpty && kk.isEmpty) return null;
+    return LocalizedValue.select(
+      ru: ru,
+      kk: kk,
+      fallback: ru.isNotEmpty ? ru : kk,
+    );
+  }
 
   factory SearchProductItem.fromJson(Map<String, dynamic> json) {
     final restaurantMap = _readMap(
@@ -144,10 +172,15 @@ class SearchProductItem {
 
     return SearchProductItem(
       id: _readString(json, const ['id']),
-      title: _readString(
+      titleRu: _readString(
         json,
         const ['titleRu'],
         fallbackKeys: ['title', 'name', 'nameRu'],
+      ),
+      titleKk: _readNullableString(
+        json,
+        const ['titleKk'],
+        fallbackKeys: ['nameKk'],
       ),
       price: _readInt(json, const ['price']),
       restaurantId: _readString(
@@ -161,11 +194,17 @@ class SearchProductItem {
         const ['restaurantName'],
         fallbackKeys: restaurantMap == null
             ? ['restaurantTitle']
-            : ['restaurant.name', 'restaurant.nameRu', 'restaurant.titleRu'],
+            : [
+                'restaurant.name',
+                'restaurant.nameRu',
+                'restaurant.nameKk',
+                'restaurant.titleRu',
+              ],
         fallbackValue: restaurantMap == null
             ? ''
             : (restaurantMap['name'] ??
                     restaurantMap['nameRu'] ??
+                    restaurantMap['nameKk'] ??
                     restaurantMap['titleRu'] ??
                     '')
                 .toString(),
@@ -173,16 +212,24 @@ class SearchProductItem {
       imageUrl: _normalizeImageUrl(
         _readNullableString(
           json,
-          const ['imageUrl'],
-          fallbackKeys: ['fullImageUrl'],
+          const ['effectiveImageUrl'],
+          fallbackKeys: ['imageUrl', 'fullImageUrl'],
         ),
       ),
-      categoryTitle: categoryMap == null
-          ? _readNullableString(json, const ['categoryTitle'])
-          : (categoryMap['titleRu'] ??
+      categoryTitleRu: categoryMap == null
+          ? _readNullableString(
+              json,
+              const ['categoryTitleRu'],
+              fallbackKeys: ['categoryTitle'],
+            )
+          : _nullableValue(
+              categoryMap['titleRu'] ??
                   categoryMap['title'] ??
-                  categoryMap['name'])
-              ?.toString(),
+                  categoryMap['name'],
+            ),
+      categoryTitleKk: categoryMap == null
+          ? _readNullableString(json, const ['categoryTitleKk'])
+          : _nullableValue(categoryMap['titleKk']),
       description: _readNullableString(json, const ['description']),
       weight: _readNullableString(json, const ['weight']),
       isDrink: _readBool(
@@ -233,6 +280,11 @@ String? _readNullableString(
   ).trim();
 
   return value.isEmpty ? null : value;
+}
+
+String? _nullableValue(dynamic value) {
+  final normalized = value?.toString().trim() ?? '';
+  return normalized.isEmpty ? null : normalized;
 }
 
 int _readInt(
