@@ -295,6 +295,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       restaurantId: restaurantId,
       restaurantName: widget.restaurantName ?? '',
       title: _resolvedTitle,
+      titleRu: _product.titleRu,
+      titleKk: _product.titleKk,
       price: _product.price,
       quantity: _quantity,
       imageUrl: _resolvedImageUrl,
