@@ -82,5 +82,48 @@ void main() {
       expect(availability.canOrder, isFalse);
       expect(availability.label, 'Закрыто');
     });
+
+    test('server isOpenNow overrides local working-hours fallback', () {
+      const availability = RestaurantAvailability(
+        status: 'OPEN',
+        isInApp: true,
+        isAcceptingOrders: true,
+        allowMissingWorkingHours: true,
+        serverIsOpenNow: false,
+        serverCanAcceptOrders: false,
+      );
+
+      expect(availability.isOpen, isFalse);
+      expect(availability.canOrder, isFalse);
+      expect(availability.label, 'Закрыто');
+    });
+
+    test('server canAcceptOrders can pause an otherwise open restaurant', () {
+      const availability = RestaurantAvailability(
+        status: 'OPEN',
+        isInApp: true,
+        isAcceptingOrders: true,
+        serverIsOpenNow: true,
+        serverCanAcceptOrders: false,
+      );
+
+      expect(availability.isOpen, isTrue);
+      expect(availability.canOrder, isFalse);
+      expect(availability.label, 'Временно не принимает заказы');
+    });
+
+    test('server availability allows order without using device time', () {
+      const availability = RestaurantAvailability(
+        status: 'OPEN',
+        isInApp: true,
+        isAcceptingOrders: true,
+        workingHours: '00:00 - 00:01',
+        serverIsOpenNow: true,
+        serverCanAcceptOrders: true,
+      );
+
+      expect(availability.isOpen, isTrue);
+      expect(availability.canOrder, isTrue);
+    });
   });
 }
