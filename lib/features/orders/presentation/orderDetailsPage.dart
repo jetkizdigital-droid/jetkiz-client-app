@@ -59,8 +59,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       if (!mounted) return;
 
       setState(() {
-        _errorText =
-            'Не удалось загрузить детали заказа';
+        _errorText = 'Не удалось загрузить детали заказа';
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -75,8 +74,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     if (restaurantId.isEmpty) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(
-          content: LocalizedText(
-              'Не удалось определить ресторан заказа'),
+          content: LocalizedText('Не удалось определить ресторан заказа'),
         ),
       );
       return;
@@ -88,7 +86,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         context: context,
         builder: (context) => AlertDialog(
           title: const LocalizedText('Заменить товары в корзине?'),
-          content: const LocalizedText('В корзине уже есть блюда другого ресторана.'),
+          content: const LocalizedText(
+              'В корзине уже есть блюда другого ресторана.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -129,8 +128,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       const SnackBar(
-        content: LocalizedText(
-            'Добавлено в корзину'),
+        content: LocalizedText('Добавлено в корзину'),
       ),
     );
 
@@ -305,9 +303,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       case 'REFUNDED':
         return 'Возврат средств';
       default:
-        return raw.trim().isEmpty
-            ? 'Статус оплаты неизвестен'
-            : raw;
+        return raw.trim().isEmpty ? 'Статус оплаты неизвестен' : raw;
     }
   }
 
@@ -659,8 +655,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
                 ),
               ),
               title: 'Самовывоз',
-              value:
-                  'Самовывоз из ресторана',
+              value: 'Самовывоз из ресторана',
             ),
           if (address != null)
             _InfoTile(
@@ -947,15 +942,12 @@ class _PriceSummaryBlock extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _PriceRow(
-            title:
-                'Стоимость товаров',
+            title: 'Стоимость товаров',
             value: '${order.subtotal} ₸',
           ),
           const SizedBox(height: 10),
           _PriceRow(
-            title: order.isPickup
-                ? 'Самовывоз'
-                : 'Доставка',
+            title: order.isPickup ? 'Самовывоз' : 'Доставка',
             value: order.isPickup
                 ? '0 ₸'
                 : order.deliveryFee == 0

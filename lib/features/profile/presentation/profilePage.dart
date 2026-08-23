@@ -393,9 +393,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 16),
                 TextButton.icon(
-                  onPressed: _isDeletingAccount
-                      ? null
-                      : _confirmAndDeleteAccount,
+                  onPressed:
+                      _isDeletingAccount ? null : _confirmAndDeleteAccount,
                   icon: _isDeletingAccount
                       ? const SizedBox(
                           width: 18,
@@ -608,7 +607,8 @@ class _ProfileHeaderCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: LocalizedText(
-                          profile?.displaySubtitle ?? strings.profileDefaultSubtitle,
+                          profile?.displaySubtitle ??
+                              strings.profileDefaultSubtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

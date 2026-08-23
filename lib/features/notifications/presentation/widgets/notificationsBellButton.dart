@@ -154,9 +154,7 @@ class _NotificationsBellButtonState extends State<NotificationsBellButton>
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: _open,
-      tooltip: AppLocalizationScope.of(context)
-          .strings
-          .localize('Уведомления'),
+      tooltip: AppLocalizationScope.of(context).strings.localize('Уведомления'),
       icon: NotificationBadge(
         count: _unreadCount,
         child: Icon(

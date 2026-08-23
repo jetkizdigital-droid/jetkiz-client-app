@@ -54,9 +54,8 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
     final preferences = await SharedPreferences.getInstance();
     final saved = preferences.getString(_languageKey);
     if (!mounted) return;
-    final language = saved == AppLanguage.kk.name
-        ? AppLanguage.kk
-        : AppLanguage.ru;
+    final language =
+        saved == AppLanguage.kk.name ? AppLanguage.kk : AppLanguage.ru;
     ApiClient().setLocale(language.name);
     if (_language != language) setState(() => _language = language);
   }

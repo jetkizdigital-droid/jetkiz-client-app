@@ -78,8 +78,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
 
   bool _isSaving = false;
   String? _submitError;
-  bool get _kk =>
-      AppLocalizationScope.of(context).language == AppLanguage.kk;
+  bool get _kk => AppLocalizationScope.of(context).language == AppLanguage.kk;
 
   @override
   void initState() {

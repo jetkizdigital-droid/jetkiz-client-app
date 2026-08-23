@@ -702,14 +702,18 @@ class _PinnedRestaurantCard extends StatelessWidget {
               top: 8,
               left: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
-                  color: isOpen ? const Color(0xFF489F2A) : const Color(0xFF6B7280),
+                  color: isOpen
+                      ? const Color(0xFF489F2A)
+                      : const Color(0xFF6B7280),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: LocalizedText(
                   isOpen ? 'Открыто' : 'Закрыто',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

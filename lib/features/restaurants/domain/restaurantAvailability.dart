@@ -22,7 +22,8 @@ class RestaurantAvailability {
   bool get _isWithinWorkingHours {
     final value = workingHours?.trim() ?? '';
     if (value.isEmpty) return allowMissingWorkingHours;
-    final matches = RegExp(r'([01]?\d|2[0-3]):([0-5]\d)').allMatches(value).toList();
+    final matches =
+        RegExp(r'([01]?\d|2[0-3]):([0-5]\d)').allMatches(value).toList();
     if (matches.length < 2) return false;
     int minutes(RegExpMatch match) =>
         int.parse(match.group(1)!) * 60 + int.parse(match.group(2)!);

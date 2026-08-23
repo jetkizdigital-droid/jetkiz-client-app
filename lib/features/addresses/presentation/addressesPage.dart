@@ -598,9 +598,7 @@ class _AddressActions extends StatelessWidget {
         IconButton(
           onPressed: isDeleting ? null : onDeleteTap,
           icon: const Icon(Icons.delete_outline),
-          tooltip: AppLocalizationScope.of(context)
-              .strings
-              .localize('Удалить'),
+          tooltip: AppLocalizationScope.of(context).strings.localize('Удалить'),
         ),
       ],
     );

@@ -73,9 +73,8 @@ class LocalizedText extends StatelessWidget {
         overflow: overflow,
         textScaler: textScaler,
         maxLines: maxLines,
-        semanticsLabel: semanticsLabel == null
-            ? null
-            : strings.localize(semanticsLabel!),
+        semanticsLabel:
+            semanticsLabel == null ? null : strings.localize(semanticsLabel!),
         textWidthBasis: textWidthBasis,
         textHeightBehavior: textHeightBehavior,
         selectionColor: selectionColor,

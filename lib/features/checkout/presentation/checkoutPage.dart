@@ -145,7 +145,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Не удалось рассчитать доставку')),
+        const SnackBar(
+            content: LocalizedText('Не удалось рассчитать доставку')),
       );
       return;
     }
@@ -174,7 +175,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final restaurantId = cartState.restaurantId;
     if (restaurantId == null || restaurantId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Не удалось определить ресторан заказа')),
+        const SnackBar(
+            content: LocalizedText('Не удалось определить ресторан заказа')),
       );
       return;
     }
@@ -182,7 +184,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final addressId = _addressRepository.selectedAddressId;
     if (!_isPickup && (addressId == null || addressId.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Не удалось определить адрес доставки')),
+        const SnackBar(
+            content: LocalizedText('Не удалось определить адрес доставки')),
       );
       return;
     }

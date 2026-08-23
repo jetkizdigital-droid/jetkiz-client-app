@@ -471,8 +471,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                             vertical: 7,
                                           ),
                                           decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withValues(alpha: 0.88),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.88),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),
@@ -504,7 +504,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                             vertical: 7,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _green.withValues(alpha: 0.92),
+                                            color:
+                                                _green.withValues(alpha: 0.92),
                                             borderRadius:
                                                 BorderRadius.circular(999),
                                           ),

@@ -133,7 +133,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     _icon(Icons.notifications),
                     const SizedBox(width: 14),
-                    Expanded(child: LocalizedText(strings.settingsNotifications)),
+                    Expanded(
+                        child: LocalizedText(strings.settingsNotifications)),
                     Switch(
                       value: notificationsEnabled,
                       activeThumbColor: _green,

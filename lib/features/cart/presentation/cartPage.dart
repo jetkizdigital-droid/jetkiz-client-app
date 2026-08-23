@@ -97,7 +97,8 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
       setState(() => _isRestaurantAvailabilityLoading = true);
     }
     try {
-      final restaurants = await _restaurantsApi.getAllPublicRestaurants(random: false);
+      final restaurants =
+          await _restaurantsApi.getAllPublicRestaurants(random: false);
       final matches = restaurants.where((item) => item.id == restaurantId);
       final restaurant = matches.isEmpty ? null : matches.first;
       if (mounted) {
@@ -232,7 +233,8 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
         builder: (context) {
           return AlertDialog(
             title: const LocalizedText('Цены обновились'),
-            content: const LocalizedText('Цены на некоторые позиции изменились.'),
+            content:
+                const LocalizedText('Цены на некоторые позиции изменились.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -461,7 +463,8 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     if (!_isAuthorized) {
       return Scaffold(
         backgroundColor: _bg,
-        appBar: AppBar(title: LocalizedText(strings.cartTitle), centerTitle: true),
+        appBar:
+            AppBar(title: LocalizedText(strings.cartTitle), centerTitle: true),
         body: _GuestCart(onLogin: _openLogin, onGoHome: _goToHomeTab),
       );
     }
@@ -538,8 +541,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
               total: total,
               isLoading: _isDeliveryLoading,
               isCheckoutStarting: _isCheckoutStarting,
-              isDisabled:
-                  isEmpty ||
+              isDisabled: isEmpty ||
                   _isDeliveryLoading ||
                   _isRestaurantAvailabilityLoading ||
                   _cart.hasBlockingItems ||
@@ -576,13 +578,18 @@ class _GuestCart extends StatelessWidget {
             const SizedBox(height: 20),
             LocalizedText(strings.guestCartTitle,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 10),
             LocalizedText(strings.guestCartSubtitle,
                 textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            FilledButton(onPressed: onLogin, child: LocalizedText(strings.loginToAccount)),
-            TextButton(onPressed: onGoHome, child: LocalizedText(strings.browseRestaurants)),
+            FilledButton(
+                onPressed: onLogin,
+                child: LocalizedText(strings.loginToAccount)),
+            TextButton(
+                onPressed: onGoHome,
+                child: LocalizedText(strings.browseRestaurants)),
           ],
         ),
       ),
@@ -1050,14 +1057,16 @@ class _CartSummary extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: disabled ? const Color(0xFF9CA3AF) : null,
-                      gradient: disabled ? null : const LinearGradient(
-                        colors: [
-                          Color(0xFF489F2A),
-                          Color(0xFF489F2A),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
+                      gradient: disabled
+                          ? null
+                          : const LinearGradient(
+                              colors: [
+                                Color(0xFF489F2A),
+                                Color(0xFF489F2A),
+                              ],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
                         BoxShadow(
@@ -1082,9 +1091,10 @@ class _CartSummary extends StatelessWidget {
                           const SizedBox(width: 10),
                         ],
                         LocalizedText(
-                          disabledReason ?? (isCheckoutStarting
-                              ? 'Переходим...'
-                              : 'Оформить заказ'),
+                          disabledReason ??
+                              (isCheckoutStarting
+                                  ? 'Переходим...'
+                                  : 'Оформить заказ'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,

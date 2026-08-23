@@ -305,7 +305,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     if (result == CartAddResult.rejectedInvalidItem) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Не удалось добавить товар в корзину')),
+        const SnackBar(
+            content: LocalizedText('Не удалось добавить товар в корзину')),
       );
       return;
     }
