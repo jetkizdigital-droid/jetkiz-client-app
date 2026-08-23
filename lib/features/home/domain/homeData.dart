@@ -15,6 +15,7 @@
 library;
 
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 class HomePromo {
@@ -39,7 +40,10 @@ class HomePromo {
     );
   }
 
-  String get title => titleRu.isNotEmpty ? titleRu : titleKk;
+  String get title => LocalizedValue.select(
+        ru: titleRu,
+        kk: titleKk,
+      );
 
   String? get fullImageUrl => _resolveImageUrl(imageUrl);
 }
@@ -93,6 +97,7 @@ class HomeCategoryProductRestaurant {
     );
   }
 
+  /// Restaurant name is a brand/proper name, not translatable UI content.
   String get name => nameRu.isNotEmpty ? nameRu : nameKk;
 
   String get statusUpper => status.trim().toUpperCase();
@@ -165,7 +170,11 @@ class HomeCategoryProductData {
     );
   }
 
-  String get title => titleRu.isNotEmpty ? titleRu : titleKk;
+  String get title => LocalizedValue.select(
+        ru: titleRu,
+        kk: titleKk,
+        fallback: 'Товар',
+      );
 
   bool get isOrderable {
     return isAvailable && restaurant.isOpenForOrders;
@@ -246,7 +255,11 @@ class HomeCategoryData {
     );
   }
 
-  String get title => titleRu.isNotEmpty ? titleRu : titleKk;
+  String get title => LocalizedValue.select(
+        ru: titleRu,
+        kk: titleKk,
+        fallback: 'Без категории',
+      );
 
   String? get fullImageUrl => _resolveImageUrl(imageUrl);
 }
@@ -320,6 +333,7 @@ class HomeRestaurantData {
     );
   }
 
+  /// Restaurant name is a brand/proper name, not translatable UI content.
   String get name => nameRu.isNotEmpty ? nameRu : nameKk;
 
   String get statusUpper => status.trim().toUpperCase();
