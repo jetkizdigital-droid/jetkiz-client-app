@@ -890,7 +890,7 @@ class _OrderItemsBlock extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        '${item.lineTotal} в‚ё',
+                        '${item.lineTotal} ₸',
                         style: const TextStyle(
                           fontSize: 15,
                           color: _OrderDetailsPageState._textMain,
@@ -948,7 +948,7 @@ class _PriceSummaryBlock extends StatelessWidget {
           _PriceRow(
             title:
                 'Стоимость товаров',
-            value: '${order.subtotal} в‚ё',
+            value: '${order.subtotal} ₸',
           ),
           const SizedBox(height: 10),
           _PriceRow(
@@ -956,16 +956,16 @@ class _PriceSummaryBlock extends StatelessWidget {
                 ? 'Самовывоз'
                 : 'Доставка',
             value: order.isPickup
-                ? '0 в‚ё'
+                ? '0 ₸'
                 : order.deliveryFee == 0
                     ? 'Бесплатно'
-                    : '${order.deliveryFee} в‚ё',
+                    : '${order.deliveryFee} ₸',
           ),
           if (order.finalDiscount > 0) ...[
             const SizedBox(height: 10),
             _PriceRow(
               title: 'Скидка',
-              value: '-${order.finalDiscount} в‚ё',
+              value: '-${order.finalDiscount} ₸',
               valueColor: _OrderDetailsPageState._green,
               titleColor: _OrderDetailsPageState._green,
             ),
@@ -979,7 +979,7 @@ class _PriceSummaryBlock extends StatelessWidget {
           ),
           _PriceRow(
             title: 'Итого',
-            value: '${order.total} в‚ё',
+            value: '${order.total} ₸',
             isTotal: true,
           ),
         ],
