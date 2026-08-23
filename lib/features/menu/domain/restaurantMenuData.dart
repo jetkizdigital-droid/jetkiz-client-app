@@ -177,11 +177,7 @@ class RestaurantMenuData extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-        restaurant,
-        categories,
-        items,
-      ];
+  List<Object?> get props => [restaurant, categories, items];
 }
 
 class RestaurantMenuRestaurant extends Equatable {
@@ -197,6 +193,8 @@ class RestaurantMenuRestaurant extends Equatable {
     required this.slug,
     required this.isPickupEnabled,
     required this.pickupPreparationMinutes,
+    this.serverIsOpenNow,
+    this.serverCanAcceptOrders,
   });
 
   final String id;
@@ -210,6 +208,8 @@ class RestaurantMenuRestaurant extends Equatable {
   final String slug;
   final bool isPickupEnabled;
   final int? pickupPreparationMinutes;
+  final bool? serverIsOpenNow;
+  final bool? serverCanAcceptOrders;
 
   RestaurantAvailability get availability {
     return RestaurantAvailability(
@@ -217,6 +217,8 @@ class RestaurantMenuRestaurant extends Equatable {
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
       workingHours: workingHours,
+      serverIsOpenNow: serverIsOpenNow,
+      serverCanAcceptOrders: serverCanAcceptOrders,
     );
   }
 
@@ -251,9 +253,11 @@ class RestaurantMenuRestaurant extends Equatable {
       nameRu: _readString(json['nameRu'] ?? json['name']),
       nameKk: _readString(json['nameKk']),
       slug: _readString(json['slug']),
-      isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: true),
+      isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: false),
       pickupPreparationMinutes:
           _readNullableInt(json['pickupPreparationMinutes']),
+      serverIsOpenNow: _readNullableBool(json['isOpenNow']),
+      serverCanAcceptOrders: _readNullableBool(json['canAcceptOrders']),
     );
   }
 
@@ -270,6 +274,8 @@ class RestaurantMenuRestaurant extends Equatable {
         slug,
         isPickupEnabled,
         pickupPreparationMinutes,
+        serverIsOpenNow,
+        serverCanAcceptOrders,
       ];
 }
 
@@ -312,14 +318,7 @@ class RestaurantMenuCategory extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-        id,
-        code,
-        titleRu,
-        titleKk,
-        sortOrder,
-        iconUrl,
-      ];
+  List<Object?> get props => [id, code, titleRu, titleKk, sortOrder, iconUrl];
 }
 
 class RestaurantMenuItem extends Equatable {
@@ -511,12 +510,7 @@ class RestaurantMenuItemImage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-        id,
-        url,
-        isMain,
-        sortOrder,
-      ];
+  List<Object?> get props => [id, url, isMain, sortOrder];
 }
 
 class RestaurantMenuGroup extends Equatable {
@@ -535,10 +529,7 @@ class RestaurantMenuGroup extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-        category,
-        items,
-      ];
+  List<Object?> get props => [category, items];
 }
 
 Map<String, dynamic> _asMap(dynamic value) {
@@ -620,6 +611,17 @@ bool _readBool(dynamic value, {bool fallback = false}) {
   }
 
   return fallback;
+}
+
+bool? _readNullableBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+
+  final text = value.toString().trim().toLowerCase();
+  if (text == 'true' || text == '1' || text == 'yes') return true;
+  if (text == 'false' || text == '0' || text == 'no') return false;
+  return null;
 }
 
 String? normalizeUrl(dynamic value) {
