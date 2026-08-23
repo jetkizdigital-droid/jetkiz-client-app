@@ -18,7 +18,7 @@ class ReviewTextInputSection extends StatelessWidget {
         hintText: AppLocalizationScope.of(context)
             .strings
             .localize('Поделитесь впечатлениями...'),
-        border: OutlineInputBorder(),
+        border: const OutlineInputBorder(),
       ),
     );
   }
