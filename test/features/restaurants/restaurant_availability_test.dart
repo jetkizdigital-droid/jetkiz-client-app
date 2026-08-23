@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
+import 'package:jetkiz_mobile/features/restaurants/domain/restaurant.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 void main() {
@@ -124,6 +126,50 @@ void main() {
 
       expect(availability.isOpen, isTrue);
       expect(availability.canOrder, isTrue);
+    });
+
+    test('restaurant model consumes server availability and pickup contract', () {
+      final restaurant = Restaurant.fromJson({
+        'id': 'restaurant-1',
+        'number': 1,
+        'slug': 'restaurant-1',
+        'nameRu': 'Тест',
+        'nameKk': 'Тест',
+        'status': 'OPEN',
+        'isInApp': true,
+        'isAcceptingOrders': true,
+        'workingHours': '00:00 - 00:01',
+        'isOpenNow': false,
+        'canAcceptOrders': false,
+        'isPickupEnabled': true,
+      });
+
+      expect(restaurant.serverIsOpenNow, isFalse);
+      expect(restaurant.serverCanAcceptOrders, isFalse);
+      expect(restaurant.canOrder, isFalse);
+      expect(restaurant.isPickupEnabled, isTrue);
+    });
+
+    test('menu restaurant consumes the same server availability contract', () {
+      final menuRestaurant = RestaurantMenuRestaurant.fromJson({
+        'id': 'restaurant-1',
+        'number': 1,
+        'slug': 'restaurant-1',
+        'nameRu': 'Тест',
+        'nameKk': 'Тест',
+        'status': 'OPEN',
+        'isInApp': true,
+        'isAcceptingOrders': true,
+        'workingHours': '00:00 - 00:01',
+        'isOpenNow': true,
+        'canAcceptOrders': true,
+        'isPickupEnabled': true,
+      });
+
+      expect(menuRestaurant.serverIsOpenNow, isTrue);
+      expect(menuRestaurant.serverCanAcceptOrders, isTrue);
+      expect(menuRestaurant.canOrder, isTrue);
+      expect(menuRestaurant.isPickupEnabled, isTrue);
     });
   });
 }
