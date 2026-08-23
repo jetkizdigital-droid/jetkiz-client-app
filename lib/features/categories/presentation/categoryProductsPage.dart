@@ -95,6 +95,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       restaurantId: product.restaurant.id,
       restaurantName: product.restaurant.name,
       title: product.title,
+      titleRu: product.titleRu,
+      titleKk: product.titleKk,
       price: product.price,
       quantity: 1,
       imageUrl: product.fullImageUrl,
