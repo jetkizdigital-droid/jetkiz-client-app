@@ -402,26 +402,26 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _onItemTapped,
         backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFCFF4D1),
+        indicatorColor: const Color(0xFF489F2A),
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
+            selectedIcon: const Icon(Icons.home, color: Colors.white),
             label: strings.navHome,
           ),
           NavigationDestination(
             icon: const Icon(Icons.favorite_border),
-            selectedIcon: const Icon(Icons.favorite),
+            selectedIcon: const Icon(Icons.favorite, color: Colors.white),
             label: strings.navFavorites,
           ),
           NavigationDestination(
             icon: const Icon(Icons.shopping_cart_outlined),
-            selectedIcon: const Icon(Icons.shopping_cart),
+            selectedIcon: const Icon(Icons.shopping_cart, color: Colors.white),
             label: strings.navCart,
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
+            selectedIcon: const Icon(Icons.person, color: Colors.white),
             label: strings.navProfile,
           ),
         ],
