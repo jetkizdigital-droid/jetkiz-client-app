@@ -169,8 +169,8 @@ class _NotificationLeading extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = _pickIcon();
 
-    const backgroundColor = Color(0xFFEAF7E5);
-    const iconColor = Color(0xFF2E7D32);
+    const backgroundColor = Color(0xFF489F2A);
+    const iconColor = Colors.white;
 
     return Container(
       width: 42,
