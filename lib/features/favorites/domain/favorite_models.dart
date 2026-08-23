@@ -247,7 +247,7 @@ class FavoriteRestaurant {
       status: _readString(
         json,
         const ['status'],
-        fallbackValue: 'OPEN',
+        fallbackValue: 'CLOSED',
       ),
       isInApp: _readBool(
         json,
@@ -290,6 +290,7 @@ class FavoriteRestaurant {
       status: status,
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
+      workingHours: workingHours,
     );
   }
 

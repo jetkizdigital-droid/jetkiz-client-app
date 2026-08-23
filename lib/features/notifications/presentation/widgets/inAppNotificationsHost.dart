@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/notifications/data/notificationsApi.dart';
+import 'package:jetkiz_mobile/features/notifications/data/notificationsStateController.dart';
 import 'package:jetkiz_mobile/features/notifications/domain/notificationItem.dart';
 
 class InAppNotificationsHost extends StatefulWidget {
@@ -78,6 +80,12 @@ class _InAppNotificationsHostState extends State<InAppNotificationsHost>
   Future<void> _poll({bool silent = false}) async {
     if (_polling || !_isForeground) return;
 
+    if (!await AuthStorage().hasAccessToken()) {
+      _initialized = false;
+      _knownIds.clear();
+      return;
+    }
+
     _polling = true;
 
     try {
@@ -146,6 +154,7 @@ class _InAppNotificationsHostState extends State<InAppNotificationsHost>
                   if (!item.isRead) {
                     try {
                       await _api.markAsRead(item.id);
+                      NotificationsStateController.instance.markOneRead();
                     } catch (_) {
                       // silent
                     }
@@ -195,11 +204,9 @@ class _InAppNotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        isOrderNotification ? const Color(0xFF489F2A) : const Color(0xFFF59E0B);
+    const accent = Color(0xFF489F2A);
 
-    final softBg =
-        isOrderNotification ? const Color(0xFFEAF7E5) : const Color(0xFFFFF4DB);
+    const softBg = Color(0xFFEAF7E5);
 
     final actionText =
         isOrderNotification ? 'Открыть заказ' : 'Открыть уведомления';
@@ -249,7 +256,7 @@ class _InAppNotificationCard extends StatelessWidget {
                   children: [
                     Text(
                       categoryText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: accent,
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
@@ -294,7 +301,7 @@ class _InAppNotificationCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       actionText,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: accent,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

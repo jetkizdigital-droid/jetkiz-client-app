@@ -11,6 +11,8 @@
   - Do not use GET /restaurants for mobile client.
 */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/favorites/presentation/widgets/favoriteRestaurantButton.dart';
@@ -28,9 +30,6 @@ class RestaurantsPage extends StatefulWidget {
 class _RestaurantsPageState extends State<RestaurantsPage> {
   static const Color _green = Color(0xFF489F2A);
   static const Color _bg = Color(0xFFF7FAF5);
-  static const Color _text = Color(0xFF111827);
-  static const Color _muted = Color(0xFF6B7280);
-  static const Color _border = Color(0xFFE5E7EB);
 
   late final RestaurantsApi _restaurantsApi;
   final TextEditingController _searchController = TextEditingController();
@@ -40,6 +39,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
   List<Restaurant> _restaurants = const [];
   String _query = '';
+  Timer? _availabilityTimer;
 
   @override
   void initState() {
@@ -47,12 +47,19 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
     _restaurantsApi = RestaurantsApi(ApiClient());
     _searchController.addListener(_handleSearchChanged);
+    _availabilityTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _restaurants.isNotEmpty) setState(() {});
+      },
+    );
 
     _loadRestaurants();
   }
 
   @override
   void dispose() {
+    _availabilityTimer?.cancel();
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
@@ -245,14 +252,14 @@ class RestaurantCard extends StatelessWidget {
                     left: 12,
                     top: 12,
                     child: _StatusBadge(
-                      isOpen: restaurant.isOpen,
+                      isOpen: restaurant.canOrder,
                     ),
                   ),
                   Positioned(
                     top: 10,
                     right: 10,
                     child: Material(
-                      color: Colors.white.withOpacity(0.94),
+                      color: Colors.white.withValues(alpha: 0.94),
                       shape: const CircleBorder(),
                       elevation: 1,
                       child: FavoriteRestaurantButton(
@@ -506,13 +513,13 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isOpen ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final color = isOpen ? const Color(0xFF489F2A) : const Color(0xFFDC2626);
     final text = isOpen ? 'Открыто' : 'Закрыто';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.95),
+        color: color.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

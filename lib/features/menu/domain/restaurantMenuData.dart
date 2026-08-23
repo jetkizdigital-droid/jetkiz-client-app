@@ -191,6 +191,7 @@ class RestaurantMenuRestaurant extends Equatable {
     required this.status,
     required this.isInApp,
     required this.isAcceptingOrders,
+    this.workingHours,
     required this.nameRu,
     required this.nameKk,
     required this.slug,
@@ -203,6 +204,7 @@ class RestaurantMenuRestaurant extends Equatable {
   final String status;
   final bool isInApp;
   final bool isAcceptingOrders;
+  final String? workingHours;
   final String nameRu;
   final String nameKk;
   final String slug;
@@ -214,6 +216,7 @@ class RestaurantMenuRestaurant extends Equatable {
       status: status,
       isInApp: isInApp,
       isAcceptingOrders: isAcceptingOrders,
+      workingHours: workingHours,
     );
   }
 
@@ -244,6 +247,7 @@ class RestaurantMenuRestaurant extends Equatable {
         json['isAcceptingOrders'],
         fallback: false,
       ),
+      workingHours: _readNullableString(json['workingHours']),
       nameRu: _readString(json['nameRu'] ?? json['name']),
       nameKk: _readString(json['nameKk']),
       slug: _readString(json['slug']),
@@ -260,6 +264,7 @@ class RestaurantMenuRestaurant extends Equatable {
         status,
         isInApp,
         isAcceptingOrders,
+        workingHours,
         nameRu,
         nameKk,
         slug,

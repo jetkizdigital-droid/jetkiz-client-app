@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/firebase_options.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -30,6 +31,13 @@ class PushNotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
+  static const preferenceKey = 'jetkiz.notifications.enabled';
+
+  static Future<bool> isEnabled() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getBool(preferenceKey) ?? true;
+  }
+
   static const AndroidNotificationChannel _androidChannel =
       AndroidNotificationChannel(
     'jetkiz_default_channel',
@@ -43,6 +51,7 @@ class PushNotificationService {
   StreamSubscription<RemoteMessage>? _openedAppSubscription;
 
   Future<void> init() async {
+    if (!await isEnabled()) return;
     await _requestPermission();
     await _initLocalNotifications();
     await _listenTokenRefresh();
@@ -69,6 +78,7 @@ class PushNotificationService {
   }
 
   Future<void> registerCurrentToken() async {
+    if (!await isEnabled()) return;
     final accessToken = await _apiClient.getAccessToken();
 
     if (accessToken == null || accessToken.trim().isEmpty) {

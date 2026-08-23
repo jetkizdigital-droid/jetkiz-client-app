@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
+import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
@@ -111,11 +112,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
         _error = 'Не удалось загрузить меню ресторана';
       });
     } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -315,7 +312,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     return true;
   }
 
-  void _addFirst(RestaurantMenuItem item) {
+  Future<void> _addFirst(RestaurantMenuItem item) async {
     if (!_canAddItemToCart(item)) return;
 
     if (!item.canAddToCart) {
@@ -323,9 +320,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return;
     }
 
-    CartRepository.instance.addItem(
+    final result = await addItemWithRestaurantConfirmation(
+      context: context,
       productId: item.id,
       restaurantId: widget.restaurantId,
+      restaurantName:
+          widget.restaurantName ?? _menuData?.restaurant.displayName ?? '',
       title: item.title,
       price: item.price,
       quantity: 1,
@@ -334,11 +334,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       weight: item.weight,
     );
 
+    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     _safeTrackAddToCart(item);
     setState(() {});
   }
 
-  void _increment(RestaurantMenuItem item) {
+  Future<void> _increment(RestaurantMenuItem item) async {
     if (!_canAddItemToCart(item)) return;
 
     if (!item.canAddToCart) {
@@ -346,9 +347,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       return;
     }
 
-    CartRepository.instance.addItem(
+    final result = await addItemWithRestaurantConfirmation(
+      context: context,
       productId: item.id,
       restaurantId: widget.restaurantId,
+      restaurantName:
+          widget.restaurantName ?? _menuData?.restaurant.displayName ?? '',
       title: item.title,
       price: item.price,
       quantity: 1,
@@ -357,6 +361,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       weight: item.weight,
     );
 
+    if (!mounted || result == CartAddResult.rejectedDifferentRestaurant) return;
     _safeTrackAddToCart(item);
     setState(() {});
   }
@@ -1224,7 +1229,7 @@ class _ReviewsSummaryCard extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: const BoxDecoration(
-                color: Color(0xFF4CAF50),
+                color: Color(0xFF489F2A),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1385,7 +1390,7 @@ class _MenuCategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: isSelected ? const Color(0xFF4CAF50) : const Color(0xFFECECEC),
+      color: isSelected ? const Color(0xFF489F2A) : const Color(0xFFECECEC),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),

@@ -29,7 +29,7 @@ class _ReviewQuickReactionsSectionState
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: active ? Colors.green : Colors.grey[200],
+              color: active ? const Color(0xFF489F2A) : Colors.grey[200],
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(reactions[i]),

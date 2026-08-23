@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
 import 'package:jetkiz_mobile/features/profile/domain/updateProfileDto.dart';
 
@@ -64,12 +66,8 @@ class EditProfileSheet extends StatefulWidget {
 }
 
 class _EditProfileSheetState extends State<EditProfileSheet> {
-  static const _green = Color(0xFF4CAF50);
-  static const _fieldFill = Color(0xFFF9FAFB);
-  static const _fieldBorder = Color(0xFFE5E7EB);
+  static const _green = Color(0xFF489F2A);
   static const _titleColor = Color(0xFF1F2937);
-  static const _labelColor = Color(0xFF374151);
-  static const _hintColor = Color(0xFF9CA3AF);
 
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
@@ -79,6 +77,8 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
 
   bool _isSaving = false;
   String? _submitError;
+  bool get _kk =>
+      AppLocalizationScope.of(context).language == AppLanguage.kk;
 
   @override
   void initState() {
@@ -142,13 +142,13 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
   String? _validateFirstName(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) {
-      return 'Имя обязательно для заполнения';
+      return _kk ? 'Атыңызды енгізіңіз' : 'Имя обязательно для заполнения';
     }
     if (text.length < 2) {
-      return 'Имя слишком короткое';
+      return _kk ? 'Аты тым қысқа' : 'Имя слишком короткое';
     }
     if (text.length > 50) {
-      return 'Имя слишком длинное';
+      return _kk ? 'Аты тым ұзын' : 'Имя слишком длинное';
     }
     return null;
   }
@@ -157,7 +157,7 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
     if (text.length > 60) {
-      return 'Фамилия слишком длинная';
+      return _kk ? 'Тегі тым ұзын' : 'Фамилия слишком длинная';
     }
     return null;
   }
@@ -171,11 +171,11 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
     );
 
     if (!emailRegex.hasMatch(text)) {
-      return 'Введите корректный email';
+      return _kk ? 'Дұрыс email енгізіңіз' : 'Введите корректный email';
     }
 
     if (text.length > 120) {
-      return 'Email слишком длинный';
+      return _kk ? 'Email тым ұзын' : 'Email слишком длинный';
     }
 
     return null;
@@ -183,12 +183,17 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
 
   String _readError(Object error) {
     final text = error.toString().trim();
-    if (text.isEmpty) return 'Не удалось сохранить данные';
+    if (text.isEmpty) {
+      return _kk
+          ? 'Деректерді сақтау мүмкін болмады'
+          : 'Не удалось сохранить данные';
+    }
     return text;
   }
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
     return ConstrainedBox(
       constraints: const BoxConstraints(
         maxWidth: 420,
@@ -211,10 +216,10 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Мои данные',
-                    style: TextStyle(
+                    strings.profileMyData,
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: _titleColor,
@@ -240,26 +245,27 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
               key: _formKey,
               child: Column(
                 children: [
-                  const _FieldLabel(
-                    title: 'Имя',
+                  _FieldLabel(
+                    title: _kk ? 'Аты' : 'Имя',
                     required: true,
                   ),
                   const SizedBox(height: 8),
                   _FormTextField(
                     controller: _firstNameController,
-                    hintText: 'Введите ваше имя',
+                    hintText: _kk ? 'Атыңызды енгізіңіз' : 'Введите ваше имя',
                     textInputAction: TextInputAction.next,
                     validator: _validateFirstName,
                     enabled: !_isSaving,
                   ),
                   const SizedBox(height: 16),
-                  const _FieldLabel(
-                    title: 'Фамилия',
+                  _FieldLabel(
+                    title: _kk ? 'Тегі' : 'Фамилия',
                   ),
                   const SizedBox(height: 8),
                   _FormTextField(
                     controller: _lastNameController,
-                    hintText: 'Введите вашу фамилию',
+                    hintText:
+                        _kk ? 'Тегіңізді енгізіңіз' : 'Введите вашу фамилию',
                     textInputAction: TextInputAction.next,
                     validator: _validateLastName,
                     enabled: !_isSaving,
@@ -329,9 +335,9 @@ class _EditProfileSheetState extends State<EditProfileSheet> {
                           ),
                         ),
                       )
-                    : const Text(
-                        'Сохранить',
-                        style: TextStyle(
+                    : Text(
+                        _kk ? 'Сақтау' : 'Сохранить',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
@@ -436,7 +442,7 @@ class _FormTextField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(
-            color: Color(0xFF4CAF50),
+            color: Color(0xFF489F2A),
             width: 1.6,
           ),
         ),

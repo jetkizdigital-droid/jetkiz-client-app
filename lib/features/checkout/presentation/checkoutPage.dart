@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
@@ -129,6 +130,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cartState = _cartRepository.state;
 
     if (_isSubmitting || _orderPlaced) return;
+
+    // Never allow the temporary client-side payment stub to create a real
+    // unpaid order in a production build.
+    if (kReleaseMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Оплата временно недоступна'),
+        ),
+      );
+      return;
+    }
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -273,6 +285,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message)),
       );
+    } on CreateOrderException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (_) {
       if (!mounted) return;
 
@@ -403,7 +420,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             child: SafeArea(
               top: false,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 140),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
                 children: [
                   const _CheckoutSectionTitle(title: 'Способ получения'),
                   const SizedBox(height: 10),

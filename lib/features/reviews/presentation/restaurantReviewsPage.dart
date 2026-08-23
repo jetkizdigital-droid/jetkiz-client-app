@@ -22,7 +22,6 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
   late final RestaurantReviewsApi _api;
 
   bool _loading = true;
-  bool _refreshing = false;
   String? _error;
   RestaurantReviewPageData? _data;
 
@@ -34,11 +33,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
   }
 
   Future<void> _load({bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _refreshing = true;
-      });
-    } else {
+    if (!refresh) {
       setState(() {
         _loading = true;
         _error = null;
@@ -66,20 +61,8 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
         _error = 'Не удалось загрузить отзывы';
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _refreshing = false;
-      });
+      if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _onCreateReviewTap() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Экран создания отзыва подключим следующим шагом'),
-      ),
-    );
   }
 
   @override
@@ -112,12 +95,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
                               : ListView.separated(
                                   physics:
                                       const AlwaysScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.fromLTRB(
-                                    16,
-                                    16,
-                                    16,
-                                    120,
-                                  ),
+                                  padding: const EdgeInsets.all(16),
                                   itemCount: items.length,
                                   separatorBuilder: (_, __) =>
                                       const SizedBox(height: 14),
@@ -130,29 +108,6 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
                         ),
             ),
           ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: SizedBox(
-          height: 56,
-          child: ElevatedButton(
-            onPressed: _onCreateReviewTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            child: const Text('Оставить отзыв'),
-          ),
         ),
       ),
     );

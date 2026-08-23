@@ -58,6 +58,9 @@ class CartItem {
       status: restaurantStatus,
       isInApp: restaurantIsInApp,
       isAcceptingOrders: restaurantIsAcceptingOrders,
+      // Product sync does not contain a schedule. CartPage performs the
+      // authoritative schedule check through the public restaurant endpoint.
+      allowMissingWorkingHours: true,
     );
   }
 

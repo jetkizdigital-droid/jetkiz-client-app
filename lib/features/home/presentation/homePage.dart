@@ -35,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   String? _error;
   HomeData? _homeData;
+  Timer? _availabilityTimer;
 
   @override
   void initState() {
@@ -44,6 +45,12 @@ class _HomePageState extends State<HomePage> {
     _analyticsService = AnalyticsService(_apiClient);
 
     _addressRepository.addListener(_handleAddressChanged);
+    _availabilityTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (mounted && _homeData != null) setState(() {});
+      },
+    );
 
     unawaited(
       _analyticsService.trackScreenView(
@@ -58,6 +65,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _availabilityTimer?.cancel();
     _addressRepository.removeListener(_handleAddressChanged);
     super.dispose();
   }
@@ -478,19 +486,6 @@ class _PromoBanner extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.34),
-                  Colors.black.withValues(alpha: 0.14),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Align(
@@ -532,7 +527,7 @@ class _RestaurantsSectionHeader extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: const BoxDecoration(
-              color: Color(0xFF4FAF43),
+              color: Color(0xFF489F2A),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -674,6 +669,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
     final ratingText = restaurant.ratingAvg == 0
         ? '0,0'
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
+    final isOpen = restaurant.isOpenForOrders;
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -698,6 +694,21 @@ class _PinnedRestaurantCard extends StatelessWidget {
                           fit: BoxFit.cover,
                         )
                       : null,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isOpen ? const Color(0xFF489F2A) : const Color(0xFF6B7280),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  isOpen ? 'Открыто' : 'Закрыто',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                 ),
               ),
             ),
