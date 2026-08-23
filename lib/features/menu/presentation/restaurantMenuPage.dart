@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
+import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
@@ -31,11 +33,6 @@ class RestaurantMenuPage extends StatefulWidget {
   State<RestaurantMenuPage> createState() => _RestaurantMenuPageState();
 }
 
-enum _MenuLanguage {
-  ru,
-  kk,
-}
-
 class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   late final ApiClient _apiClient;
   late final RestaurantMenuApi _menuApi;
@@ -54,8 +51,9 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   String _searchQuery = '';
   String _selectedTabId = 'all';
 
-  final _MenuLanguage _menuLanguage = _MenuLanguage.ru;
   int _deliveryFee = 0;
+
+  AppLanguage get _menuLanguage => AppLocalizationScope.of(context).language;
 
   @override
   void initState() {
@@ -204,45 +202,45 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
 
   String _allTabTitle() {
     switch (_menuLanguage) {
-      case _MenuLanguage.ru:
+      case AppLanguage.ru:
         return 'Все';
-      case _MenuLanguage.kk:
+      case AppLanguage.kk:
         return 'Барлығы';
     }
   }
 
   String _searchHint() {
     switch (_menuLanguage) {
-      case _MenuLanguage.ru:
+      case AppLanguage.ru:
         return 'Поиск по меню...';
-      case _MenuLanguage.kk:
+      case AppLanguage.kk:
         return 'Мәзірден іздеу...';
     }
   }
 
   String _basketItemsLabel() {
     switch (_menuLanguage) {
-      case _MenuLanguage.ru:
+      case AppLanguage.ru:
         return 'В корзине';
-      case _MenuLanguage.kk:
+      case AppLanguage.kk:
         return 'Себетте';
     }
   }
 
   String _deliveryLabel() {
     switch (_menuLanguage) {
-      case _MenuLanguage.ru:
+      case AppLanguage.ru:
         return 'Доставка';
-      case _MenuLanguage.kk:
+      case AppLanguage.kk:
         return 'Жеткізу';
     }
   }
 
   String _nextButtonLabel() {
     switch (_menuLanguage) {
-      case _MenuLanguage.ru:
+      case AppLanguage.ru:
         return 'Далее';
-      case _MenuLanguage.kk:
+      case AppLanguage.kk:
         return 'Әрі қарай';
     }
   }
@@ -328,6 +326,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       restaurantName:
           widget.restaurantName ?? _menuData?.restaurant.displayName ?? '',
       title: item.title,
+      titleRu: item.titleRu,
+      titleKk: item.titleKk,
       price: item.price,
       quantity: 1,
       imageUrl: item.mainImageUrl,
@@ -355,6 +355,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       restaurantName:
           widget.restaurantName ?? _menuData?.restaurant.displayName ?? '',
       title: item.title,
+      titleRu: item.titleRu,
+      titleKk: item.titleKk,
       price: item.price,
       quantity: 1,
       imageUrl: item.mainImageUrl,
@@ -469,7 +471,9 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'tagline'),
           _readDynamicString(restaurant, 'shortDescription'),
         ]) ??
-        'Лучшие блюда с доставкой на дом';
+        (_menuLanguage == AppLanguage.kk
+            ? 'Үйге жеткізілетін таңдаулы тағамдар'
+            : 'Лучшие блюда с доставкой на дом');
   }
 
   String get _restaurantRatingText {
@@ -509,7 +513,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'fullAddress'),
           widget.restaurantAddress,
         ]) ??
-        'Адрес уточняется';
+        (_menuLanguage == AppLanguage.kk ? 'Мекенжай нақтылануда' : 'Адрес уточняется');
   }
 
   int get _reviewsCount => _reviewsData?.total ?? 0;
