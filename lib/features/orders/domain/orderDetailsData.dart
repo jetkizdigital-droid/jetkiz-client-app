@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 
 class OrderDetailsData {
   const OrderDetailsData({
@@ -158,6 +159,14 @@ class OrderDetailsRestaurant {
   final String? coverImageUrl;
   final String? status;
 
+  /// Restaurant name is a brand/proper name and is not translated by locale.
+  String get displayName {
+    final primary = nameRu.trim();
+    if (primary.isNotEmpty) return primary;
+    final fallback = nameKk?.trim() ?? '';
+    return fallback.isNotEmpty ? fallback : 'Ресторан';
+  }
+
   String? get resolvedCoverImageUrl {
     final raw = (coverImageUrl ?? '').trim();
     if (raw.isEmpty) return null;
@@ -211,11 +220,15 @@ class OrderDetailsAddress {
   final String? comment;
 
   String get formatted {
+    final isKk = LocalizedValue.language.name == 'kk';
     final parts = <String>[
       address,
-      if ((entrance ?? '').trim().isNotEmpty) 'Подъезд: $entrance',
-      if ((floor ?? '').trim().isNotEmpty) 'Этаж: $floor',
-      if ((door ?? '').trim().isNotEmpty) 'Кв/офис: $door',
+      if ((entrance ?? '').trim().isNotEmpty)
+        '${isKk ? 'Кіреберіс' : 'Подъезд'}: $entrance',
+      if ((floor ?? '').trim().isNotEmpty)
+        '${isKk ? 'Қабат' : 'Этаж'}: $floor',
+      if ((door ?? '').trim().isNotEmpty)
+        '${isKk ? 'Пәтер/кеңсе' : 'Кв/офис'}: $door',
     ];
     return parts.join(', ');
   }
@@ -244,24 +257,37 @@ class OrderDetailsItem {
   const OrderDetailsItem({
     required this.id,
     required this.productId,
-    required this.title,
+    String? title,
+    this.titleRu = '',
+    this.titleKk = '',
     required this.price,
     required this.quantity,
-  });
+  }) : _legacyTitle = title ?? '';
 
   final String id;
   final String productId;
-  final String title;
+  final String titleRu;
+  final String titleKk;
+  final String _legacyTitle;
   final int price;
   final int quantity;
+
+  String get title => LocalizedValue.select(
+        ru: titleRu.isNotEmpty ? titleRu : _legacyTitle,
+        kk: titleKk,
+        fallback: _legacyTitle,
+      );
 
   int get lineTotal => price * quantity;
 
   factory OrderDetailsItem.fromJson(Map<String, dynamic> json) {
+    final legacyTitle = (json['title'] ?? '').toString();
     return OrderDetailsItem(
       id: (json['id'] ?? '').toString(),
       productId: (json['productId'] ?? '').toString(),
-      title: (json['title'] ?? '').toString(),
+      title: legacyTitle,
+      titleRu: (json['titleRu'] ?? legacyTitle).toString(),
+      titleKk: (json['titleKk'] ?? '').toString(),
       price: _parseInt(json['price']),
       quantity: _parseInt(json['quantity']),
     );
