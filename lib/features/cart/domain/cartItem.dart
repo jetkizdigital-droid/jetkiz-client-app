@@ -1,3 +1,4 @@
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 enum CartItemSyncState {
@@ -6,23 +7,15 @@ enum CartItemSyncState {
   notFound,
 }
 
-/// JETKIZ MOBILE CONTEXT:
-/// CartItem — локальная модель корзины для mobile cart feature.
-/// На текущем этапе backend endpoint корзины / checkout не подтвержден,
-/// поэтому cart state хранится локально в приложении.
-/// Источники данных для добавления товара в корзину:
-/// - ProductDetailsPage
-/// - в будущем CategoryProductsPage / RestaurantMenuPage
-///
-/// Важно:
-/// - productId приходит из реального backend как UUID string
-/// - restaurantId нужен для будущего правила "одна корзина = один ресторан"
-/// - imageUrl уже должен быть полным URL или нормализован заранее моделью продукта
+/// Local cart snapshot. Product title keeps both backend languages so changing
+/// the app language does not require rebuilding the cart or re-adding items.
 class CartItem {
   const CartItem({
     required this.productId,
     required this.restaurantId,
-    required this.title,
+    String? title,
+    this.titleRu = '',
+    this.titleKk = '',
     required this.price,
     required this.quantity,
     this.imageUrl,
@@ -32,11 +25,13 @@ class CartItem {
     this.restaurantStatus = 'OPEN',
     this.restaurantIsInApp = true,
     this.restaurantIsAcceptingOrders = true,
-  });
+  }) : _legacyTitle = title ?? '';
 
   final String productId;
   final String restaurantId;
-  final String title;
+  final String titleRu;
+  final String titleKk;
+  final String _legacyTitle;
   final int price;
   final int quantity;
   final String? imageUrl;
@@ -46,6 +41,14 @@ class CartItem {
   final String restaurantStatus;
   final bool restaurantIsInApp;
   final bool restaurantIsAcceptingOrders;
+
+  String get title => LocalizedValue.select(
+        ru: titleRu.isNotEmpty ? titleRu : _legacyTitle,
+        kk: titleKk,
+        fallback: _legacyTitle.isNotEmpty
+            ? _legacyTitle
+            : (LocalizedValue.language.name == 'kk' ? 'Тауар' : 'Товар'),
+      );
 
   int get totalPrice => price * quantity;
 
@@ -94,6 +97,8 @@ class CartItem {
     String? productId,
     String? restaurantId,
     String? title,
+    String? titleRu,
+    String? titleKk,
     int? price,
     int? quantity,
     String? imageUrl,
@@ -107,7 +112,9 @@ class CartItem {
     return CartItem(
       productId: productId ?? this.productId,
       restaurantId: restaurantId ?? this.restaurantId,
-      title: title ?? this.title,
+      title: title ?? _legacyTitle,
+      titleRu: titleRu ?? this.titleRu,
+      titleKk: titleKk ?? this.titleKk,
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
       imageUrl: imageUrl ?? this.imageUrl,
@@ -122,10 +129,13 @@ class CartItem {
   }
 
   Map<String, dynamic> toJson() {
+    final stableLegacyTitle = titleRu.trim().isNotEmpty ? titleRu : _legacyTitle;
     return {
       'productId': productId,
       'restaurantId': restaurantId,
-      'title': title,
+      'title': stableLegacyTitle,
+      'titleRu': titleRu,
+      'titleKk': titleKk,
       'price': price,
       'quantity': quantity,
       'imageUrl': imageUrl,
@@ -139,10 +149,13 @@ class CartItem {
   }
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
+    final legacyTitle = _readString(json['title'], fallback: 'Товар');
     return CartItem(
       productId: _readString(json['productId']),
       restaurantId: _readString(json['restaurantId']),
-      title: _readString(json['title'], fallback: 'Товар'),
+      title: legacyTitle,
+      titleRu: _readString(json['titleRu'], fallback: legacyTitle),
+      titleKk: _readString(json['titleKk']),
       price: _readInt(json['price']),
       quantity: _readInt(json['quantity'], fallback: 1),
       imageUrl: _readNullableString(json['imageUrl']),
