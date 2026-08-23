@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/smsCodePage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// PhoneLoginPage
 ///
@@ -41,6 +42,16 @@ class PhoneLoginPage extends StatefulWidget {
 
 class _PhoneLoginPageState extends State<PhoneLoginPage> {
   final TextEditingController _phoneController = TextEditingController();
+
+  static final Uri _legalDocumentsUri =
+      Uri.parse('https://jetkiz.asia/privacy');
+
+  Future<void> _openLegalDocuments() async {
+    await launchUrl(
+      _legalDocumentsUri,
+      mode: LaunchMode.externalApplication,
+    );
+  }
 
   late final AuthApi _authApi;
 
@@ -280,14 +291,56 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'Настоящим я подтверждаю своё согласие с условиями Пользовательского соглашения, а также с Политикой конфиденциальности и даю согласие на сбор и обработку персональных данных.',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      height: 1.35,
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        height: 1.35,
+                      ),
+                      children: [
+                        const TextSpan(
+                          text: 'Настоящим я подтверждаю своё согласие с условиями ',
+                        ),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: _openLegalDocuments,
+                            child: const Text(
+                              'Пользовательского соглашения',
+                              style: TextStyle(
+                                color: Color(0xFF1565C0),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const TextSpan(text: ', а также с '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: _openLegalDocuments,
+                            child: const Text(
+                              'Политикой конфиденциальности',
+                              style: TextStyle(
+                                color: Color(0xFF1565C0),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const TextSpan(
+                          text: ' и даю согласие на сбор и обработку персональных данных.',
+                        ),
+                      ],
                     ),
                   ),
                 ),
