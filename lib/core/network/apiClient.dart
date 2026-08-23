@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
@@ -139,7 +140,7 @@ class ApiClient {
   void setLocale(String locale) {
     final normalized = locale.trim().toLowerCase();
     _locale = normalized == 'kk' ? 'kk' : 'ru';
-    _persistLocalePreference();
+    unawaited(_persistLocalePreference());
   }
 
   Future<void> init() async {
@@ -174,7 +175,7 @@ class ApiClient {
       accessToken.trim(),
       refreshToken.trim(),
     );
-    await _persistLocalePreference();
+    unawaited(_persistLocalePreference());
   }
 
   Future<void> loadTokensFromStorage() async {
