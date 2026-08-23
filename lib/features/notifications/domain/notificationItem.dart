@@ -1,3 +1,5 @@
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
+
 class NotificationItem {
   const NotificationItem({
     required this.id,
@@ -20,6 +22,7 @@ class NotificationItem {
   final Map<String, dynamic>? data;
 
   String? get orderId => data?['orderId']?.toString();
+
   int? get orderNumber {
     final raw = data?['orderNumber'];
     if (raw is int) return raw;
@@ -28,6 +31,118 @@ class NotificationItem {
   }
 
   String? get status => data?['status']?.toString();
+
+  String get displayTitle {
+    final ru = _localizedDataString('titleRu') ?? title;
+    final kk = _localizedDataString('titleKk') ?? _legacyKkTitle();
+    return LocalizedValue.select(ru: ru, kk: kk, fallback: ru);
+  }
+
+  String get displayBody {
+    final ru = _localizedDataString('bodyRu') ?? body;
+    final kk = _localizedDataString('bodyKk') ?? _legacyKkBody();
+    return LocalizedValue.select(ru: ru, kk: kk, fallback: ru);
+  }
+
+  String? _localizedDataString(String key) {
+    final value = data?[key]?.toString().trim() ?? '';
+    return value.isEmpty ? null : value;
+  }
+
+  String? _legacyKkTitle() {
+    final normalizedStatus = status?.trim().toUpperCase() ?? '';
+    final normalizedType = type.trim().toUpperCase();
+
+    switch (normalizedStatus) {
+      case 'CREATED':
+        return 'Тапсырыс жасалды';
+      case 'ACCEPTED':
+        return 'Тапсырыс қабылданды';
+      case 'COOKING':
+        return 'Дайындалып жатыр';
+      case 'READY':
+        return 'Дайын';
+      case 'ON_THE_WAY':
+        return 'Жолда';
+      case 'DELIVERED':
+        return 'Жеткізілді';
+      case 'REJECTED':
+        return 'Қабылданбады';
+      case 'CANCELED':
+      case 'CANCELLED':
+        return 'Тоқтатылды';
+    }
+
+    switch (normalizedType) {
+      case 'ORDER_CREATED':
+        return 'Тапсырыс жасалды';
+      case 'ORDER_ACCEPTED':
+        return 'Тапсырыс қабылданды';
+      case 'ORDER_COOKING':
+        return 'Дайындалып жатыр';
+      case 'ORDER_READY':
+        return 'Дайын';
+      case 'ORDER_ON_THE_WAY':
+        return 'Жолда';
+      case 'ORDER_DELIVERED':
+        return 'Жеткізілді';
+      case 'ORDER_CANCELED':
+      case 'ORDER_CANCELLED':
+        return 'Тоқтатылды';
+      default:
+        return null;
+    }
+  }
+
+  String? _legacyKkBody() {
+    final number = orderNumber;
+    if (number == null) {
+      return null;
+    }
+
+    final normalizedStatus = status?.trim().toUpperCase() ?? '';
+    final normalizedType = type.trim().toUpperCase();
+
+    switch (normalizedStatus) {
+      case 'CREATED':
+        return '№$number тапсырыс жасалды';
+      case 'ACCEPTED':
+        return 'Мейрамхана №$number тапсырысты қабылдады';
+      case 'COOKING':
+        return '№$number тапсырыс дайындалып жатыр';
+      case 'READY':
+        return '№$number тапсырыс дайын';
+      case 'ON_THE_WAY':
+        return 'Курьер №$number тапсырысты жеткізіп келеді';
+      case 'DELIVERED':
+        return '№$number тапсырыс жеткізілді';
+      case 'REJECTED':
+        return 'Мейрамхана №$number тапсырысты қабылдамады';
+      case 'CANCELED':
+      case 'CANCELLED':
+        return '№$number тапсырыс тоқтатылды';
+    }
+
+    switch (normalizedType) {
+      case 'ORDER_CREATED':
+        return '№$number тапсырыс жасалды';
+      case 'ORDER_ACCEPTED':
+        return 'Мейрамхана №$number тапсырысты қабылдады';
+      case 'ORDER_COOKING':
+        return '№$number тапсырыс дайындалып жатыр';
+      case 'ORDER_READY':
+        return '№$number тапсырыс дайын';
+      case 'ORDER_ON_THE_WAY':
+        return 'Курьер №$number тапсырысты жеткізіп келеді';
+      case 'ORDER_DELIVERED':
+        return '№$number тапсырыс жеткізілді';
+      case 'ORDER_CANCELED':
+      case 'ORDER_CANCELLED':
+        return '№$number тапсырыс тоқтатылды';
+      default:
+        return null;
+    }
+  }
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
