@@ -1,3 +1,5 @@
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
+
 class OrderHistoryItem {
   const OrderHistoryItem({
     required this.id,
@@ -149,6 +151,7 @@ class OrderHistoryRestaurant {
   final int? ratingCount;
   final String? status;
 
+  /// Restaurant name is a brand/proper name and is not translated by locale.
   String get displayName {
     final name = nameRu.trim();
     return name.isEmpty ? 'Ресторан' : name;
@@ -193,16 +196,29 @@ class OrderHistoryRestaurant {
 
 class OrderPreviewItem {
   const OrderPreviewItem({
-    required this.title,
+    String? title,
+    this.titleRu = '',
+    this.titleKk = '',
     required this.quantity,
-  });
+  }) : _legacyTitle = title ?? '';
 
-  final String title;
+  final String titleRu;
+  final String titleKk;
+  final String _legacyTitle;
   final int quantity;
 
+  String get title => LocalizedValue.select(
+        ru: titleRu.isNotEmpty ? titleRu : _legacyTitle,
+        kk: titleKk,
+        fallback: _legacyTitle,
+      );
+
   factory OrderPreviewItem.fromJson(Map<String, dynamic> json) {
+    final legacyTitle = (json['title'] ?? '').toString();
     return OrderPreviewItem(
-      title: (json['title'] ?? '').toString(),
+      title: legacyTitle,
+      titleRu: (json['titleRu'] ?? legacyTitle).toString(),
+      titleKk: (json['titleKk'] ?? '').toString(),
       quantity: _parseInt(json['quantity']),
     );
   }
