@@ -206,7 +206,7 @@ class _InAppNotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     const accent = Color(0xFF489F2A);
 
-    const softBg = Color(0xFFEAF7E5);
+    const softBg = Color(0xFF489F2A);
 
     final actionText =
         isOrderNotification ? 'Открыть заказ' : 'Открыть уведомления';
@@ -245,7 +245,7 @@ class _InAppNotificationCard extends StatelessWidget {
                 ),
                 child: Icon(
                   _pickIcon(),
-                  color: accent,
+                  color: Colors.white,
                   size: 22,
                 ),
               ),
