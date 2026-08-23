@@ -7,6 +7,7 @@ import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderDetailsData.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderHistoryItem.dart';
+import 'package:jetkiz_mobile/features/search/domain/searchResult.dart';
 
 void main() {
   tearDown(() {
@@ -61,6 +62,30 @@ void main() {
     expect(item.categoryTitle, 'Ыстық тағамдар');
   });
 
+  test('restaurant keeps brand name but localizes description', () {
+    final restaurant = RestaurantMenuRestaurant.fromJson({
+      'id': 'restaurant-1',
+      'number': 1,
+      'status': 'OPEN',
+      'isInApp': true,
+      'isAcceptingOrders': true,
+      'nameRu': 'JET CAFE',
+      'nameKk': 'JET CAFE',
+      'slug': 'jet-cafe',
+      'isPickupEnabled': true,
+      'descriptionRu': 'Домашняя кухня',
+      'descriptionKk': 'Үй тағамдары',
+    });
+
+    LocalizedValue.setLanguage(AppLanguage.ru);
+    expect(restaurant.displayName, 'JET CAFE');
+    expect(restaurant.description, 'Домашняя кухня');
+
+    LocalizedValue.setLanguage(AppLanguage.kk);
+    expect(restaurant.displayName, 'JET CAFE');
+    expect(restaurant.description, 'Үй тағамдары');
+  });
+
   test('home category and product switch language', () {
     final category = HomeCategoryData.fromJson({
       'id': 'category-1',
@@ -92,6 +117,48 @@ void main() {
     expect(category.title, 'Сусындар');
     expect(product.title, 'Шай');
     expect(product.restaurant.name, 'JET CAFE');
+  });
+
+  test('search product and category switch language while brand stays fixed', () {
+    final result = SearchResult.fromJson({
+      'restaurants': [
+        {
+          'id': 'restaurant-1',
+          'name': 'JET CAFE',
+          'nameRu': 'JET CAFE',
+          'nameKk': 'JET CAFE',
+          'ratingAvg': 5,
+        },
+      ],
+      'products': [
+        {
+          'id': 'product-1',
+          'titleRu': 'Куриный плов',
+          'titleKk': 'Тауық еті қосылған палау',
+          'price': 1800,
+          'restaurantId': 'restaurant-1',
+          'restaurantName': 'JET CAFE',
+          'category': {
+            'id': 'category-1',
+            'titleRu': 'Горячие блюда',
+            'titleKk': 'Ыстық тағамдар',
+          },
+        },
+      ],
+    });
+
+    final restaurant = result.restaurants.single;
+    final product = result.products.single;
+
+    LocalizedValue.setLanguage(AppLanguage.ru);
+    expect(restaurant.name, 'JET CAFE');
+    expect(product.title, 'Куриный плов');
+    expect(product.categoryTitle, 'Горячие блюда');
+
+    LocalizedValue.setLanguage(AppLanguage.kk);
+    expect(restaurant.name, 'JET CAFE');
+    expect(product.title, 'Тауық еті қосылған палау');
+    expect(product.categoryTitle, 'Ыстық тағамдар');
   });
 
   test('favorites preserve restaurant brand and localize dish/category', () {
