@@ -139,6 +139,7 @@ class ApiClient {
   void setLocale(String locale) {
     final normalized = locale.trim().toLowerCase();
     _locale = normalized == 'kk' ? 'kk' : 'ru';
+    _persistLocalePreference();
   }
 
   Future<void> init() async {
@@ -173,6 +174,7 @@ class ApiClient {
       accessToken.trim(),
       refreshToken.trim(),
     );
+    await _persistLocalePreference();
   }
 
   Future<void> loadTokensFromStorage() async {
@@ -213,6 +215,23 @@ class ApiClient {
 
   Future<void> clearAccessToken() async {
     await clearTokens();
+  }
+
+  Future<void> _persistLocalePreference() async {
+    try {
+      final token = _accessToken ?? await _authStorage.getAccessToken();
+      if (token == null || token.trim().isEmpty) {
+        return;
+      }
+
+      await _dio.patch(
+        '/client-settings/me',
+        data: {'language': _locale},
+      );
+    } catch (_) {
+      // Locale is also persisted locally and sent with every API request.
+      // A failed preference sync must never block navigation or authentication.
+    }
   }
 
   Future<bool> _tryRefreshToken() async {
