@@ -63,7 +63,7 @@ void main() {
   });
 
   test('restaurant keeps brand name but localizes description', () {
-    final restaurant = RestaurantMenuRestaurant.fromJson({
+    final restaurant = RestaurantMenuRestaurant.fromJson(const {
       'id': 'restaurant-1',
       'number': 1,
       'status': 'OPEN',
