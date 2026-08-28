@@ -80,6 +80,7 @@ class CreateOrderPayload {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{
       'restaurantId': restaurantId.trim(),
+      'paymentMethod': 'CARD',
       'fulfillmentType': fulfillmentType.wireName,
       'leaveAtDoor':
           fulfillmentType == OrderFulfillmentType.pickup ? false : leaveAtDoor,
