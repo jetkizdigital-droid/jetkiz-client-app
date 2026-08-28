@@ -130,7 +130,7 @@ void main() {
 
     test('restaurant model consumes server availability and pickup contract',
         () {
-      final restaurant = Restaurant.fromJson({
+      final restaurant = Restaurant.fromJson(const {
         'id': 'restaurant-1',
         'number': 1,
         'slug': 'restaurant-1',
@@ -152,7 +152,7 @@ void main() {
     });
 
     test('menu restaurant consumes the same server availability contract', () {
-      final menuRestaurant = RestaurantMenuRestaurant.fromJson({
+      final menuRestaurant = RestaurantMenuRestaurant.fromJson(const {
         'id': 'restaurant-1',
         'number': 1,
         'slug': 'restaurant-1',
