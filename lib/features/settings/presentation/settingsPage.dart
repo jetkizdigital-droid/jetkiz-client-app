@@ -12,6 +12,8 @@ import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentMethodsPage.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
 import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
 
 /// SettingsPage
@@ -83,6 +85,12 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _openPaymentMethods() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const PaymentMethodsPage()),
+    );
+  }
+
   Future<void> _confirmAndDeleteAccount() async {
     if (_isDeletingAccount) return;
 
@@ -150,6 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final scope = AppLocalizationScope.of(context);
     final strings = scope.strings;
     final language = scope.language;
+    final paymentStrings = PaymentStrings.of(context);
 
     return Scaffold(
       backgroundColor: _background,
@@ -235,6 +244,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 10),
+            _tile(
+              child: Row(
+                children: [
+                  _icon(Icons.credit_card_rounded),
+                  const SizedBox(width: 14),
+                  Expanded(child: Text(paymentStrings.paymentMethods)),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
+              onTap: _openPaymentMethods,
             ),
             const SizedBox(height: 24),
             _tile(
