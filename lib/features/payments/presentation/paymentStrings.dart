@@ -31,7 +31,8 @@ class PaymentStrings {
       ? 'Функция төлем провайдері қосылғаннан кейін қолжетімді болады'
       : 'Функция станет доступна после подключения платёжного провайдера';
   String get deleteCard => _kk ? 'Картаны жою' : 'Удалить карту';
-  String get deleteCardQuestion => _kk ? 'Картаны жою керек пе?' : 'Удалить карту?';
+  String get deleteCardQuestion =>
+      _kk ? 'Картаны жою керек пе?' : 'Удалить карту?';
   String deleteCardDescription(String cardLabel) => _kk
       ? '$cardLabel төлем тәсілдерінен жойылады.'
       : '$cardLabel будет удалена из способов оплаты.';

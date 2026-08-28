@@ -475,7 +475,9 @@ class FavoriteProductCategory {
         kk: titleKk,
         fallback: _legacyTitle.isNotEmpty
             ? _legacyTitle
-            : (LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории'),
+            : (LocalizedValue.language.name == 'kk'
+                ? 'Санатсыз'
+                : 'Без категории'),
       );
 
   factory FavoriteProductCategory.fromJson(Map<String, dynamic> json) {

@@ -119,7 +119,8 @@ void main() {
     expect(product.restaurant.name, 'JET CAFE');
   });
 
-  test('search product and category switch language while brand stays fixed', () {
+  test('search product and category switch language while brand stays fixed',
+      () {
     final result = SearchResult.fromJson({
       'restaurants': [
         {
@@ -250,7 +251,8 @@ void main() {
     expect(detail.title, 'Палау');
   });
 
-  test('old order without Kazakh snapshot falls back to exact legacy title', () {
+  test('old order without Kazakh snapshot falls back to exact legacy title',
+      () {
     final oldItem = OrderDetailsItem.fromJson({
       'id': 'old-item',
       'productId': 'product-old',

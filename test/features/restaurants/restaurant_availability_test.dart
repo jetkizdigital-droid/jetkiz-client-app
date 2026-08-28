@@ -128,7 +128,8 @@ void main() {
       expect(availability.canOrder, isTrue);
     });
 
-    test('restaurant model consumes server availability and pickup contract', () {
+    test('restaurant model consumes server availability and pickup contract',
+        () {
       final restaurant = Restaurant.fromJson({
         'id': 'restaurant-1',
         'number': 1,

@@ -225,8 +225,7 @@ class OrderDetailsAddress {
       address,
       if ((entrance ?? '').trim().isNotEmpty)
         '${isKk ? 'Кіреберіс' : 'Подъезд'}: $entrance',
-      if ((floor ?? '').trim().isNotEmpty)
-        '${isKk ? 'Қабат' : 'Этаж'}: $floor',
+      if ((floor ?? '').trim().isNotEmpty) '${isKk ? 'Қабат' : 'Этаж'}: $floor',
       if ((door ?? '').trim().isNotEmpty)
         '${isKk ? 'Пәтер/кеңсе' : 'Кв/офис'}: $door',
     ];

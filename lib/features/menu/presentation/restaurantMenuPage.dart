@@ -513,7 +513,9 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
           _readDynamicString(restaurant, 'fullAddress'),
           widget.restaurantAddress,
         ]) ??
-        (_menuLanguage == AppLanguage.kk ? 'Мекенжай нақтылануда' : 'Адрес уточняется');
+        (_menuLanguage == AppLanguage.kk
+            ? 'Мекенжай нақтылануда'
+            : 'Адрес уточняется');
   }
 
   int get _reviewsCount => _reviewsData?.total ?? 0;

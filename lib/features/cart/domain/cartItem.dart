@@ -129,7 +129,8 @@ class CartItem {
   }
 
   Map<String, dynamic> toJson() {
-    final stableLegacyTitle = titleRu.trim().isNotEmpty ? titleRu : _legacyTitle;
+    final stableLegacyTitle =
+        titleRu.trim().isNotEmpty ? titleRu : _legacyTitle;
     return {
       'productId': productId,
       'restaurantId': restaurantId,

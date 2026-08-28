@@ -189,8 +189,10 @@ class CartRepository extends ChangeNotifier {
       }
 
       nextItems[existingIndex] = existing.copyWith(
-        titleRu: normalizedTitleRu.isEmpty ? existing.titleRu : normalizedTitleRu,
-        titleKk: normalizedTitleKk.isEmpty ? existing.titleKk : normalizedTitleKk,
+        titleRu:
+            normalizedTitleRu.isEmpty ? existing.titleRu : normalizedTitleRu,
+        titleKk:
+            normalizedTitleKk.isEmpty ? existing.titleKk : normalizedTitleKk,
         quantity: existing.quantity + quantity,
         imageUrl: _normalizeOptional(imageUrl) ?? existing.imageUrl,
         description: _normalizeOptional(description) ?? existing.description,
