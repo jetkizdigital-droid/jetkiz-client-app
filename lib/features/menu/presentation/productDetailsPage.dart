@@ -13,7 +13,8 @@ import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 /// Product details page.
 ///
 /// Current source of truth:
-/// - canonical product is loaded from backend when restaurantId is available
+/// - canonical product and restaurant availability are loaded from backend when
+///   restaurantId is available
 /// - preview product is used for instant first render / fallback
 ///
 /// Confirmed backend-supported product fields:
@@ -31,11 +32,9 @@ import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 /// - product can contain up to 10 photos
 /// - gallery must use images[] first
 /// - if images[] is empty, fallback to imageUrl
-/// - later this page should become the single reusable product screen for:
-///   HomePage -> category products -> product
-///   RestaurantMenuPage -> product
-/// - add-to-cart now goes through shared CartRepository
-/// - checkout/order backend contract is still a separate next step
+/// - product orderability must include restaurant availability; product
+///   isAvailable alone is not sufficient
+/// - add-to-cart goes through shared CartRepository
 class ProductDetailsPage extends StatefulWidget {
   const ProductDetailsPage({
     super.key,
@@ -67,6 +66,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
   late RestaurantMenuItem _product;
   bool _isLoadingCanonical = false;
+  bool _restaurantCanOrder = false;
+  String _restaurantAvailabilityReason = '';
   String? _canonicalLoadError;
 
   @override
@@ -74,6 +75,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     super.initState();
     _pageController = PageController();
     _product = widget.product;
+    _restaurantCanOrder = !_canFetchCanonical;
     _favorites.addListener(_handleFavoritesChanged);
     _favorites.initialize();
     _loadCanonicalProductIfNeeded();
@@ -91,6 +93,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       _product = widget.product;
       _selectedImageIndex = 0;
       _quantity = 1;
+      _restaurantCanOrder = !_canFetchCanonical;
+      _restaurantAvailabilityReason = '';
 
       if (_pageController.hasClients) {
         _pageController.jumpToPage(0);
@@ -114,6 +118,26 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   bool get _canFetchCanonical {
     final restaurantId = widget.restaurantId?.trim();
     return restaurantId != null && restaurantId.isNotEmpty;
+  }
+
+  bool get _canOrderProduct {
+    return _product.canAddToCart && _restaurantCanOrder;
+  }
+
+  String get _availabilityText {
+    if (!_product.canAddToCart) {
+      return 'Товар сейчас недоступен';
+    }
+
+    if (!_restaurantCanOrder) {
+      final reason = _restaurantAvailabilityReason.trim();
+      if (reason.isNotEmpty) return reason;
+      return _isLoadingCanonical
+          ? 'Проверяем доступность ресторана'
+          : 'Ресторан сейчас не принимает заказы';
+    }
+
+    return 'Доступно к заказу';
   }
 
   String? get _resolvedRestaurantId {
@@ -142,6 +166,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       if (mounted) {
         setState(() {
           _isLoadingCanonical = false;
+          _restaurantCanOrder = true;
+          _restaurantAvailabilityReason = '';
           _canonicalLoadError = null;
         });
       }
@@ -150,6 +176,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
     setState(() {
       _isLoadingCanonical = true;
+      _restaurantCanOrder = false;
+      _restaurantAvailabilityReason = 'Проверяем доступность ресторана';
       _canonicalLoadError = null;
     });
 
@@ -171,6 +199,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           jsonDecode(response.body) as Map<String, dynamic>;
 
       final menuData = RestaurantMenuData.fromJson(json);
+      final availability = menuData.restaurant.availability;
 
       final RestaurantMenuItem loadedProduct = menuData.items.firstWhere(
         (item) => item.id == widget.product.id,
@@ -180,6 +209,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
       setState(() {
         _product = loadedProduct;
+        _restaurantCanOrder = availability.canOrder;
+        _restaurantAvailabilityReason = availability.reason;
         _isLoadingCanonical = false;
         _canonicalLoadError = null;
         _selectedImageIndex = 0;
@@ -193,6 +224,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
       setState(() {
         _isLoadingCanonical = false;
+        _restaurantCanOrder = false;
+        _restaurantAvailabilityReason =
+            'Не удалось проверить доступность ресторана';
         _canonicalLoadError = e.toString();
       });
     }
@@ -269,9 +303,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   Future<void> _addToCart() async {
-    if (!_product.canAddToCart) {
+    if (!_canOrderProduct) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Товар сейчас недоступен')),
+        SnackBar(content: LocalizedText(_availabilityText)),
       );
       return;
     }
@@ -308,7 +342,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     if (result == CartAddResult.rejectedInvalidItem) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: LocalizedText('Не удалось добавить товар в корзину')),
+          content: LocalizedText('Не удалось добавить товар в корзину'),
+        ),
       );
       return;
     }
@@ -437,7 +472,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                             ],
                             const SizedBox(height: 14),
                             _AvailabilityBlock(
-                              isAvailable: _product.isAvailable,
+                              isAvailable: _canOrderProduct,
+                              text: _availabilityText,
                             ),
                             if (_canonicalLoadError != null) ...[
                               const SizedBox(height: 12),
@@ -454,7 +490,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                 _BottomActionBar(
                   quantity: _quantity,
                   totalPrice: totalPrice,
-                  isAvailable: _product.isAvailable,
+                  isAvailable: _canOrderProduct,
                   onIncrementTap: _increment,
                   onDecrementTap: _decrement,
                   onAddToCartTap: _addToCart,
@@ -622,7 +658,7 @@ class _ProductGalleryStrip extends StatelessWidget {
         itemCount: imageUrls.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          final selected = index == selectedIndex;
+          final selected = index == selectedImageIndex;
 
           return GestureDetector(
             onTap: () => onImageTap(index),
@@ -721,9 +757,11 @@ class _InfoBlock extends StatelessWidget {
 class _AvailabilityBlock extends StatelessWidget {
   const _AvailabilityBlock({
     required this.isAvailable,
+    required this.text,
   });
 
   final bool isAvailable;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
@@ -735,7 +773,7 @@ class _AvailabilityBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: LocalizedText(
-        isAvailable ? 'Доступно к заказу' : 'Временно недоступно',
+        text,
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
