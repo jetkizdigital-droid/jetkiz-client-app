@@ -658,7 +658,7 @@ class _ProductGalleryStrip extends StatelessWidget {
         itemCount: imageUrls.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          final selected = index == selectedImageIndex;
+          final selected = index == selectedIndex;
 
           return GestureDetector(
             onTap: () => onImageTap(index),
