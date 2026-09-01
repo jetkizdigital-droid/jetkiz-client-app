@@ -16,8 +16,12 @@
   - каждый экран строится только после проверки реального backend ответа
 */
 
+import 'dart:ui';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:jetkiz_mobile/app/app.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -34,11 +38,32 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await _configureCrashReporting();
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     await PushNotificationService(apiClient).init();
-  } catch (error) {
-    debugPrint('Push initialization skipped: $error');
+  } catch (error, stackTrace) {
+    debugPrint('Firebase initialization skipped: $error');
+    if (kDebugMode) {
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   runApp(const JetkizApp());
+}
+
+Future<void> _configureCrashReporting() async {
+  final crashlytics = FirebaseCrashlytics.instance;
+  await crashlytics.setCrashlyticsCollectionEnabled(kReleaseMode);
+
+  FlutterError.onError = (details) {
+    if (kDebugMode) {
+      FlutterError.presentError(details);
+    }
+    crashlytics.recordFlutterFatalError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    crashlytics.recordError(error, stack, fatal: true);
+    return true;
+  };
 }
