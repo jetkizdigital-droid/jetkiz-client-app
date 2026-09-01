@@ -7,6 +7,14 @@ import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 
+/// Signals that authentication was refreshed successfully, but the original
+/// request body cannot be replayed safely. MultipartFile streams may already
+/// be consumed by Dio after the first attempt, so the feature layer must
+/// rebuild FormData from its original file paths before retrying.
+class MultipartRequestReplayRequired {
+  const MultipartRequestReplayRequired();
+}
+
 class ApiClient {
   ApiClient._internal() {
     _dio = Dio(
@@ -70,6 +78,24 @@ class ApiClient {
             if (!refreshed) {
               await clearTokens(notifySession: true);
               return handler.next(error);
+            }
+
+            // FormData contains stream-backed MultipartFile instances. Reusing
+            // requestOptions.data after the first network attempt is unsafe:
+            // the stream can already be consumed. Authentication is refreshed
+            // here, then the upload repository gets an explicit signal to
+            // rebuild the multipart request from the original local file.
+            if (requestOptions.data is FormData) {
+              return handler.reject(
+                DioException(
+                  requestOptions: requestOptions,
+                  response: error.response,
+                  type: DioExceptionType.unknown,
+                  error: const MultipartRequestReplayRequired(),
+                  message:
+                      'Multipart request must be rebuilt after auth refresh',
+                ),
+              );
             }
 
             final retryHeaders = Map<String, dynamic>.from(
