@@ -15,11 +15,29 @@ class ReviewMediaUploadApi {
     required String orderId,
     String? kind,
     bool makePreview = true,
+  }) {
+    return _uploadFile(
+      file,
+      orderId: orderId,
+      kind: kind,
+      makePreview: makePreview,
+      allowAuthReplay: true,
+    );
+  }
+
+  Future<UploadReviewMediaResponse> _uploadFile(
+    File file, {
+    required String orderId,
+    String? kind,
+    required bool makePreview,
+    required bool allowAuthReplay,
   }) async {
     final fileName = file.path.split(Platform.pathSeparator).last;
     final resolvedKind =
         (kind ?? _detectKindFromPath(file.path)).trim().toUpperCase();
 
+    // FormData must be rebuilt for every attempt. MultipartFile is stream
+    // backed and cannot be safely reused after Dio has sent it once.
     final formData = FormData.fromMap({
       'orderId': orderId,
       'file': await MultipartFile.fromFile(
@@ -31,16 +49,29 @@ class ReviewMediaUploadApi {
       'makePreview': makePreview.toString(),
     });
 
-    final response = await _client.dio.post<Map<String, dynamic>>(
-      '/restaurants/review-media/upload',
-      data: formData,
-      options: Options(
-        contentType: 'multipart/form-data',
-      ),
-    );
+    try {
+      final response = await _client.dio.post<Map<String, dynamic>>(
+        '/restaurants/review-media/upload',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
 
-    final json = response.data ?? <String, dynamic>{};
-    return UploadReviewMediaResponse.fromJson(json);
+      final json = response.data ?? <String, dynamic>{};
+      return UploadReviewMediaResponse.fromJson(json);
+    } on DioException catch (error) {
+      if (allowAuthReplay && error.error is MultipartRequestReplayRequired) {
+        return _uploadFile(
+          file,
+          orderId: orderId,
+          kind: resolvedKind,
+          makePreview: makePreview,
+          allowAuthReplay: false,
+        );
+      }
+      rethrow;
+    }
   }
 
   String _detectKindFromPath(String path) {
