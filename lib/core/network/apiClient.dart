@@ -15,6 +15,12 @@ class MultipartRequestReplayRequired {
   const MultipartRequestReplayRequired();
 }
 
+/// Signals a temporary refresh failure without invalidating local auth state.
+/// Network errors, timeouts and 5xx responses must never log the user out.
+class SessionRefreshTemporarilyUnavailable {
+  const SessionRefreshTemporarilyUnavailable();
+}
+
 class ApiClient {
   ApiClient._internal() {
     _dio = Dio(
@@ -73,11 +79,23 @@ class ApiClient {
           final alreadyRetried = requestOptions.extra['retried'] == true;
 
           if (isUnauthorized && !skipRefresh && !alreadyRetried) {
-            final refreshed = await _tryRefreshToken();
+            final refreshResult = await _tryRefreshToken();
 
-            if (!refreshed) {
+            if (refreshResult == _RefreshResult.invalidSession) {
               await clearTokens(notifySession: true);
               return handler.next(error);
+            }
+
+            if (refreshResult == _RefreshResult.transientFailure) {
+              return handler.reject(
+                DioException(
+                  requestOptions: requestOptions,
+                  type: DioExceptionType.unknown,
+                  error: const SessionRefreshTemporarilyUnavailable(),
+                  message:
+                      'Не удалось проверить сессию. Проверьте подключение и повторите.',
+                ),
+              );
             }
 
             // FormData contains stream-backed MultipartFile instances. Reusing
@@ -142,6 +160,10 @@ class ApiClient {
             }
           }
 
+          // A protected endpoint can still return 401 after a successful
+          // refresh because of endpoint-specific authorization or a race.
+          // Do not erase tokens here. Only /auth/refresh may prove that the
+          // refresh session itself is invalid.
           handler.next(error);
         },
       ),
@@ -158,7 +180,7 @@ class ApiClient {
   String? _accessToken;
   String? _refreshToken;
   bool _isInitialized = false;
-  Future<bool>? _refreshFuture;
+  Future<_RefreshResult>? _refreshFuture;
   String _locale = 'ru';
 
   Dio get dio => _dio;
@@ -261,32 +283,37 @@ class ApiClient {
     }
   }
 
-  Future<bool> _tryRefreshToken() async {
-    if (_refreshFuture != null) {
-      return _refreshFuture!;
+  Future<_RefreshResult> _tryRefreshToken() async {
+    final activeRefresh = _refreshFuture;
+    if (activeRefresh != null) {
+      return activeRefresh;
     }
 
-    _refreshFuture = _performRefreshToken();
+    final refresh = _performRefreshToken();
+    _refreshFuture = refresh;
 
     try {
-      return await _refreshFuture!;
+      return await refresh;
     } finally {
-      _refreshFuture = null;
+      if (identical(_refreshFuture, refresh)) {
+        _refreshFuture = null;
+      }
     }
   }
 
-  Future<bool> _performRefreshToken() async {
-    final refreshToken = _refreshToken ?? await _authStorage.getRefreshToken();
+  Future<_RefreshResult> _performRefreshToken() async {
+    final refreshToken =
+        (_refreshToken ?? await _authStorage.getRefreshToken())?.trim();
 
-    if (refreshToken == null || refreshToken.trim().isEmpty) {
-      return false;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return _RefreshResult.invalidSession;
     }
 
     try {
       final response = await _dio.post(
         '/auth/refresh',
         data: {
-          'refreshToken': refreshToken.trim(),
+          'refreshToken': refreshToken,
         },
         options: Options(
           headers: const {
@@ -296,26 +323,57 @@ class ApiClient {
       );
 
       if (response.data is! Map) {
-        return false;
+        return _RefreshResult.transientFailure;
       }
 
       final data = Map<String, dynamic>.from(response.data as Map);
 
-      final newAccessToken = data['accessToken']?.toString() ?? '';
-      final newRefreshToken = data['refreshToken']?.toString() ?? refreshToken;
+      final newAccessToken = data['accessToken']?.toString().trim() ?? '';
+      final newRefreshToken =
+          data['refreshToken']?.toString().trim() ?? refreshToken;
 
-      if (newAccessToken.trim().isEmpty) {
-        return false;
+      if (newAccessToken.isEmpty || newRefreshToken.isEmpty) {
+        return _RefreshResult.transientFailure;
       }
 
       await setTokens(
-        accessToken: newAccessToken.trim(),
-        refreshToken: newRefreshToken.trim(),
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
       );
 
-      return true;
+      return _RefreshResult.refreshed;
+    } on DioException catch (error) {
+      final status = error.response?.statusCode;
+
+      if (status == 400 || status == 401 || status == 403) {
+        // Another isolate/request may already have rotated and stored a newer
+        // refresh token while this refresh was in flight. Never wipe that new
+        // session because the stale token was rejected by the server.
+        for (final delay in <Duration>[
+          Duration.zero,
+          const Duration(milliseconds: 250),
+          const Duration(milliseconds: 750),
+        ]) {
+          if (delay != Duration.zero) {
+            await Future<void>.delayed(delay);
+          }
+
+          final latestRefreshToken =
+              (await _authStorage.getRefreshToken())?.trim();
+          if (latestRefreshToken != null &&
+              latestRefreshToken.isNotEmpty &&
+              latestRefreshToken != refreshToken) {
+            await loadTokensFromStorage();
+            return _RefreshResult.refreshed;
+          }
+        }
+
+        return _RefreshResult.invalidSession;
+      }
+
+      return _RefreshResult.transientFailure;
     } catch (_) {
-      return false;
+      return _RefreshResult.transientFailure;
     }
   }
 
@@ -432,3 +490,5 @@ class ApiClient {
     return data;
   }
 }
+
+enum _RefreshResult { refreshed, invalidSession, transientFailure }
