@@ -49,10 +49,13 @@ class AuthPostLoginService {
 
   Future<void> _safeRegisterFcmToken() async {
     try {
-      await PushNotificationService(_apiClient).registerCurrentToken();
+      final registered = await PushNotificationService(_apiClient)
+          .registerCurrentToken(requestPermissionIfNeeded: true);
 
       if (kDebugMode) {
-        debugPrint('AuthPostLoginService: FCM token sync finished');
+        debugPrint(
+          'AuthPostLoginService: FCM token sync success=$registered',
+        );
       }
     } catch (error) {
       if (kDebugMode) {
