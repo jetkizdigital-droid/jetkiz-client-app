@@ -90,7 +90,7 @@ jobs:
       - name: Build release APK
         run: flutter build apk --release
 
-      - name: Verify release APK metadata and notification permission
+      - name: Verify release APK metadata and push wiring
         shell: bash
         run: |
           set -euo pipefail
@@ -101,12 +101,16 @@ jobs:
           test -x "$AAPT"
           "$AAPT" dump badging "$APK" > /tmp/client-badging.txt
           "$AAPT" dump permissions "$APK" > /tmp/client-permissions.txt
+          "$AAPT" dump xmltree "$APK" AndroidManifest.xml > /tmp/client-manifest.txt
           grep -F "package: name='kz.jetkiz.app'" /tmp/client-badging.txt
           grep -F "versionCode='2'" /tmp/client-badging.txt
           grep -F "versionName='1.0.1'" /tmp/client-badging.txt
           grep -F "application-label:'JETKIZ'" /tmp/client-badging.txt
           grep -F 'android.permission.POST_NOTIFICATIONS' /tmp/client-permissions.txt
-          echo 'Release APK metadata verified'
+          grep -F 'com.google.firebase.MESSAGING_EVENT' /tmp/client-manifest.txt
+          grep -F 'com.google.android.c2dm.intent.RECEIVE' /tmp/client-manifest.txt
+          grep -F 'jetkiz_default_channel' /tmp/client-manifest.txt
+          echo 'Release APK metadata and FCM wiring verified'
 
       - name: Build release AAB
         run: flutter build appbundle --release
