@@ -28,8 +28,6 @@ import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
 import 'package:jetkiz_mobile/firebase_options.dart';
 
-AppLifecycleListener? _pushLifecycleListener;
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -66,11 +64,11 @@ Future<void> main() async {
   runApp(const JetkizApp());
 
   if (firebaseAvailable) {
-    // If the user grants notification permission from Android Settings while
-    // the app is backgrounded, restore the token as soon as the app resumes.
-    // This closes the gap where OS permission is ON but production DB still
-    // has no active FCM token until a full app restart.
-    _pushLifecycleListener = AppLifecycleListener(
+    // AppLifecycleListener registers itself with WidgetsBinding, which retains
+    // the observer until dispose. Keeping a separate unused field is not
+    // necessary. On resume, a permission granted from Android Settings can
+    // therefore restore the production FCM token immediately.
+    AppLifecycleListener(
       onResume: () {
         unawaited(_restorePushAfterResume(apiClient));
       },
