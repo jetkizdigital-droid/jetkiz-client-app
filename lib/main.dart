@@ -16,6 +16,8 @@
   - каждый экран строится только после проверки реального backend ответа
 */
 
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -32,21 +34,53 @@ Future<void> main() async {
   final apiClient = ApiClient();
   await apiClient.init();
 
+  var firebaseAvailable = false;
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await _configureCrashReporting();
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await PushNotificationService(apiClient).init();
+    firebaseAvailable = true;
   } catch (error, stackTrace) {
-    debugPrint('Firebase initialization skipped: $error');
+    debugPrint('Firebase initialization failed: $error');
     if (kDebugMode) {
       debugPrintStack(stackTrace: stackTrace);
     }
   }
 
+  if (firebaseAvailable) {
+    try {
+      await _configureCrashReporting();
+    } catch (error, stackTrace) {
+      // Crash reporting is optional infrastructure. It must never prevent FCM
+      // token registration or normal application startup.
+      debugPrint('Crashlytics initialization failed: $error');
+      if (kDebugMode) {
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+  }
+
   runApp(const JetkizApp());
+
+  if (firebaseAvailable) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Initialize notification taps after Navigator exists and keep network
+      // token registration off the critical startup path.
+      unawaited(_initializePush(apiClient));
+    });
+  }
+}
+
+Future<void> _initializePush(ApiClient apiClient) async {
+  try {
+    await PushNotificationService(apiClient).init();
+  } catch (error, stackTrace) {
+    debugPrint('Push initialization failed: $error');
+    if (kDebugMode) {
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
 }
 
 Future<void> _configureCrashReporting() async {
