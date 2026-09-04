@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
@@ -33,6 +32,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool notificationsEnabled = true;
+  bool _isUpdatingNotifications = false;
   bool _isDeletingAccount = false;
 
   late final ApiClient _apiClient;
@@ -52,24 +52,44 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadNotificationPreference() async {
-    final preferences = await SharedPreferences.getInstance();
+    final service = PushNotificationService(_apiClient);
+    final localEnabled = await PushNotificationService.isEnabled();
+    final backendEnabled = await service.getBackendPushEnabled();
+
     if (!mounted) return;
     setState(() {
-      notificationsEnabled =
-          preferences.getBool(PushNotificationService.preferenceKey) ?? true;
+      // A false value on either side means the device is not actually ready
+      // to receive push. Legacy mismatches therefore become visible instead
+      // of the UI claiming notifications are enabled when backend blocks them.
+      notificationsEnabled = localEnabled && (backendEnabled ?? true);
     });
   }
 
   Future<void> _setNotificationsEnabled(bool value) async {
-    setState(() => notificationsEnabled = value);
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setBool(PushNotificationService.preferenceKey, value);
+    if (_isUpdatingNotifications) return;
+
+    final previous = notificationsEnabled;
+    setState(() {
+      _isUpdatingNotifications = true;
+    });
 
     final service = PushNotificationService(_apiClient);
-    if (value) {
-      await service.init();
-    } else {
-      await service.unregisterCurrentToken();
+    final success = value
+        ? await service.enableNotifications()
+        : await service.disableNotifications();
+
+    if (!mounted) return;
+    setState(() {
+      notificationsEnabled = success ? value : previous;
+      _isUpdatingNotifications = false;
+    });
+
+    if (!success) {
+      _showSnack(
+        value
+            ? 'Не удалось включить уведомления. Разрешите уведомления JETKIZ в настройках телефона и попробуйте ещё раз.'
+            : 'Не удалось отключить уведомления. Попробуйте ещё раз.',
+      );
     }
   }
 
@@ -219,7 +239,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   Switch(
                     value: notificationsEnabled,
                     activeThumbColor: _green,
-                    onChanged: _setNotificationsEnabled,
+                    onChanged: _isUpdatingNotifications
+                        ? null
+                        : _setNotificationsEnabled,
                   ),
                 ],
               ),
