@@ -74,13 +74,19 @@ void main() {
       expect(find.text('Щучинск'), findsOneWidget);
       expect(find.text('Қала'), findsOneWidget);
       expect(find.text('Көше, үй'), findsOneWidget);
+      expect(find.text('Город'), findsNothing);
+      expect(find.text('Улица, дом'), findsNothing);
+
+      // The delivery-scope notice is below the initial viewport. Scroll the
+      // real ListView before asserting its localized copy so the lazy child is
+      // actually built by Flutter's test environment.
+      await tester.drag(find.byType(ListView), const Offset(0, -900));
+      await tester.pumpAndSettle();
+
       expect(
         find.text('Жеткізу әзірге тек Щучинск қаласында қолжетімді'),
         findsOneWidget,
       );
-
-      expect(find.text('Город'), findsNothing);
-      expect(find.text('Улица, дом'), findsNothing);
       expect(
         find.text('Доставка пока доступна только в Щучинске'),
         findsNothing,
