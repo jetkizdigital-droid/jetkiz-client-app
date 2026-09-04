@@ -24,6 +24,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
   static const Color _text = Color(0xFF111827);
   static const Color _muted = Color(0xFF6B7280);
   static const Color _error = Color(0xFFE53935);
+  static const String _deliveryCity = 'Щучинск';
 
   late final AddressesApi _addressesApi;
 
@@ -57,7 +58,9 @@ class _AddressFormPageState extends State<AddressFormPage> {
     final initial = widget.initialAddress;
 
     _selectedTitle = _resolveInitialTitle(initial?.title);
-    _addressController = TextEditingController(text: initial?.address ?? '');
+    _addressController = TextEditingController(
+      text: _streetAndHouseFromStoredAddress(initial?.address),
+    );
     _entranceController = TextEditingController(text: initial?.entrance ?? '');
     _floorController = TextEditingController(text: initial?.floor ?? '');
     _doorController = TextEditingController(text: initial?.door ?? '');
@@ -72,6 +75,27 @@ class _AddressFormPageState extends State<AddressFormPage> {
     final value = (title ?? '').trim();
 
     return allowed.contains(value) ? value : 'Дом';
+  }
+
+  String _streetAndHouseFromStoredAddress(String? value) {
+    var address = (value ?? '').trim();
+    if (address.isEmpty) return '';
+
+    address = address.replaceFirst(
+      RegExp(
+        r'^\s*(?:г(?:ород)?\.?\s*)?щучинск\s*[,;:\-]?\s*',
+        caseSensitive: false,
+        unicode: true,
+      ),
+      '',
+    );
+
+    return address.replaceFirst(RegExp(r'^,+\s*'), '').trim();
+  }
+
+  String _fullDeliveryAddress() {
+    final streetAndHouse = _addressController.text.trim();
+    return '$_deliveryCity, $streetAndHouse';
   }
 
   @override
@@ -104,11 +128,11 @@ class _AddressFormPageState extends State<AddressFormPage> {
     String? commentError;
 
     if (addressText.isEmpty) {
-      addressError = 'Укажите адрес';
+      addressError = 'Укажите улицу и дом';
     } else if (addressText.length < 3) {
       addressError = 'Адрес слишком короткий';
-    } else if (addressText.length > 255) {
-      addressError = 'Максимум 255 символов';
+    } else if (_fullDeliveryAddress().length > 255) {
+      addressError = 'Адрес слишком длинный';
     }
 
     if (entranceText.length > 50) {
@@ -167,7 +191,10 @@ class _AddressFormPageState extends State<AddressFormPage> {
 
     final payload = SaveAddressPayload(
       title: _selectedTitle,
-      address: _addressController.text.trim(),
+      // The user edits only street/house. The API still receives a complete
+      // 2GIS-friendly city-qualified address, and the backend independently
+      // enforces the same city contract.
+      address: _fullDeliveryAddress(),
       entrance: _entranceController.text.trim(),
       floor: _floorController.text.trim(),
       door: _doorController.text.trim(),
@@ -303,6 +330,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   _SectionCard(
                     child: Column(
                       children: [
+                        const _FixedCityField(city: _deliveryCity),
+                        const SizedBox(height: 14),
                         _AppTextField(
                           controller: _addressController,
                           label: 'Улица, дом',
@@ -407,7 +436,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8),
                     child: LocalizedText(
-                      'Доставка осуществляется только в зоне обслуживания JETKIZ',
+                      'Доставка пока доступна только в Щучинске',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -503,6 +532,64 @@ class _SectionCard extends StatelessWidget {
         ],
       ),
       child: child,
+    );
+  }
+}
+
+class _FixedCityField extends StatelessWidget {
+  const _FixedCityField({required this.city});
+
+  final String city;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const LocalizedText(
+          'Город',
+          style: TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.location_city_rounded,
+                size: 19,
+                color: Color(0xFF489F2A),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: LocalizedText(
+                  city,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 18,
+                color: Color(0xFF9CA3AF),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
