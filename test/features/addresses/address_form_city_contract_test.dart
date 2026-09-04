@@ -6,9 +6,9 @@ import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
 import 'package:jetkiz_mobile/features/addresses/presentation/addressFormPage.dart';
 
 void main() {
-  Widget app(AddressFormPage page) {
+  Widget app(AddressFormPage page, {AppLanguage language = AppLanguage.ru}) {
     return AppLocalizationScope(
-      language: AppLanguage.ru,
+      language: language,
       onLanguageChanged: (_) {},
       child: MaterialApp(home: page),
     );
@@ -62,4 +62,23 @@ void main() {
       expect(editableValues, isNot(contains('Щучинск, ул. Абая, 10')));
     },
   );
+
+  testWidgets('fixed-city address screen is localized in Kazakh', (tester) async {
+    await tester.pumpWidget(
+      app(const AddressFormPage(), language: AppLanguage.kk),
+    );
+    await tester.pump();
+
+    expect(find.text('Щучинск'), findsOneWidget);
+    expect(find.text('Қала'), findsOneWidget);
+    expect(find.text('Көше, үй'), findsOneWidget);
+    expect(
+      find.text('Жеткізу әзірге тек Щучинск қаласында қолжетімді'),
+      findsOneWidget,
+    );
+
+    expect(find.text('Город'), findsNothing);
+    expect(find.text('Улица, дом'), findsNothing);
+    expect(find.text('Доставка пока доступна только в Щучинске'), findsNothing);
+  });
 }
