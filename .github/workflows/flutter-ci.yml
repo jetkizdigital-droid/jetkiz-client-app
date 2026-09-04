@@ -10,14 +10,119 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test
-      - run: flutter analyze
-      - run: flutter test
-      - run: flutter build apk --debug
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify production Firebase client configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('android/app/google-services.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          assert data.get('project_info', {}).get('project_id') == 'jetkiz-mobile', 'Wrong Firebase project_id'
+          assert str(data.get('project_info', {}).get('project_number')) == '97147344656', 'Wrong Firebase project_number'
+          packages = {
+              item.get('client_info', {}).get('android_client_info', {}).get('package_name')
+              for item in data.get('client') or []
+          }
+          assert 'kz.jetkiz.app' in packages, 'Client package is missing from google-services.json'
+          print('Firebase client configuration verified')
+          PY
+
+      - name: Verify production push sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'android.permission.POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml
+          grep -F 'com.google.firebase.messaging.default_notification_channel_id' android/app/src/main/AndroidManifest.xml
+          grep -F 'jetkiz_default_channel' android/app/src/main/AndroidManifest.xml
+          grep -F "'app': 'client'" lib/core/push/pushNotificationService.dart
+          grep -F "'/notification-devices/register'" lib/core/push/pushNotificationService.dart
+          grep -F "'/client-settings/me'" lib/core/push/pushNotificationService.dart
+          grep -F "productionBaseUrl = 'https://api.jetkiz.asia'" lib/core/config/appConfig.dart
+          echo 'Production push sources verified'
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Prepare ephemeral CI release signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/client-ci-upload.jks" \
+            -storepass ci-not-for-production \
+            -keypass ci-not-for-production \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -alias client-ci \
+            -dname "CN=JETKIZ Client CI,O=JETKIZ,C=KZ"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/client-ci-upload.jks
+          storePassword=ci-not-for-production
+          keyAlias=client-ci
+          keyPassword=ci-not-for-production
+          EOF
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Verify release APK metadata and notification permission
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          AAPT="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name aapt -print | sort -V | tail -n 1)"
+          test -s "$APK"
+          test -n "$AAPT"
+          test -x "$AAPT"
+          "$AAPT" dump badging "$APK" > /tmp/client-badging.txt
+          "$AAPT" dump permissions "$APK" > /tmp/client-permissions.txt
+          grep -F "package: name='kz.jetkiz.app'" /tmp/client-badging.txt
+          grep -F "versionCode='2'" /tmp/client-badging.txt
+          grep -F "versionName='1.0.1'" /tmp/client-badging.txt
+          grep -F "application-label:'JETKIZ'" /tmp/client-badging.txt
+          grep -F 'android.permission.POST_NOTIFICATIONS' /tmp/client-permissions.txt
+          echo 'Release APK metadata verified'
+
+      - name: Build release AAB
+        run: flutter build appbundle --release
+
+      - name: Verify release AAB structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          test -s "$AAB"
+          unzip -t "$AAB" >/dev/null
+          unzip -Z1 "$AAB" | grep -F 'base/manifest/AndroidManifest.xml'
+          unzip -Z1 "$AAB" | grep -F 'base/resources.pb'
+          echo 'Release AAB structure verified'
+
+      - name: Remove ephemeral signing material
+        if: always()
+        shell: bash
+        run: rm -f android/key.properties "$RUNNER_TEMP/client-ci-upload.jks"
