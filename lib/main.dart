@@ -28,6 +28,8 @@ import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
 import 'package:jetkiz_mobile/firebase_options.dart';
 
+AppLifecycleListener? _pushLifecycleListener;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -64,6 +66,16 @@ Future<void> main() async {
   runApp(const JetkizApp());
 
   if (firebaseAvailable) {
+    // If the user grants notification permission from Android Settings while
+    // the app is backgrounded, restore the token as soon as the app resumes.
+    // This closes the gap where OS permission is ON but production DB still
+    // has no active FCM token until a full app restart.
+    _pushLifecycleListener = AppLifecycleListener(
+      onResume: () {
+        unawaited(_restorePushAfterResume(apiClient));
+      },
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Initialize notification taps after Navigator exists and keep network
       // token registration off the critical startup path.
@@ -77,6 +89,21 @@ Future<void> _initializePush(ApiClient apiClient) async {
     await PushNotificationService(apiClient).init();
   } catch (error, stackTrace) {
     debugPrint('Push initialization failed: $error');
+    if (kDebugMode) {
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+}
+
+Future<void> _restorePushAfterResume(ApiClient apiClient) async {
+  try {
+    if (!await PushNotificationService.isEnabled()) return;
+
+    await PushNotificationService(apiClient).registerCurrentToken(
+      requestPermissionIfNeeded: false,
+    );
+  } catch (error, stackTrace) {
+    debugPrint('Push resume registration failed: $error');
     if (kDebugMode) {
       debugPrintStack(stackTrace: stackTrace);
     }
