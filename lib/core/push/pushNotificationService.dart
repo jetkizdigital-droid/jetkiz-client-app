@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -17,9 +18,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  if (kDebugMode) {
-    debugPrint('FCM background message: ${message.messageId}');
-  }
+  developer.log(
+    '[PUSH] background message received id=${message.messageId ?? '<none>'}',
+    name: 'jetkiz.client.push',
+  );
 }
 
 class PushNotificationService {
@@ -38,6 +40,11 @@ class PushNotificationService {
     return preferences.getBool(preferenceKey) ?? true;
   }
 
+  static Future<void> _setLocalEnabled(bool value) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(preferenceKey, value);
+  }
+
   static const AndroidNotificationChannel _androidChannel =
       AndroidNotificationChannel(
     'jetkiz_default_channel',
@@ -50,14 +57,26 @@ class PushNotificationService {
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedAppSubscription;
 
-  Future<void> init() async {
-    if (!await isEnabled()) return;
-    await _requestPermission();
+  /// Initializes message handling and restores push registration for an
+  /// already authenticated user. Permission is never requested before login.
+  Future<bool> init() async {
+    if (!await isEnabled()) {
+      _log('local preference disabled; automatic registration skipped');
+      return false;
+    }
+
     await _initLocalNotifications();
     await _listenTokenRefresh();
     await _listenForegroundMessages();
     await _listenNotificationOpen();
-    await registerCurrentToken();
+
+    final accessToken = await _apiClient.getAccessToken();
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      _log('user is not authorized; permission request deferred until login');
+      return true;
+    }
+
+    return registerCurrentToken(requestPermissionIfNeeded: true);
   }
 
   Future<void> dispose() async {
@@ -68,82 +87,179 @@ class PushNotificationService {
 
   Future<String?> getToken() async {
     try {
-      return await _messaging.getToken();
+      final token = await _messaging.getToken();
+      final normalized = token?.trim();
+      return normalized == null || normalized.isEmpty ? null : normalized;
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: getToken failed: $error');
-      }
+      _log('FCM getToken failed: ${_safeError(error)}');
       return null;
     }
   }
 
-  Future<void> registerCurrentToken() async {
-    if (!await isEnabled()) return;
-    final accessToken = await _apiClient.getAccessToken();
+  /// Restores a token for an authenticated user. If registration succeeds,
+  /// backend pushEnabled is synchronized to true so legacy server state cannot
+  /// silently suppress a device that is enabled in the app.
+  Future<bool> registerCurrentToken({
+    bool requestPermissionIfNeeded = false,
+  }) async {
+    if (!await isEnabled()) {
+      _log('registration skipped because local preference is disabled');
+      return false;
+    }
 
+    final accessToken = await _apiClient.getAccessToken();
     if (accessToken == null || accessToken.trim().isEmpty) {
-      if (kDebugMode) {
-        debugPrint(
-          'PushNotificationService: skip token registration, user is not authorized',
-        );
-      }
-      return;
+      _log('registration skipped because user is not authorized');
+      return false;
+    }
+
+    final permissionGranted = await _ensurePermission(
+      requestIfNeeded: requestPermissionIfNeeded,
+    );
+    if (!permissionGranted) {
+      _log('registration skipped because notification permission is not granted');
+      return false;
     }
 
     final token = await getToken();
-
-    if (token == null || token.trim().isEmpty) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: FCM token is empty');
-      }
-      return;
+    if (token == null) {
+      _log('registration failed because FCM token is empty');
+      return false;
     }
 
-    await _sendTokenToBackend(token);
+    final registered = await _sendTokenToBackend(token);
+    if (!registered) return false;
+
+    final preferenceSynced = await _setBackendPushEnabled(true);
+    if (!preferenceSynced) {
+      _log('token registered but backend push preference sync failed');
+      return false;
+    }
+
+    _log('client push ready ${_maskToken(token)}');
+    return true;
+  }
+
+  /// Explicit user action from Settings. Local preference is only committed
+  /// after OS permission, FCM token registration and backend preference sync
+  /// all succeed.
+  Future<bool> enableNotifications() async {
+    final permissionGranted = await _ensurePermission(requestIfNeeded: true);
+    if (!permissionGranted) {
+      await _setLocalEnabled(false);
+      return false;
+    }
+
+    final accessToken = await _apiClient.getAccessToken();
+    if (accessToken == null || accessToken.trim().isEmpty) {
+      _log('enable failed because user is not authorized');
+      return false;
+    }
+
+    final token = await getToken();
+    if (token == null) {
+      _log('enable failed because FCM token is empty');
+      return false;
+    }
+
+    if (!await _sendTokenToBackend(token)) return false;
+    if (!await _setBackendPushEnabled(true)) return false;
+
+    await _setLocalEnabled(true);
+
+    // Settings can enable notifications after startup when automatic init was
+    // skipped because the local preference was false. Attach listeners now.
+    await _initLocalNotifications();
+    await _listenTokenRefresh();
+    await _listenForegroundMessages();
+    await _listenNotificationOpen();
+
+    _log('notifications enabled ${_maskToken(token)}');
+    return true;
+  }
+
+  Future<bool> disableNotifications() async {
+    final accessToken = await _apiClient.getAccessToken();
+    if (accessToken != null && accessToken.trim().isNotEmpty) {
+      if (!await _setBackendPushEnabled(false)) {
+        _log('disable aborted because backend preference sync failed');
+        return false;
+      }
+    }
+
+    await unregisterCurrentToken();
+    await _setLocalEnabled(false);
+    _log('notifications disabled');
+    return true;
+  }
+
+  Future<bool?> getBackendPushEnabled() async {
+    final accessToken = await _apiClient.getAccessToken();
+    if (accessToken == null || accessToken.trim().isEmpty) return null;
+
+    try {
+      final response = await _apiClient.dio.get('/client-settings/me');
+      final root = _asMap(response.data);
+      final settings = _asMap(root['settings']);
+      final value = settings['pushEnabled'];
+      return value is bool ? value : null;
+    } catch (error) {
+      _log('backend preference read failed: ${_safeError(error)}');
+      return null;
+    }
   }
 
   Future<void> unregisterCurrentToken() async {
     final token = await getToken();
-    if (token == null || token.trim().isEmpty) return;
+    if (token == null) return;
 
     try {
       final deviceId = await _apiClient.getDeviceId();
       await _apiClient.dio.post(
         '/notification-devices/unregister',
         data: {
-          'token': token.trim(),
+          'token': token,
           'deviceId': deviceId,
         },
       );
+      _log('FCM token unregistered ${_maskToken(token)}');
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: unregister failed: $error');
-      }
+      _log('unregister failed: ${_safeError(error)}');
     }
   }
 
-  Future<void> _requestPermission() async {
+  Future<bool> _ensurePermission({required bool requestIfNeeded}) async {
     try {
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
+      var settings = await _messaging.getNotificationSettings();
+      _log('permission=${settings.authorizationStatus.name}');
 
-      if (kDebugMode) {
-        debugPrint(
-          'PushNotificationService: permission=${settings.authorizationStatus}',
+      if (_isGranted(settings.authorizationStatus)) return true;
+
+      if (settings.authorizationStatus == AuthorizationStatus.notDetermined &&
+          requestIfNeeded) {
+        settings = await _messaging.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
         );
+        _log('permission after request=${settings.authorizationStatus.name}');
+        return _isGranted(settings.authorizationStatus);
       }
+
+      return false;
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: permission failed: $error');
-      }
+      _log('permission check failed: ${_safeError(error)}');
+      return false;
     }
+  }
+
+  bool _isGranted(AuthorizationStatus status) {
+    return status == AuthorizationStatus.authorized ||
+        status == AuthorizationStatus.provisional;
   }
 
   Future<void> _initLocalNotifications() async {
@@ -189,43 +305,82 @@ class PushNotificationService {
     await _tokenRefreshSubscription?.cancel();
 
     _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((token) {
-      unawaited(_sendTokenToBackend(token));
+      unawaited(_handleTokenRefresh(token));
     });
   }
 
-  Future<void> _sendTokenToBackend(String token) async {
+  Future<void> _handleTokenRefresh(String token) async {
+    if (!await isEnabled()) return;
+    if (!await _ensurePermission(requestIfNeeded: false)) return;
+
+    final registered = await _sendTokenToBackend(token);
+    if (registered) {
+      await _setBackendPushEnabled(true);
+    }
+  }
+
+  Future<bool> _sendTokenToBackend(String token) async {
+    final normalized = token.trim();
+    if (normalized.isEmpty) return false;
+
     try {
       final accessToken = await _apiClient.getAccessToken();
-
-      if (accessToken == null || accessToken.trim().isEmpty) {
-        return;
-      }
+      if (accessToken == null || accessToken.trim().isEmpty) return false;
 
       final deviceId = await _apiClient.getDeviceId();
 
-      await _apiClient.dio.post(
+      final response = await _apiClient.dio.post(
         '/notification-devices/register',
         data: {
-          'token': token.trim(),
+          'app': 'client',
+          'token': normalized,
           'platform': _backendPlatformName(),
           'deviceId': deviceId,
           'appVersion': '1.0.0',
         },
       );
 
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: FCM token registered');
+      final payload = _asMap(response.data);
+      final success = payload['success'] == true || payload['deviceToken'] is Map;
+      if (success) {
+        _log('FCM token registered ${_maskToken(normalized)}');
+      } else {
+        _log('FCM registration response did not confirm success');
       }
+      return success;
     } on DioException catch (error) {
-      if (kDebugMode) {
-        debugPrint(
-          'PushNotificationService: register failed: ${error.response?.statusCode} ${error.response?.data}',
-        );
-      }
+      _log(
+        'FCM register failed status=${error.response?.statusCode ?? 0} '
+        'body=${_safeResponse(error.response?.data)}',
+      );
+      return false;
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: register failed: $error');
-      }
+      _log('FCM register failed: ${_safeError(error)}');
+      return false;
+    }
+  }
+
+  Future<bool> _setBackendPushEnabled(bool enabled) async {
+    try {
+      final response = await _apiClient.dio.patch(
+        '/client-settings/me',
+        data: {'pushEnabled': enabled},
+      );
+      final root = _asMap(response.data);
+      final settings = _asMap(root['settings']);
+      final serverValue = settings['pushEnabled'];
+      final success = serverValue is bool ? serverValue == enabled : true;
+      _log('backend pushEnabled=$enabled synced success=$success');
+      return success;
+    } on DioException catch (error) {
+      _log(
+        'backend pushEnabled=$enabled failed status=${error.response?.statusCode ?? 0} '
+        'body=${_safeResponse(error.response?.data)}',
+      );
+      return false;
+    } catch (error) {
+      _log('backend pushEnabled=$enabled failed: ${_safeError(error)}');
+      return false;
     }
   }
 
@@ -304,9 +459,7 @@ class PushNotificationService {
     final data = _decodePayload(payload);
 
     if (data.isEmpty) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: empty local notification payload');
-      }
+      _log('empty local notification payload');
       return;
     }
 
@@ -318,13 +471,7 @@ class PushNotificationService {
     required String source,
   }) async {
     final data = _normalizeData(message.data);
-
-    if (kDebugMode) {
-      debugPrint(
-        'PushNotificationService: opened source=$source data=$data',
-      );
-    }
-
+    _log('opened source=$source dataKeys=${data.keys.join(',')}');
     await _processOpenedNotificationData(data, source: source);
   }
 
@@ -367,16 +514,9 @@ class PushNotificationService {
           },
         },
       );
-
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: notification_open sent');
-      }
+      _log('notification_open sent');
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint(
-          'PushNotificationService: notification_open failed: $error',
-        );
-      }
+      _log('notification_open failed: ${_safeError(error)}');
     }
   }
 
@@ -395,18 +535,9 @@ class PushNotificationService {
       }
 
       await _apiClient.dio.post('/notifications/$notificationId/read');
-
-      if (kDebugMode) {
-        debugPrint(
-          'PushNotificationService: notification marked as read $notificationId',
-        );
-      }
+      _log('notification marked as read');
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint(
-          'PushNotificationService: mark notification read failed: $error',
-        );
-      }
+      _log('mark notification read failed: ${_safeError(error)}');
     }
   }
 
@@ -444,9 +575,7 @@ class PushNotificationService {
 
       return _normalizeData(decoded);
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('PushNotificationService: payload decode failed: $error');
-      }
+      _log('payload decode failed: ${_safeError(error)}');
       return const {};
     }
   }
@@ -463,5 +592,30 @@ class PushNotificationService {
       case TargetPlatform.fuchsia:
         return 'WEB';
     }
+  }
+
+  static Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return <String, dynamic>{};
+  }
+
+  static String _maskToken(String token) {
+    if (token.length <= 12) return '***';
+    return '${token.substring(0, 6)}...${token.substring(token.length - 6)}';
+  }
+
+  static String _safeError(Object error) {
+    final text = error.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    return text.length <= 220 ? text : '${text.substring(0, 220)}…';
+  }
+
+  static String _safeResponse(dynamic value) {
+    final text = value.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    return text.length <= 180 ? text : '${text.substring(0, 180)}…';
+  }
+
+  static void _log(String message) {
+    developer.log('[PUSH] $message', name: 'jetkiz.client.push');
   }
 }
