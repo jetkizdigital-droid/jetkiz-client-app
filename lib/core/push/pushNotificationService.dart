@@ -117,7 +117,9 @@ class PushNotificationService {
       requestIfNeeded: requestPermissionIfNeeded,
     );
     if (!permissionGranted) {
-      _log('registration skipped because notification permission is not granted');
+      _log(
+        'registration skipped because notification permission is not granted',
+      );
       return false;
     }
 
@@ -341,7 +343,8 @@ class PushNotificationService {
       );
 
       final payload = _asMap(response.data);
-      final success = payload['success'] == true || payload['deviceToken'] is Map;
+      final success =
+          payload['success'] == true || payload['deviceToken'] is Map;
       if (success) {
         _log('FCM token registered ${_maskToken(normalized)}');
       } else {
