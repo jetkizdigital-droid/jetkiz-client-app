@@ -32,6 +32,8 @@ class FavoritesController extends ChangeNotifier {
   String? _restaurantError;
   String? _productError;
   DateTime? _lastUpdated;
+  Future<void>? _initializationFuture;
+  int _generation = 0;
 
   Set<String> get restaurantIds => Set.unmodifiable(_restaurantIds);
   Set<String> get productIds => Set.unmodifiable(_productIds);
@@ -63,6 +65,8 @@ class FavoritesController extends ChangeNotifier {
   bool isProductBusy(String id) => _busyProductIds.contains(id);
 
   void reset() {
+    _generation++;
+    _initializationFuture = null;
     _restaurantIds.clear();
     _productIds.clear();
     _busyRestaurantIds.clear();
@@ -82,14 +86,39 @@ class FavoritesController extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    if (_idsLoaded || _isInitializing) return;
+    if (_idsLoaded) return;
+
+    final inFlight = _initializationFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+
+    final generation = _generation;
+    late final Future<void> future;
+    future = _loadFavoriteIds(generation);
+    _initializationFuture = future;
+
+    try {
+      await future;
+    } finally {
+      if (identical(_initializationFuture, future)) {
+        _initializationFuture = null;
+      }
+    }
+  }
+
+  Future<void> _loadFavoriteIds(int generation) async {
     if (!await AuthStorage().hasAccessToken()) return;
+    if (generation != _generation) return;
 
     _isInitializing = true;
     notifyListeners();
 
     try {
       final ids = await _api.getFavoriteIds();
+      if (generation != _generation) return;
+
       _restaurantIds
         ..clear()
         ..addAll(ids.restaurantIds);
@@ -99,8 +128,10 @@ class FavoritesController extends ChangeNotifier {
       _idsLoaded = true;
       _lastUpdated = DateTime.now();
     } finally {
-      _isInitializing = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isInitializing = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -177,6 +208,8 @@ class FavoritesController extends ChangeNotifier {
     if (!await AuthStorage().hasAccessToken()) {
       throw StateError('AUTH_REQUIRED');
     }
+
+    await initialize();
     if (_busyRestaurantIds.contains(id)) return;
 
     if (_restaurantIds.contains(id)) {
@@ -190,6 +223,8 @@ class FavoritesController extends ChangeNotifier {
     if (!await AuthStorage().hasAccessToken()) {
       throw StateError('AUTH_REQUIRED');
     }
+
+    await initialize();
     if (_busyProductIds.contains(id)) return;
 
     if (_productIds.contains(id)) {

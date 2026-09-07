@@ -93,6 +93,32 @@ void main() {
       expect(controller.isProductBusy('p1'), isFalse);
     });
 
+    test('toggle waits for initial favorite ids before deciding add or remove',
+        () async {
+      final idsCompleter = Completer<void>();
+      final api = _FakeFavoritesApi()
+        ..restaurantsResponse = _restaurantsResponse(['r1'])
+        ..favoriteIdsCompleter = idsCompleter;
+      final controller = FavoritesController.forTesting(api);
+
+      final initialization = controller.initialize();
+      await Future<void>.delayed(Duration.zero);
+
+      final toggle = controller.toggleRestaurant('r1');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(api.addRestaurantCalls, 0);
+      expect(api.removeRestaurantCalls, 0);
+
+      idsCompleter.complete();
+      await initialization;
+      await toggle;
+
+      expect(api.addRestaurantCalls, 0);
+      expect(api.removeRestaurantCalls, 1);
+      expect(controller.isRestaurantFavorite('r1'), isFalse);
+    });
+
     test('refresh during busy product remove does not overwrite local state',
         () async {
       final completer = Completer<void>();
@@ -128,15 +154,18 @@ class _FakeFavoritesApi extends FavoritesApi {
 
   Object? removeRestaurantError;
   Object? removeProductError;
+  Completer<void>? favoriteIdsCompleter;
   Completer<void>? addProductCompleter;
   Completer<void>? removeProductCompleter;
 
+  int addRestaurantCalls = 0;
   int addProductCalls = 0;
   int removeRestaurantCalls = 0;
   int removeProductCalls = 0;
 
   @override
   Future<FavoriteIdsResponse> getFavoriteIds() async {
+    await favoriteIdsCompleter?.future;
     return FavoriteIdsResponse(
       restaurantIds:
           restaurantsResponse.items.map((item) => item.restaurant.id).toList(),
@@ -153,6 +182,15 @@ class _FakeFavoritesApi extends FavoritesApi {
   @override
   Future<FavoriteProductsResponse> getFavoriteProducts() async {
     return productsResponse;
+  }
+
+  @override
+  Future<void> addRestaurantFavorite(String restaurantId) async {
+    addRestaurantCalls++;
+    restaurantsResponse = _restaurantsResponse([
+      ...restaurantsResponse.items.map((item) => item.restaurant.id),
+      restaurantId,
+    ]);
   }
 
   @override

@@ -26,7 +26,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final ApiClient _apiClient = ApiClient();
   final AddressRepository _addressRepository = AddressRepository.instance;
 
@@ -34,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   late final AnalyticsService _analyticsService;
 
   bool _isLoading = true;
+  bool _isBackgroundRefreshing = false;
   String? _error;
   HomeData? _homeData;
   Timer? _availabilityTimer;
@@ -42,15 +43,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this);
     _homeApi = HomeApi(_apiClient);
     _analyticsService = AnalyticsService(_apiClient);
 
     _addressRepository.addListener(_handleAddressChanged);
     _availabilityTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) {
-        if (mounted && _homeData != null) setState(() {});
-      },
+      (_) => unawaited(_refreshHomeSilently()),
     );
 
     unawaited(
@@ -66,15 +66,49 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _availabilityTimer?.cancel();
     _addressRepository.removeListener(_handleAddressChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshHomeSilently());
+    }
   }
 
   void _handleAddressChanged() {
     if (!mounted) return;
 
     setState(() {});
+  }
+
+  Future<void> _refreshHomeSilently() async {
+    if (!mounted ||
+        _homeData == null ||
+        _isLoading ||
+        _isBackgroundRefreshing) {
+      return;
+    }
+
+    _isBackgroundRefreshing = true;
+
+    try {
+      final data = await _homeApi.getHomeData();
+      if (!mounted) return;
+
+      setState(() {
+        _homeData = data;
+        _error = null;
+      });
+    } catch (_) {
+      // Keep the last successful Home snapshot. A background refresh failure
+      // must not replace a usable screen with an error state.
+    } finally {
+      _isBackgroundRefreshing = false;
+    }
   }
 
   Future<void> _load() async {
