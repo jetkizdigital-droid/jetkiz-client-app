@@ -485,9 +485,9 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                               ),
                                               const SizedBox(width: 5),
                                               LocalizedText(
-                                                ((widget.restaurantRating ??
-                                                        4.9))
-                                                    .toStringAsFixed(1),
+                                                widget.restaurantRating
+                                                        ?.toStringAsFixed(1) ??
+                                                    '—',
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w800,
