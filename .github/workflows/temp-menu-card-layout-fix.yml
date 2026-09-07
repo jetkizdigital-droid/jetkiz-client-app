@@ -20,65 +20,17 @@ jobs:
 
       - name: Apply deterministic menu card fix
         shell: bash
+        env:
+          HELPER_B64: aW1wb3J0ICdkYXJ0Om1hdGgnIGFzIG1hdGg7CgppbXBvcnQgJ3BhY2thZ2U6Zmx1dHRlci9tYXRlcmlhbC5kYXJ0JzsKCi8vLyBDb21wdXRlcyBlbm91Z2ggdmVydGljYWwgc3BhY2UgZm9yIGEgdHdvLWNvbHVtbiBwcm9kdWN0IGNhcmQgd2hpbGUga2VlcGluZwovLy8gdGhlIHByb2R1Y3QgaW1hZ2Ugc3F1YXJlLiBUaGUgY29udGVudCByZXNlcnZlIGlzIGluZGVwZW5kZW50IGZyb20gZGV2aWNlCi8vLyB3aWR0aCwgc28gdGl0bGUvZGVzY3JpcHRpb24vcHJpY2UgY29udHJvbHMgZG8gbm90IG92ZXJsYXAgb24gbmFycm93IHBob25lcy4KZG91YmxlIG1lbnVQcm9kdWN0Q2FyZEV4dGVudCgKICBCdWlsZENvbnRleHQgY29udGV4dCwgewogIHJlcXVpcmVkIGRvdWJsZSBob3Jpem9udGFsUGFkZGluZywKICBkb3VibGUgY3Jvc3NBeGlzU3BhY2luZyA9IDE0LAp9KSB7CiAgZmluYWwgc2NyZWVuV2lkdGggPSBNZWRpYVF1ZXJ5LnNpemVPZihjb250ZXh0KS53aWR0aDsKICBmaW5hbCBncmlkV2lkdGggPSBtYXRoLm1heCgwLjAsIHNjcmVlbldpZHRoIC0gaG9yaXpvbnRhbFBhZGRpbmcpOwogIGZpbmFsIGNhcmRXaWR0aCA9IG1hdGgubWF4KDAuMCwgKGdyaWRXaWR0aCAtIGNyb3NzQXhpc1NwYWNpbmcpIC8gMik7CiAgZmluYWwgdGV4dFNjYWxlID0gTWVkaWFRdWVyeS50ZXh0U2NhbGVyT2YoY29udGV4dCkuc2NhbGUoMS4wKTsKICBmaW5hbCBzY2FsZUV4dHJhID0gbWF0aC5tYXgoMC4wLCBtYXRoLm1pbigwLjgsIHRleHRTY2FsZSAtIDEuMCkpICogNzI7CgogIHJldHVybiBtYXRoLm1heCgyNzAuMCwgY2FyZFdpZHRoICsgMTQ2ICsgc2NhbGVFeHRyYSk7Cn0KCi8vLyBEZWNvZGUgZm9vZCBpbWFnZXMgY2xvc2UgdG8gdGhlaXIgYWN0dWFsIG9uLXNjcmVlbiBzaXplIGluc3RlYWQgb2Yga2VlcGluZwovLy8gdW5uZWNlc3NhcmlseSBsYXJnZSBzb3VyY2UgYml0bWFwcyBpbiBtZW1vcnkgd2hpbGUgc2Nyb2xsaW5nIHRoZSBtZW51LgppbnQgbWVudVByb2R1Y3RJbWFnZUNhY2hlU2l6ZSgKICBCdWlsZENvbnRleHQgY29udGV4dCwgewogIGRvdWJsZSBob3Jpem9udGFsUGFkZGluZyA9IDMwLAogIGRvdWJsZSBjcm9zc0F4aXNTcGFjaW5nID0gMTQsCn0pIHsKICBmaW5hbCBzY3JlZW5XaWR0aCA9IE1lZGlhUXVlcnkuc2l6ZU9mKGNvbnRleHQpLndpZHRoOwogIGZpbmFsIGdyaWRXaWR0aCA9IG1hdGgubWF4KDAuMCwgc2NyZWVuV2lkdGggLSBob3Jpem9udGFsUGFkZGluZyk7CiAgZmluYWwgY2FyZFdpZHRoID0gbWF0aC5tYXgoMS4wLCAoZ3JpZFdpZHRoIC0gY3Jvc3NBeGlzU3BhY2luZykgLyAyKTsKICBmaW5hbCBpbWFnZUxvZ2ljYWxXaWR0aCA9IG1hdGgubWF4KDEuMCwgY2FyZFdpZHRoIC0gMTYpOwogIGZpbmFsIGRlY29kZWRQaXhlbHMgPQogICAgICAoaW1hZ2VMb2dpY2FsV2lkdGggKiBNZWRpYVF1ZXJ5LmRldmljZVBpeGVsUmF0aW9PZihjb250ZXh0KSkucm91bmQoKTsKCiAgcmV0dXJuIGRlY29kZWRQaXhlbHMuY2xhbXAoMTI4LCAyMDQ4KS50b0ludCgpOwp9CgpTdHJpbmcgZm9ybWF0TWVudVByaWNlKGludCB2YWx1ZSkgewogIGZpbmFsIG5lZ2F0aXZlID0gdmFsdWUgPCAwOwogIGZpbmFsIHJhdyA9IHZhbHVlLmFicygpLnRvU3RyaW5nKCk7CiAgZmluYWwgYnVmZmVyID0gU3RyaW5nQnVmZmVyKCk7CgogIGZvciAodmFyIGluZGV4ID0gMDsgaW5kZXggPCByYXcubGVuZ3RoOyBpbmRleCsrKSB7CiAgICBpZiAoaW5kZXggPiAwICYmIChyYXcubGVuZ3RoIC0gaW5kZXgpICUgMyA9PSAwKSB7CiAgICAgIGJ1ZmZlci53cml0ZSgnICcpOwogICAgfQogICAgYnVmZmVyLndyaXRlKHJhd1tpbmRleF0pOwogIH0KCiAgcmV0dXJuICcke25lZ2F0aXZlID8gJy0nIDogJyd9JHtidWZmZXIudG9TdHJpbmcoKX0g4oK4JzsKfQo=
         run: |
           set -euo pipefail
           python3 <<'PY'
+          import base64
+          import os
           from pathlib import Path
 
           helper = Path('lib/features/menu/presentation/productCardLayout.dart')
-          helper.write_text("""import 'dart:math' as math;
-
-import 'package:flutter/material.dart';
-
-/// Computes enough vertical space for a two-column product card while keeping
-/// the product image square. The content reserve is independent from device
-/// width, so title/description/price controls do not overlap on narrow phones.
-double menuProductCardExtent(
-  BuildContext context, {
-  required double horizontalPadding,
-  double crossAxisSpacing = 14,
-}) {
-  final screenWidth = MediaQuery.sizeOf(context).width;
-  final gridWidth = math.max(0.0, screenWidth - horizontalPadding);
-  final cardWidth = math.max(0.0, (gridWidth - crossAxisSpacing) / 2);
-  final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-  final scaleExtra = math.max(0.0, math.min(0.8, textScale - 1.0)) * 72;
-
-  return math.max(270.0, cardWidth + 146 + scaleExtra);
-}
-
-/// Decode food images close to their actual on-screen size instead of keeping
-/// unnecessarily large source bitmaps in memory while scrolling the menu.
-int menuProductImageCacheSize(
-  BuildContext context, {
-  double horizontalPadding = 30,
-  double crossAxisSpacing = 14,
-}) {
-  final screenWidth = MediaQuery.sizeOf(context).width;
-  final gridWidth = math.max(0.0, screenWidth - horizontalPadding);
-  final cardWidth = math.max(1.0, (gridWidth - crossAxisSpacing) / 2);
-  final imageLogicalWidth = math.max(1.0, cardWidth - 16);
-  final decodedPixels =
-      (imageLogicalWidth * MediaQuery.devicePixelRatioOf(context)).round();
-
-  return decodedPixels.clamp(128, 2048).toInt();
-}
-
-String formatMenuPrice(int value) {
-  final negative = value < 0;
-  final raw = value.abs().toString();
-  final buffer = StringBuffer();
-
-  for (var index = 0; index < raw.length; index++) {
-    if (index > 0 && (raw.length - index) % 3 == 0) {
-      buffer.write(' ');
-    }
-    buffer.write(raw[index]);
-  }
-
-  return '${negative ? '-' : ''}${buffer.toString()} ₸';
-}
-""", encoding='utf-8')
+          helper.write_bytes(base64.b64decode(os.environ['HELPER_B64']))
 
           restaurant = Path('lib/features/menu/presentation/restaurantMenuPage.dart')
           text = restaurant.read_text(encoding='utf-8')
@@ -88,97 +40,38 @@ String formatMenuPrice(int value) {
           if import_line not in text:
               text = text.replace(import_anchor, import_anchor + import_line, 1)
 
-          old_delegate = """          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            childAspectRatio: 0.72,
-          ),"""
-          new_delegate = """          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            mainAxisExtent: menuProductCardExtent(
-              context,
-              horizontalPadding: 32,
-            ),
-          ),"""
+          old_delegate = "          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(\n            crossAxisCount: 2,\n            crossAxisSpacing: 14,\n            mainAxisSpacing: 14,\n            childAspectRatio: 0.72,\n          ),"
+          new_delegate = "          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(\n            crossAxisCount: 2,\n            crossAxisSpacing: 14,\n            mainAxisSpacing: 14,\n            mainAxisExtent: menuProductCardExtent(\n              context,\n              horizontalPadding: 32,\n            ),\n          ),"
           assert text.count(old_delegate) == 1, text.count(old_delegate)
           text = text.replace(old_delegate, new_delegate, 1)
           assert text.count('                        item.priceText,') == 1
-          text = text.replace(
-              '                        item.priceText,',
-              '                        formatMenuPrice(item.price),',
-              1,
-          )
-          image_anchor = """    final imageUrl = _normalizeUrl(item.mainImageUrl);
-
-    return ClipRRect("""
-          image_replacement = """    final imageUrl = _normalizeUrl(item.mainImageUrl);
-    final cacheSize = menuProductImageCacheSize(context, horizontalPadding: 32);
-
-    return ClipRRect("""
+          text = text.replace('                        item.priceText,', '                        formatMenuPrice(item.price),', 1)
+          image_anchor = "    final imageUrl = _normalizeUrl(item.mainImageUrl);\n\n    return ClipRRect("
+          image_replacement = "    final imageUrl = _normalizeUrl(item.mainImageUrl);\n    final cacheSize = menuProductImageCacheSize(context, horizontalPadding: 32);\n\n    return ClipRRect("
           assert text.count(image_anchor) == 1
           text = text.replace(image_anchor, image_replacement, 1)
-          image_fit_anchor = """                imageUrl,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.medium,"""
-          image_fit_replacement = """                imageUrl,
-                fit: BoxFit.cover,
-                cacheWidth: cacheSize,
-                cacheHeight: cacheSize,
-                filterQuality: FilterQuality.medium,"""
+          image_fit_anchor = "                imageUrl,\n                fit: BoxFit.cover,\n                filterQuality: FilterQuality.medium,"
+          image_fit_replacement = "                imageUrl,\n                fit: BoxFit.cover,\n                cacheWidth: cacheSize,\n                cacheHeight: cacheSize,\n                filterQuality: FilterQuality.medium,"
           assert text.count(image_fit_anchor) == 1
           text = text.replace(image_fit_anchor, image_fit_replacement, 1)
           restaurant.write_text(text, encoding='utf-8')
 
           category = Path('lib/features/menu/presentation/categoryProductsPage.dart')
           text = category.read_text(encoding='utf-8')
-          import_anchor = "import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';\n"
           assert import_anchor in text
           if import_line not in text:
               text = text.replace(import_anchor, import_anchor + import_line, 1)
-
           assert text.count(old_delegate) == 1, text.count(old_delegate)
-          category_delegate = """          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            mainAxisExtent: menuProductCardExtent(
-              context,
-              horizontalPadding: 30,
-            ),
-          ),"""
+          category_delegate = "          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(\n            crossAxisCount: 2,\n            crossAxisSpacing: 14,\n            mainAxisSpacing: 14,\n            mainAxisExtent: menuProductCardExtent(\n              context,\n              horizontalPadding: 30,\n            ),\n          ),"
           text = text.replace(old_delegate, category_delegate, 1)
           assert text.count("                      '${product.price}₸',") == 1
-          text = text.replace(
-              "                      '${product.price}₸',",
-              '                      formatMenuPrice(product.price),',
-              1,
-          )
-          build_anchor = """  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: AspectRatio("""
-          build_replacement = """  @override
-  Widget build(BuildContext context) {
-    final cacheSize = menuProductImageCacheSize(context);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: AspectRatio("""
-          # Only the _ProductImage widget has this exact block in this file.
+          text = text.replace("                      '${product.price}₸',", '                      formatMenuPrice(product.price),', 1)
+          build_anchor = "  @override\n  Widget build(BuildContext context) {\n    return ClipRRect(\n      borderRadius: BorderRadius.circular(16),\n      child: AspectRatio("
+          build_replacement = "  @override\n  Widget build(BuildContext context) {\n    final cacheSize = menuProductImageCacheSize(context);\n\n    return ClipRRect(\n      borderRadius: BorderRadius.circular(16),\n      child: AspectRatio("
           assert text.count(build_anchor) == 1, text.count(build_anchor)
           text = text.replace(build_anchor, build_replacement, 1)
-          fit_anchor = """                imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder:"""
-          fit_replacement = """                imageUrl!,
-                fit: BoxFit.cover,
-                cacheWidth: cacheSize,
-                cacheHeight: cacheSize,
-                errorBuilder:"""
+          fit_anchor = "                imageUrl!,\n                fit: BoxFit.cover,\n                errorBuilder:"
+          fit_replacement = "                imageUrl!,\n                fit: BoxFit.cover,\n                cacheWidth: cacheSize,\n                cacheHeight: cacheSize,\n                errorBuilder:"
           assert text.count(fit_anchor) == 1
           text = text.replace(fit_anchor, fit_replacement, 1)
           category.write_text(text, encoding='utf-8')
