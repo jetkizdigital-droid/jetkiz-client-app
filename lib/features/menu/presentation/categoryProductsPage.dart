@@ -574,14 +574,11 @@ class _RestaurantSection extends StatelessWidget {
           itemCount: group.products.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            mainAxisExtent: menuProductCardExtent(
-              context,
-              horizontalPadding: 30,
-            ),
+            childAspectRatio: 0.72,
           ),
           itemBuilder: (context, index) {
             final product = group.products[index];
@@ -688,7 +685,7 @@ class _CategoryProductCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.black,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 1.15,
                   ),
@@ -699,19 +696,15 @@ class _CategoryProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: LocalizedText(
-                        formatMenuPrice(product.price),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          height: 1.0,
-                        ),
+                    child: LocalizedText(
+                      '${product.price}₸',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.0,
                       ),
                     ),
                   ),

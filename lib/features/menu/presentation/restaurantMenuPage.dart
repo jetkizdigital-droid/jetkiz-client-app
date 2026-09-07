@@ -1474,14 +1474,11 @@ class _MenuCategorySection extends StatelessWidget {
           itemCount: visibleItems.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            mainAxisExtent: menuProductCardExtent(
-              context,
-              horizontalPadding: 32,
-            ),
+            childAspectRatio: 0.72,
           ),
           itemBuilder: (context, index) {
             final item = visibleItems[index];
@@ -1621,25 +1618,11 @@ class _MenuProductCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.black,
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           height: 1.15,
                         ),
                       ),
-                      if ((item.description ?? '').trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        LocalizedText(
-                          item.description!.trim(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF5F5F5F),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            height: 1.2,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -1648,19 +1631,15 @@ class _MenuProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: LocalizedText(
-                          formatMenuPrice(item.price),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            height: 1.0,
-                          ),
+                      child: LocalizedText(
+                        item.priceText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          height: 1.0,
                         ),
                       ),
                     ),
