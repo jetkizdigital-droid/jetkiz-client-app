@@ -1,0 +1,36 @@
+name: Temp format final polish
+
+on:
+  push:
+    branches: [fix/final-phone-polish]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[format-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/final-phone-polish
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart format lib test
+      - run: flutter analyze
+      - run: flutter test
+      - name: Commit formatting
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test
+          if git diff --cached --quiet; then
+            git commit --allow-empty -m "style(client): confirm final formatting [format-applied]"
+          else
+            git commit -m "style(client): normalize final formatting [format-applied]"
+          fi
+          git push origin HEAD:fix/final-phone-polish
