@@ -53,7 +53,10 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
   }
 
   void _handleScroll() {
-    if (!_scrollController.hasClients || !_hasMore || _loadingMore || _loading) {
+    if (!_scrollController.hasClients ||
+        !_hasMore ||
+        _loadingMore ||
+        _loading) {
       return;
     }
 
@@ -176,7 +179,8 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
                               ? const _ReviewsEmptyState()
                               : ListView.separated(
                                   controller: _scrollController,
-                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
                                   padding: const EdgeInsets.all(16),
                                   itemCount: _items.length + 1,
                                   separatorBuilder: (_, __) =>
@@ -191,12 +195,15 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
 
                                     if (_loadingMore) {
                                       return const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 18),
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 18),
                                         child: Center(
                                           child: SizedBox(
                                             width: 24,
                                             height: 24,
-                                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                            ),
                                           ),
                                         ),
                                       );
@@ -204,11 +211,16 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
 
                                     if (_loadMoreError != null) {
                                       return Padding(
-                                        padding: const EdgeInsets.only(top: 4, bottom: 18),
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          bottom: 18,
+                                        ),
                                         child: Center(
                                           child: OutlinedButton(
                                             onPressed: _loadNextPage,
-                                            child: const LocalizedText('Загрузить ещё'),
+                                            child: const LocalizedText(
+                                              'Загрузить ещё',
+                                            ),
                                           ),
                                         ),
                                       );
@@ -216,18 +228,26 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
 
                                     if (_hasMore) {
                                       return Padding(
-                                        padding: const EdgeInsets.only(top: 4, bottom: 18),
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          bottom: 18,
+                                        ),
                                         child: Center(
                                           child: TextButton(
                                             onPressed: _loadNextPage,
-                                            child: const LocalizedText('Загрузить ещё'),
+                                            child: const LocalizedText(
+                                              'Загрузить ещё',
+                                            ),
                                           ),
                                         ),
                                       );
                                     }
 
                                     return Padding(
-                                      padding: const EdgeInsets.only(top: 2, bottom: 18),
+                                      padding: const EdgeInsets.only(
+                                        top: 2,
+                                        bottom: 18,
+                                      ),
                                       child: Center(
                                         child: LocalizedText(
                                           'Все отзывы загружены',
@@ -242,8 +262,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
                                 ),
                         ),
             ),
-            if (_refreshing)
-              const LinearProgressIndicator(minHeight: 2),
+            if (_refreshing) const LinearProgressIndicator(minHeight: 2),
           ],
         ),
       ),
@@ -321,7 +340,11 @@ class _ReviewsEmptyState extends StatelessWidget {
         LocalizedText(
           'Когда клиенты оставят отзывы, они появятся здесь.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF6B7280)),
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.45,
+            color: Color(0xFF6B7280),
+          ),
         ),
       ],
     );
@@ -345,7 +368,11 @@ class _ReviewsErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFEF4444)),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: Color(0xFFEF4444),
+            ),
             const SizedBox(height: 12),
             LocalizedText(
               message,
