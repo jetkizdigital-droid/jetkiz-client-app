@@ -94,8 +94,6 @@ class FavoritesController extends ChangeNotifier {
       return;
     }
 
-    if (!await AuthStorage().hasAccessToken()) return;
-
     final generation = _generation;
     late final Future<void> future;
     future = _loadFavoriteIds(generation);
@@ -111,6 +109,9 @@ class FavoritesController extends ChangeNotifier {
   }
 
   Future<void> _loadFavoriteIds(int generation) async {
+    if (!await AuthStorage().hasAccessToken()) return;
+    if (generation != _generation) return;
+
     _isInitializing = true;
     notifyListeners();
 
