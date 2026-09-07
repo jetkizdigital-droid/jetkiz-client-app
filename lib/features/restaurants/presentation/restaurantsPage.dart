@@ -29,7 +29,8 @@ class RestaurantsPage extends StatefulWidget {
   State<RestaurantsPage> createState() => _RestaurantsPageState();
 }
 
-class _RestaurantsPageState extends State<RestaurantsPage> {
+class _RestaurantsPageState extends State<RestaurantsPage>
+    with WidgetsBindingObserver {
   static const Color _green = Color(0xFF489F2A);
   static const Color _bg = Color(0xFFF7FAF5);
 
@@ -37,6 +38,7 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   final TextEditingController _searchController = TextEditingController();
 
   bool _isLoading = true;
+  bool _isBackgroundRefreshing = false;
   String? _errorText;
 
   List<Restaurant> _restaurants = const [];
@@ -47,13 +49,12 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this);
     _restaurantsApi = RestaurantsApi(ApiClient());
     _searchController.addListener(_handleSearchChanged);
     _availabilityTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) {
-        if (mounted && _restaurants.isNotEmpty) setState(() {});
-      },
+      (_) => unawaited(_refreshRestaurantsSilently()),
     );
 
     _loadRestaurants();
@@ -61,12 +62,20 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _availabilityTimer?.cancel();
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
 
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshRestaurantsSilently());
+    }
   }
 
   void _handleSearchChanged() {
@@ -77,6 +86,31 @@ class _RestaurantsPageState extends State<RestaurantsPage> {
     setState(() {
       _query = nextQuery;
     });
+  }
+
+  Future<void> _refreshRestaurantsSilently() async {
+    if (!mounted ||
+        _restaurants.isEmpty ||
+        _isLoading ||
+        _isBackgroundRefreshing) {
+      return;
+    }
+
+    _isBackgroundRefreshing = true;
+
+    try {
+      final items = await _restaurantsApi.getAllPublicRestaurants();
+      if (!mounted) return;
+
+      setState(() {
+        _restaurants = items;
+        _errorText = null;
+      });
+    } catch (_) {
+      // Keep the last successful list. Background refresh failures are silent.
+    } finally {
+      _isBackgroundRefreshing = false;
+    }
   }
 
   Future<void> _loadRestaurants() async {
