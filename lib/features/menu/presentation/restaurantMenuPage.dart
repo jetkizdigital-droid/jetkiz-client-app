@@ -281,12 +281,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
       }).toList();
 
       if (items.isNotEmpty) {
-        result.add(
-          RestaurantMenuGroup(
-            category: group.category,
-            items: items,
-          ),
-        );
+        result.add(RestaurantMenuGroup(category: group.category, items: items));
       }
     }
 
@@ -400,9 +395,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   void _showSnackBar(String message) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.hideCurrentSnackBar();
-    messenger?.showSnackBar(
-      SnackBar(content: LocalizedText(message)),
-    );
+    messenger?.showSnackBar(SnackBar(content: LocalizedText(message)));
   }
 
   void _openProductDetails(RestaurantMenuItem item) {
@@ -478,19 +471,9 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   }
 
   String get _restaurantRatingText {
-    final dynamic restaurant = _menuData?.restaurant;
-
-    final raw = _firstNonEmpty([
-      _readDynamicString(restaurant, 'ratingAvg'),
-      _readDynamicString(restaurant, 'rating'),
-    ]);
-
-    if (raw == null) return '—';
-
-    final parsed = double.tryParse(raw.replaceAll(',', '.'));
-    if (parsed == null || parsed <= 0) return raw;
-
-    return parsed.toStringAsFixed(1);
+    final rating = _menuData?.restaurant.ratingAvg;
+    if (rating == null || rating <= 0) return '—';
+    return rating.toStringAsFixed(1);
   }
 
   String get _restaurantDeliveryText {
@@ -590,275 +573,263 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _RestaurantMenuErrorState(
-                    message: _error!,
-                    onRetry: _load,
-                  )
-                : menuData == null
-                    ? _RestaurantMenuErrorState(
-                        message: 'Меню ресторана не найдено',
-                        onRetry: _load,
-                      )
-                    : ScrollConfiguration(
-                        behavior: const _SmoothScrollBehavior(),
-                        child: CustomScrollView(
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
-                          slivers: [
-                            SliverAppBar(
-                              pinned: true,
-                              automaticallyImplyLeading: false,
-                              backgroundColor: const Color(0xFFF7F7F7),
-                              surfaceTintColor: const Color(0xFFF7F7F7),
-                              expandedHeight: 160,
-                              collapsedHeight: 56,
-                              elevation: 0,
-                              flexibleSpace: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final top =
-                                      MediaQuery.of(context).padding.top;
-                                  final maxHeight = 160 + top;
-                                  final collapseT =
-                                      ((maxHeight - constraints.maxHeight) /
-                                              (160 - 56))
-                                          .clamp(0.0, 1.0);
+            ? _RestaurantMenuErrorState(message: _error!, onRetry: _load)
+            : menuData == null
+            ? _RestaurantMenuErrorState(
+                message: 'Меню ресторана не найдено',
+                onRetry: _load,
+              )
+            : ScrollConfiguration(
+                behavior: const _SmoothScrollBehavior(),
+                child: CustomScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  slivers: [
+                    SliverAppBar(
+                      pinned: true,
+                      automaticallyImplyLeading: false,
+                      backgroundColor: const Color(0xFFF7F7F7),
+                      surfaceTintColor: const Color(0xFFF7F7F7),
+                      expandedHeight: 160,
+                      collapsedHeight: 56,
+                      elevation: 0,
+                      flexibleSpace: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final top = MediaQuery.of(context).padding.top;
+                          final maxHeight = 160 + top;
+                          final collapseT =
+                              ((maxHeight - constraints.maxHeight) / (160 - 56))
+                                  .clamp(0.0, 1.0);
 
-                                  return Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      Transform.translate(
-                                        offset: Offset(0, -20 * collapseT),
-                                        child: _HeroImageLayer(
-                                          imageUrl: _restaurantImageUrl,
-                                        ),
-                                      ),
-                                      Container(
-                                        decoration: const BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Color(0x2E000000),
-                                              Color(0x0A000000),
-                                              Color(0x3D000000),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: top + 6,
-                                        left: 14,
-                                        child: _HeaderCircleButton(
-                                          onTap: () {
-                                            Navigator.of(context).maybePop();
-                                          },
-                                          child: const Icon(
-                                            Icons.arrow_back_ios_new_rounded,
-                                            color: Colors.black87,
-                                            size: 18,
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: top + 6,
-                                        right: 14,
-                                        child: _HeaderCircleButton(
-                                          onTap: _favorites.isRestaurantBusy(
-                                                  widget.restaurantId)
-                                              ? null
-                                              : _toggleRestaurantFavorite,
-                                          child: _favorites.isRestaurantBusy(
-                                                  widget.restaurantId)
-                                              ? const SizedBox(
-                                                  width: 18,
-                                                  height: 18,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                  ),
-                                                )
-                                              : Icon(
-                                                  _favorites
-                                                          .isRestaurantFavorite(
-                                                              widget
-                                                                  .restaurantId)
-                                                      ? Icons.favorite_rounded
-                                                      : Icons
-                                                          .favorite_border_rounded,
-                                                  color: _favorites
-                                                          .isRestaurantFavorite(
-                                                              widget
-                                                                  .restaurantId)
-                                                      ? Colors.redAccent
-                                                      : Colors.black87,
-                                                  size: 21,
-                                                ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        left: 60,
-                                        right: 60,
-                                        top: top + 14,
-                                        child: IgnorePointer(
-                                          child: AnimatedOpacity(
-                                            duration: const Duration(
-                                              milliseconds: 120,
-                                            ),
-                                            opacity: collapseT > 0.55 ? 1 : 0,
-                                            child: LocalizedText(
-                                              _restaurantName,
-                                              maxLines: 1,
-                                              textAlign: TextAlign.center,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF1E1E1E),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Transform.translate(
+                                offset: Offset(0, -20 * collapseT),
+                                child: _HeroImageLayer(
+                                  imageUrl: _restaurantImageUrl,
+                                ),
+                              ),
+                              Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Color(0x2E000000),
+                                      Color(0x0A000000),
+                                      Color(0x3D000000),
                                     ],
-                                  );
-                                },
-                              ),
-                            ),
-                            SliverPersistentHeader(
-                              pinned: true,
-                              delegate: _FixedHeaderDelegate(
-                                height: 142,
-                                child: Container(
-                                  color: const Color(0xFFF7F7F7),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                                  child: _RestaurantInfoCard(
-                                    restaurantName: _restaurantName,
-                                    restaurantDescription:
-                                        _restaurantDescription,
-                                    ratingText: _restaurantRatingText,
-                                    deliveryText: _restaurantDeliveryText,
-                                    addressText: _restaurantAddressText,
                                   ),
                                 ),
                               ),
-                            ),
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                child: _ReviewsSummaryCard(
-                                  reviewsCount: _reviewsCount,
-                                  videoReviewsCount: _videoReviewsCount,
-                                  photoReviewsCount: _photoReviewsCount,
-                                  audioReviewsCount: _audioReviewsCount,
-                                  onTap: _onReviewsTap,
-                                ),
-                              ),
-                            ),
-                            SliverPersistentHeader(
-                              pinned: true,
-                              delegate: _FixedHeaderDelegate(
-                                height: 56,
-                                child: Container(
-                                  color: const Color(0xFFF7F7F7),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                  child: _MenuSearchField(
-                                    controller: _searchController,
-                                    focusNode: _searchFocusNode,
-                                    hintText: _searchHint(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _searchQuery = value;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SliverPersistentHeader(
-                              pinned: true,
-                              delegate: _FixedHeaderDelegate(
-                                height: 46,
-                                child: Container(
-                                  color: const Color(0xFFF7F7F7),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                  child: _CategoriesStrip(
-                                    groups: _allGroups,
-                                    selectedTabId: _selectedTabId,
-                                    allTabTitle: _allTabTitle(),
-                                    onTabSelected: (tabId) {
-                                      setState(() {
-                                        _selectedTabId = tabId;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-                            if (groups.isEmpty)
-                              const SliverFillRemaining(
-                                hasScrollBody: false,
-                                child: _MenuEmptyState(),
-                              )
-                            else
-                              SliverPadding(
-                                padding: EdgeInsets.fromLTRB(
-                                  16,
-                                  12,
-                                  16,
-                                  hasBasket ? 190 : 32,
-                                ),
-                                sliver: SliverList.separated(
-                                  itemCount: groups.length,
-                                  itemBuilder: (context, groupIndex) {
-                                    final group = groups[groupIndex];
-
-                                    return _MenuCategorySection(
-                                      title: group.category.title,
-                                      showTitle: _selectedTabId == 'all',
-                                      items: group.items,
-                                      favoriteProductIds: _favorites.productIds,
-                                      favoritePendingProductIds:
-                                          _favorites.busyProductIds,
-                                      restaurantCanOrder:
-                                          _menuData?.restaurant.canOrder ??
-                                              false,
-                                      getQuantity: _getQuantity,
-                                      onProductTap: _openProductDetails,
-                                      onFavoriteTap: _toggleProductFavorite,
-                                      onAddFirst: (productId) {
-                                        final item = group.items.firstWhere(
-                                          (x) => x.id == productId,
-                                        );
-                                        _addFirst(item);
-                                      },
-                                      onAdd: (productId) {
-                                        final item = group.items.firstWhere(
-                                          (x) => x.id == productId,
-                                        );
-                                        _increment(item);
-                                      },
-                                      onRemove: (productId) {
-                                        final item = group.items.firstWhere(
-                                          (x) => x.id == productId,
-                                        );
-                                        _decrement(item);
-                                      },
-                                    );
+                              Positioned(
+                                top: top + 6,
+                                left: 14,
+                                child: _HeaderCircleButton(
+                                  onTap: () {
+                                    Navigator.of(context).maybePop();
                                   },
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 18),
+                                  child: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Colors.black87,
+                                    size: 18,
+                                  ),
                                 ),
                               ),
-                          ],
+                              Positioned(
+                                top: top + 6,
+                                right: 14,
+                                child: _HeaderCircleButton(
+                                  onTap:
+                                      _favorites.isRestaurantBusy(
+                                        widget.restaurantId,
+                                      )
+                                      ? null
+                                      : _toggleRestaurantFavorite,
+                                  child:
+                                      _favorites.isRestaurantBusy(
+                                        widget.restaurantId,
+                                      )
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Icon(
+                                          _favorites.isRestaurantFavorite(
+                                                widget.restaurantId,
+                                              )
+                                              ? Icons.favorite_rounded
+                                              : Icons.favorite_border_rounded,
+                                          color:
+                                              _favorites.isRestaurantFavorite(
+                                                widget.restaurantId,
+                                              )
+                                              ? Colors.redAccent
+                                              : Colors.black87,
+                                          size: 21,
+                                        ),
+                                ),
+                              ),
+                              Positioned(
+                                left: 60,
+                                right: 60,
+                                top: top + 14,
+                                child: IgnorePointer(
+                                  child: AnimatedOpacity(
+                                    duration: const Duration(milliseconds: 120),
+                                    opacity: collapseT > 0.55 ? 1 : 0,
+                                    child: LocalizedText(
+                                      _restaurantName,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF1E1E1E),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _FixedHeaderDelegate(
+                        height: 142,
+                        child: Container(
+                          color: const Color(0xFFF7F7F7),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                          child: _RestaurantInfoCard(
+                            restaurantName: _restaurantName,
+                            restaurantDescription: _restaurantDescription,
+                            ratingText: _restaurantRatingText,
+                            deliveryText: _restaurantDeliveryText,
+                            addressText: _restaurantAddressText,
+                          ),
                         ),
                       ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: _ReviewsSummaryCard(
+                          reviewsCount: _reviewsCount,
+                          videoReviewsCount: _videoReviewsCount,
+                          photoReviewsCount: _photoReviewsCount,
+                          audioReviewsCount: _audioReviewsCount,
+                          onTap: _onReviewsTap,
+                        ),
+                      ),
+                    ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _FixedHeaderDelegate(
+                        height: 56,
+                        child: Container(
+                          color: const Color(0xFFF7F7F7),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: _MenuSearchField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            hintText: _searchHint(),
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _FixedHeaderDelegate(
+                        height: 46,
+                        child: Container(
+                          color: const Color(0xFFF7F7F7),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                          child: _CategoriesStrip(
+                            groups: _allGroups,
+                            selectedTabId: _selectedTabId,
+                            allTabTitle: _allTabTitle(),
+                            onTabSelected: (tabId) {
+                              setState(() {
+                                _selectedTabId = tabId;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (groups.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _MenuEmptyState(),
+                      )
+                    else
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          12,
+                          16,
+                          hasBasket ? 190 : 32,
+                        ),
+                        sliver: SliverList.separated(
+                          itemCount: groups.length,
+                          itemBuilder: (context, groupIndex) {
+                            final group = groups[groupIndex];
+
+                            return _MenuCategorySection(
+                              title: group.category.title,
+                              showTitle: _selectedTabId == 'all',
+                              items: group.items,
+                              favoriteProductIds: _favorites.productIds,
+                              favoritePendingProductIds:
+                                  _favorites.busyProductIds,
+                              restaurantCanOrder:
+                                  _menuData?.restaurant.canOrder ?? false,
+                              getQuantity: _getQuantity,
+                              onProductTap: _openProductDetails,
+                              onFavoriteTap: _toggleProductFavorite,
+                              onAddFirst: (productId) {
+                                final item = group.items.firstWhere(
+                                  (x) => x.id == productId,
+                                );
+                                _addFirst(item);
+                              },
+                              onAdd: (productId) {
+                                final item = group.items.firstWhere(
+                                  (x) => x.id == productId,
+                                );
+                                _increment(item);
+                              },
+                              onRemove: (productId) {
+                                final item = group.items.firstWhere(
+                                  (x) => x.id == productId,
+                                );
+                                _decrement(item);
+                              },
+                            );
+                          },
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 18),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
       ),
       bottomNavigationBar: hasBasket
           ? CartSummaryBar(
@@ -878,10 +849,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
 }
 
 class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _FixedHeaderDelegate({
-    required this.height,
-    required this.child,
-  });
+  const _FixedHeaderDelegate({required this.height, required this.child});
 
   final double height;
   final Widget child;
@@ -956,9 +924,7 @@ class _CategoriesStrip extends StatelessWidget {
 }
 
 class _HeroImageLayer extends StatelessWidget {
-  const _HeroImageLayer({
-    required this.imageUrl,
-  });
+  const _HeroImageLayer({required this.imageUrl});
 
   final String? imageUrl;
 
@@ -1006,10 +972,7 @@ class _RestaurantHeroPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE8E8E8),
-            Color(0xFFD6D6D6),
-          ],
+          colors: [Color(0xFFE8E8E8), Color(0xFFD6D6D6)],
         ),
       ),
       alignment: Alignment.center,
@@ -1023,10 +986,7 @@ class _RestaurantHeroPlaceholder extends StatelessWidget {
 }
 
 class _HeaderCircleButton extends StatelessWidget {
-  const _HeaderCircleButton({
-    required this.child,
-    required this.onTap,
-  });
+  const _HeaderCircleButton({required this.child, required this.onTap});
 
   final Widget child;
   final VoidCallback? onTap;
@@ -1040,11 +1000,7 @@ class _HeaderCircleButton extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Center(child: child),
-        ),
+        child: SizedBox(width: 36, height: 36, child: Center(child: child)),
       ),
     );
   }
@@ -1101,18 +1057,24 @@ class _RestaurantInfoCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE9F5E7),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.star_rounded,
-                      size: 16,
-                      color: Color(0xFF489F2A),
+                    const Text(
+                      '★',
+                      style: TextStyle(
+                        fontSize: 17,
+                        height: 1,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF489F2A),
+                      ),
                     ),
                     const SizedBox(width: 4),
                     LocalizedText(
@@ -1163,10 +1125,7 @@ class _RestaurantInfoCard extends StatelessWidget {
 }
 
 class _MiniMetaItem extends StatelessWidget {
-  const _MiniMetaItem({
-    required this.icon,
-    required this.text,
-  });
+  const _MiniMetaItem({required this.icon, required this.text});
 
   final IconData icon;
   final String text;
@@ -1180,11 +1139,7 @@ class _MiniMetaItem extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 15,
-            color: const Color(0xFF808080),
-          ),
+          Icon(icon, size: 15, color: const Color(0xFF808080)),
           const SizedBox(width: 4),
           Flexible(
             child: LocalizedText(
@@ -1295,10 +1250,7 @@ class _ReviewsSummaryCard extends StatelessWidget {
 }
 
 class _ReviewStat extends StatelessWidget {
-  const _ReviewStat({
-    required this.icon,
-    required this.value,
-  });
+  const _ReviewStat({required this.icon, required this.value});
 
   final IconData icon;
   final int value;
@@ -1308,11 +1260,7 @@ class _ReviewStat extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 14,
-          color: const Color(0xFF5A5A5A),
-        ),
+        Icon(icon, size: 14, color: const Color(0xFF5A5A5A)),
         const SizedBox(width: 4),
         LocalizedText(
           '$value',
@@ -1369,16 +1317,10 @@ class _MenuSearchField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(
-              color: Color(0xFF489F2A),
-              width: 1.2,
-            ),
+            borderSide: const BorderSide(color: Color(0xFF489F2A), width: 1.2),
           ),
         ),
-        style: const TextStyle(
-          fontSize: 14,
-          color: Colors.black,
-        ),
+        style: const TextStyle(fontSize: 14, color: Colors.black),
       ),
     );
   }
@@ -1574,8 +1516,9 @@ class _MenuProductCard extends StatelessWidget {
                                     isFavorite
                                         ? Icons.favorite_rounded
                                         : Icons.favorite_border_rounded,
-                                    color:
-                                        isFavorite ? Colors.red : Colors.black,
+                                    color: isFavorite
+                                        ? Colors.red
+                                        : Colors.black,
                                     size: 22,
                                   ),
                           ),
@@ -1608,22 +1551,21 @@ class _MenuProductCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      LocalizedText(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          height: 1.15,
-                        ),
+                SizedBox(
+                  height: 30,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: LocalizedText(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1631,15 +1573,18 @@ class _MenuProductCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: LocalizedText(
-                        item.priceText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          height: 1.0,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: LocalizedText(
+                          formatMenuPrice(item.price),
+                          maxLines: 1,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
@@ -1653,9 +1598,7 @@ class _MenuProductCard extends StatelessWidget {
                         onRemove: onRemove,
                       )
                     else
-                      _CompactAddButton(
-                        onTap: onAddFirst,
-                      ),
+                      _CompactAddButton(onTap: onAddFirst),
                   ],
                 ),
               ],
@@ -1668,9 +1611,7 @@ class _MenuProductCard extends StatelessWidget {
 }
 
 class _MenuProductImage extends StatelessWidget {
-  const _MenuProductImage({
-    required this.item,
-  });
+  const _MenuProductImage({required this.item});
 
   final RestaurantMenuItem item;
 
@@ -1682,13 +1623,12 @@ class _MenuProductImage extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: menuProductImageAspectRatio,
         child: imageUrl != null && imageUrl.isNotEmpty
             ? Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
                 cacheWidth: cacheSize,
-                cacheHeight: cacheSize,
                 filterQuality: FilterQuality.medium,
                 gaplessPlayback: true,
                 errorBuilder: (_, __, ___) {
@@ -1709,19 +1649,13 @@ class _MenuImagePlaceholder extends StatelessWidget {
     return Container(
       color: const Color(0xFFF4F4F4),
       alignment: Alignment.center,
-      child: const Icon(
-        Icons.image_outlined,
-        size: 42,
-        color: Colors.black54,
-      ),
+      child: const Icon(Icons.image_outlined, size: 42, color: Colors.black54),
     );
   }
 }
 
 class _CompactAddButton extends StatelessWidget {
-  const _CompactAddButton({
-    required this.onTap,
-  });
+  const _CompactAddButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -1731,7 +1665,7 @@ class _CompactAddButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
-        width: 74,
+        width: 56,
         height: 36,
         decoration: ShapeDecoration(
           color: const Color(0xFF489F2A),
@@ -1740,11 +1674,7 @@ class _CompactAddButton extends StatelessWidget {
           ),
         ),
         alignment: Alignment.center,
-        child: const Icon(
-          Icons.add_rounded,
-          color: Colors.white,
-          size: 24,
-        ),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
       ),
     );
   }
@@ -1773,12 +1703,9 @@ class _MenuQuantityControl extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _QuantityButton(
-            icon: Icons.remove_rounded,
-            onTap: onRemove,
-          ),
+          _QuantityButton(icon: Icons.remove_rounded, onTap: onRemove),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 5),
             child: LocalizedText(
               '$quantity',
               style: const TextStyle(
@@ -1788,10 +1715,7 @@ class _MenuQuantityControl extends StatelessWidget {
               ),
             ),
           ),
-          _QuantityButton(
-            icon: Icons.add_rounded,
-            onTap: onAdd,
-          ),
+          _QuantityButton(icon: Icons.add_rounded, onTap: onAdd),
         ],
       ),
     );
@@ -1799,10 +1723,7 @@ class _MenuQuantityControl extends StatelessWidget {
 }
 
 class _QuantityButton extends StatelessWidget {
-  const _QuantityButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _QuantityButton({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -1813,13 +1734,9 @@ class _QuantityButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: SizedBox(
-        width: 28,
+        width: 24,
         height: 28,
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: 18,
-        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
@@ -1836,11 +1753,7 @@ class _MenuEmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 56,
-              color: Color(0xFFB0B0B0),
-            ),
+            Icon(Icons.search_off_rounded, size: 56, color: Color(0xFFB0B0B0)),
             SizedBox(height: 12),
             LocalizedText(
               'Ничего не найдено',
@@ -1906,8 +1819,10 @@ class _RestaurantMenuErrorState extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF489F2A),
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1926,9 +1841,7 @@ class _SmoothScrollBehavior extends ScrollBehavior {
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(
-      parent: AlwaysScrollableScrollPhysics(),
-    );
+    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
   }
 
   @override
