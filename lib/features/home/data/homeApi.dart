@@ -36,7 +36,6 @@ class HomeApi {
 
     final promoJson = homeJson['promo'];
     final rawCategories = (homeJson['categories'] as List?) ?? const [];
-    final rawPinned = (restaurantsJson['pinned'] as List?) ?? const [];
 
     return HomeData(
       promo: promoJson is Map<String, dynamic>
@@ -46,10 +45,29 @@ class HomeApi {
           .whereType<Map<String, dynamic>>()
           .map(HomeCategoryData.fromJson)
           .toList(),
-      pinnedRestaurants: rawPinned
-          .whereType<Map<String, dynamic>>()
-          .map(HomeRestaurantData.fromJson)
-          .toList(),
+      pinnedRestaurants: _parsePinnedRestaurants(restaurantsJson),
     );
+  }
+
+  /// Availability changes much more often than CMS. Background refreshes use
+  /// this lightweight request so they do not repeatedly download/parse the
+  /// whole home CMS payload while the user is scrolling.
+  Future<List<HomeRestaurantData>> getPinnedRestaurants() async {
+    final response = await apiClient.dio.get<Map<String, dynamic>>(
+      '/restaurants/public/list',
+    );
+    return _parsePinnedRestaurants(
+      response.data ?? const <String, dynamic>{},
+    );
+  }
+
+  List<HomeRestaurantData> _parsePinnedRestaurants(
+    Map<String, dynamic> restaurantsJson,
+  ) {
+    final rawPinned = (restaurantsJson['pinned'] as List?) ?? const [];
+    return rawPinned
+        .whereType<Map<String, dynamic>>()
+        .map(HomeRestaurantData.fromJson)
+        .toList();
   }
 }
