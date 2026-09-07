@@ -12,6 +12,7 @@ import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/data/restaurantMenuApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/productCardLayout.dart';
 import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 import 'package:jetkiz_mobile/features/reviews/presentation/restaurantReviewsPage.dart';
 
@@ -1617,25 +1618,11 @@ class _MenuProductCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.black,
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           height: 1.15,
                         ),
                       ),
-                      if ((item.description ?? '').trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        LocalizedText(
-                          item.description!.trim(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF5F5F5F),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            height: 1.2,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -1690,6 +1677,7 @@ class _MenuProductImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = _normalizeUrl(item.mainImageUrl);
+    final cacheSize = menuProductImageCacheSize(context, horizontalPadding: 32);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -1699,6 +1687,8 @@ class _MenuProductImage extends StatelessWidget {
             ? Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
+                cacheWidth: cacheSize,
+                cacheHeight: cacheSize,
                 filterQuality: FilterQuality.medium,
                 gaplessPlayback: true,
                 errorBuilder: (_, __, ___) {

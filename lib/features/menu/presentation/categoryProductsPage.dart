@@ -9,6 +9,7 @@ import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/productCardLayout.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 
 // Jetkiz mobile
@@ -684,7 +685,7 @@ class _CategoryProductCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.black,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 1.15,
                   ),
@@ -736,6 +737,8 @@ class _ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cacheSize = menuProductImageCacheSize(context);
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
@@ -744,6 +747,8 @@ class _ProductImage extends StatelessWidget {
             ? Image.network(
                 imageUrl!,
                 fit: BoxFit.cover,
+                cacheWidth: cacheSize,
+                cacheHeight: cacheSize,
                 errorBuilder: (_, __, ___) {
                   return const _ProductImagePlaceholder();
                 },
