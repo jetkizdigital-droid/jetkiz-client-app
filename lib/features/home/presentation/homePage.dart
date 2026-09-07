@@ -100,7 +100,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final pinnedRestaurants = await _homeApi.getPinnedRestaurants();
       if (!mounted) return;
 
-      if (_samePinnedRestaurants(current.pinnedRestaurants, pinnedRestaurants)) {
+      if (_samePinnedRestaurants(
+        current.pinnedRestaurants,
+        pinnedRestaurants,
+      )) {
         return;
       }
 
