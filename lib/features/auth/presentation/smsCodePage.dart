@@ -25,7 +25,8 @@ class SmsCodePage extends StatefulWidget {
   State<SmsCodePage> createState() => _SmsCodePageState();
 }
 
-class _SmsCodePageState extends State<SmsCodePage> {
+class _SmsCodePageState extends State<SmsCodePage>
+    with WidgetsBindingObserver {
   static const int _otpLength = 6;
   static const int _resendCooldownSeconds = 60;
 
@@ -46,19 +47,41 @@ class _SmsCodePageState extends State<SmsCodePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _authApi = AuthApi(_apiClient);
     _postLoginService = AuthPostLoginService(_apiClient);
     _startResendTimer(resendAvailableAt: widget.resendAvailableAt);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _codeFocusNode.requestFocus();
-      }
+      _restoreCodeKeyboard();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _restoreCodeKeyboard();
+    }
+  }
+
+  void _restoreCodeKeyboard() {
+    if (!mounted || _isSubmitting) return;
+
+    if (_codeFocusNode.hasFocus) {
+      _codeFocusNode.unfocus();
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isSubmitting) return;
+
+      _codeFocusNode.requestFocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.show');
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _resendTimer?.cancel();
     _codeController.dispose();
     _codeFocusNode.dispose();
@@ -194,7 +217,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
       });
 
       _codeController.clear();
-      _codeFocusNode.requestFocus();
+      _restoreCodeKeyboard();
     } catch (_) {
       if (!mounted) return;
 
@@ -204,7 +227,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
       });
 
       _codeController.clear();
-      _codeFocusNode.requestFocus();
+      _restoreCodeKeyboard();
     }
   }
 
@@ -223,6 +246,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
       _codeController.clear();
       _startResendTimer(resendAvailableAt: response.resendAvailableAt);
+      _restoreCodeKeyboard();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -273,7 +297,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => _codeFocusNode.requestFocus(),
+        onTap: _restoreCodeKeyboard,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           height: 64,
@@ -312,7 +336,7 @@ class _SmsCodePageState extends State<SmsCodePage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: GestureDetector(
-          onTap: () => _codeFocusNode.requestFocus(),
+          onTap: _restoreCodeKeyboard,
           behavior: HitTestBehavior.opaque,
           child: Stack(
             children: [
