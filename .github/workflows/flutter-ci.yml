@@ -59,7 +59,10 @@ jobs:
           echo 'Production push sources verified'
 
       - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test
+        shell: bash
+        run: |
+          dart format lib test
+          git diff --exit-code
 
       - name: Analyze
         run: flutter analyze
