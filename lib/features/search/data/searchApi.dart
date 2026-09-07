@@ -9,7 +9,9 @@ class SearchApi {
   final ApiClient apiClient;
   final String _sessionId;
 
-  static const String _appVersion = '1.0.1';
+  static const String appVersion = '1.0.1';
+
+  String get sessionId => _sessionId;
 
   Future<SearchResult> search(String query) async {
     final trimmed = query.trim();
@@ -31,7 +33,7 @@ class SearchApi {
         'deviceId': deviceId,
         'source': 'search_page',
         'platform': _backendPlatformName(),
-        'appVersion': _appVersion,
+        'appVersion': appVersion,
       },
     );
 

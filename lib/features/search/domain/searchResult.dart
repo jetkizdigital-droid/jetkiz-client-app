@@ -5,10 +5,12 @@ class SearchResult {
   const SearchResult({
     required this.restaurants,
     required this.products,
+    this.searchQueryLogId,
   });
 
   final List<SearchRestaurantItem> restaurants;
   final List<SearchProductItem> products;
+  final String? searchQueryLogId;
 
   bool get isEmpty => restaurants.isEmpty && products.isEmpty;
 
@@ -42,6 +44,11 @@ class SearchResult {
           .whereType<Map>()
           .map((e) => SearchProductItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
+      searchQueryLogId: _readNullableString(
+        json,
+        const ['meta', 'searchQueryLogId'],
+        fallbackKeys: const ['searchQueryLogId'],
+      ),
     );
   }
 
