@@ -49,18 +49,6 @@ class HomeApi {
     );
   }
 
-  /// Availability changes much more often than CMS. Background refreshes use
-  /// this lightweight request so they do not repeatedly download/parse the
-  /// whole home CMS payload while the user is scrolling.
-  Future<List<HomeRestaurantData>> getPinnedRestaurants() async {
-    final response = await apiClient.dio.get<Map<String, dynamic>>(
-      '/restaurants/public/list',
-    );
-    return _parsePinnedRestaurants(
-      response.data ?? const <String, dynamic>{},
-    );
-  }
-
   List<HomeRestaurantData> _parsePinnedRestaurants(
     Map<String, dynamic> restaurantsJson,
   ) {
