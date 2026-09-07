@@ -9,6 +9,7 @@ import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/productCardLayout.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 
 // Jetkiz mobile
@@ -573,11 +574,14 @@ class _RestaurantSection extends StatelessWidget {
           itemCount: group.products.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            childAspectRatio: 0.72,
+            mainAxisExtent: menuProductCardExtent(
+              context,
+              horizontalPadding: 30,
+            ),
           ),
           itemBuilder: (context, index) {
             final product = group.products[index];
@@ -696,7 +700,7 @@ class _CategoryProductCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: LocalizedText(
-                      '${product.price}₸',
+                      formatMenuPrice(product.price),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -736,6 +740,8 @@ class _ProductImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cacheSize = menuProductImageCacheSize(context);
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
@@ -744,6 +750,8 @@ class _ProductImage extends StatelessWidget {
             ? Image.network(
                 imageUrl!,
                 fit: BoxFit.cover,
+                cacheWidth: cacheSize,
+                cacheHeight: cacheSize,
                 errorBuilder: (_, __, ___) {
                   return const _ProductImagePlaceholder();
                 },

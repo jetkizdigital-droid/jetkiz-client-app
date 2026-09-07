@@ -12,6 +12,7 @@ import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/data/restaurantMenuApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/productCardLayout.dart';
 import 'package:jetkiz_mobile/features/reviews/domain/restaurantReview.dart';
 import 'package:jetkiz_mobile/features/reviews/presentation/restaurantReviewsPage.dart';
 
@@ -1473,11 +1474,14 @@ class _MenuCategorySection extends StatelessWidget {
           itemCount: visibleItems.length,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
-            childAspectRatio: 0.72,
+            mainAxisExtent: menuProductCardExtent(
+              context,
+              horizontalPadding: 32,
+            ),
           ),
           itemBuilder: (context, index) {
             final item = visibleItems[index];
@@ -1645,7 +1649,7 @@ class _MenuProductCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: LocalizedText(
-                        item.priceText,
+                        formatMenuPrice(item.price),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -1690,6 +1694,7 @@ class _MenuProductImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = _normalizeUrl(item.mainImageUrl);
+    final cacheSize = menuProductImageCacheSize(context, horizontalPadding: 32);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -1699,6 +1704,8 @@ class _MenuProductImage extends StatelessWidget {
             ? Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
+                cacheWidth: cacheSize,
+                cacheHeight: cacheSize,
                 filterQuality: FilterQuality.medium,
                 gaplessPlayback: true,
                 errorBuilder: (_, __, ___) {
