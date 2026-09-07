@@ -1,0 +1,200 @@
+name: Temporary Menu Card Layout Fix
+
+on:
+  push:
+    branches:
+      - fix/menu-product-card-layout
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/menu-product-card-layout
+          fetch-depth: 0
+
+      - name: Apply deterministic menu card fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          helper = Path('lib/features/menu/presentation/productCardLayout.dart')
+          helper.write_text("""import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+/// Computes enough vertical space for a two-column product card while keeping
+/// the product image square. The content reserve is independent from device
+/// width, so title/description/price controls do not overlap on narrow phones.
+double menuProductCardExtent(
+  BuildContext context, {
+  required double horizontalPadding,
+  double crossAxisSpacing = 14,
+}) {
+  final screenWidth = MediaQuery.sizeOf(context).width;
+  final gridWidth = math.max(0.0, screenWidth - horizontalPadding);
+  final cardWidth = math.max(0.0, (gridWidth - crossAxisSpacing) / 2);
+  final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+  final scaleExtra = math.max(0.0, math.min(0.8, textScale - 1.0)) * 72;
+
+  return math.max(270.0, cardWidth + 146 + scaleExtra);
+}
+
+/// Decode food images close to their actual on-screen size instead of keeping
+/// unnecessarily large source bitmaps in memory while scrolling the menu.
+int menuProductImageCacheSize(
+  BuildContext context, {
+  double horizontalPadding = 30,
+  double crossAxisSpacing = 14,
+}) {
+  final screenWidth = MediaQuery.sizeOf(context).width;
+  final gridWidth = math.max(0.0, screenWidth - horizontalPadding);
+  final cardWidth = math.max(1.0, (gridWidth - crossAxisSpacing) / 2);
+  final imageLogicalWidth = math.max(1.0, cardWidth - 16);
+  final decodedPixels =
+      (imageLogicalWidth * MediaQuery.devicePixelRatioOf(context)).round();
+
+  return decodedPixels.clamp(128, 2048).toInt();
+}
+
+String formatMenuPrice(int value) {
+  final negative = value < 0;
+  final raw = value.abs().toString();
+  final buffer = StringBuffer();
+
+  for (var index = 0; index < raw.length; index++) {
+    if (index > 0 && (raw.length - index) % 3 == 0) {
+      buffer.write(' ');
+    }
+    buffer.write(raw[index]);
+  }
+
+  return '${negative ? '-' : ''}${buffer.toString()} ₸';
+}
+""", encoding='utf-8')
+
+          restaurant = Path('lib/features/menu/presentation/restaurantMenuPage.dart')
+          text = restaurant.read_text(encoding='utf-8')
+          import_anchor = "import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';\n"
+          import_line = "import 'package:jetkiz_mobile/features/menu/presentation/productCardLayout.dart';\n"
+          assert import_anchor in text
+          if import_line not in text:
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          old_delegate = """          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 0.72,
+          ),"""
+          new_delegate = """          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            mainAxisExtent: menuProductCardExtent(
+              context,
+              horizontalPadding: 32,
+            ),
+          ),"""
+          assert text.count(old_delegate) == 1, text.count(old_delegate)
+          text = text.replace(old_delegate, new_delegate, 1)
+          assert text.count('                        item.priceText,') == 1
+          text = text.replace(
+              '                        item.priceText,',
+              '                        formatMenuPrice(item.price),',
+              1,
+          )
+          image_anchor = """    final imageUrl = _normalizeUrl(item.mainImageUrl);
+
+    return ClipRRect("""
+          image_replacement = """    final imageUrl = _normalizeUrl(item.mainImageUrl);
+    final cacheSize = menuProductImageCacheSize(context, horizontalPadding: 32);
+
+    return ClipRRect("""
+          assert text.count(image_anchor) == 1
+          text = text.replace(image_anchor, image_replacement, 1)
+          image_fit_anchor = """                imageUrl,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,"""
+          image_fit_replacement = """                imageUrl,
+                fit: BoxFit.cover,
+                cacheWidth: cacheSize,
+                cacheHeight: cacheSize,
+                filterQuality: FilterQuality.medium,"""
+          assert text.count(image_fit_anchor) == 1
+          text = text.replace(image_fit_anchor, image_fit_replacement, 1)
+          restaurant.write_text(text, encoding='utf-8')
+
+          category = Path('lib/features/menu/presentation/categoryProductsPage.dart')
+          text = category.read_text(encoding='utf-8')
+          import_anchor = "import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';\n"
+          assert import_anchor in text
+          if import_line not in text:
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          assert text.count(old_delegate) == 1, text.count(old_delegate)
+          category_delegate = """          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            mainAxisExtent: menuProductCardExtent(
+              context,
+              horizontalPadding: 30,
+            ),
+          ),"""
+          text = text.replace(old_delegate, category_delegate, 1)
+          assert text.count("                      '${product.price}₸',") == 1
+          text = text.replace(
+              "                      '${product.price}₸',",
+              '                      formatMenuPrice(product.price),',
+              1,
+          )
+          build_anchor = """  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio("""
+          build_replacement = """  @override
+  Widget build(BuildContext context) {
+    final cacheSize = menuProductImageCacheSize(context);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: AspectRatio("""
+          # Only the _ProductImage widget has this exact block in this file.
+          assert text.count(build_anchor) == 1, text.count(build_anchor)
+          text = text.replace(build_anchor, build_replacement, 1)
+          fit_anchor = """                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder:"""
+          fit_replacement = """                imageUrl!,
+                fit: BoxFit.cover,
+                cacheWidth: cacheSize,
+                cacheHeight: cacheSize,
+                errorBuilder:"""
+          assert text.count(fit_anchor) == 1
+          text = text.replace(fit_anchor, fit_replacement, 1)
+          category.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          git status --short
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add lib/features/menu/presentation/productCardLayout.dart \
+                  lib/features/menu/presentation/restaurantMenuPage.dart \
+                  lib/features/menu/presentation/categoryProductsPage.dart
+          git commit -m "fix(menu): prevent product card overflow on narrow screens"
+          git push origin HEAD:fix/menu-product-card-layout
