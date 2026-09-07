@@ -15,12 +15,14 @@ void main() {
     final textField = tester.widget<TextField>(find.byType(TextField));
     expect(textField.focusNode?.hasFocus, isTrue);
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     await tester.pump();
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     await tester.pump();
 
     expect(textField.focusNode?.hasFocus, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }
