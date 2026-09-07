@@ -236,7 +236,8 @@ class _RestaurantsPageState extends State<RestaurantsPage>
                     return const _PageEmpty(
                       icon: Icons.restaurant_menu_outlined,
                       title: 'Рестораны пока не добавлены',
-                      text: 'Список ресторанов появится здесь после публикации.',
+                      text:
+                          'Список ресторанов появится здесь после публикации.',
                     );
                   }
                   return const _PageEmpty(
@@ -510,10 +511,7 @@ class _RestaurantImage extends StatelessWidget {
         .round()
         .clamp(1, 2048)
         .toInt();
-    final cacheHeight = (180 * pixelRatio)
-        .round()
-        .clamp(1, 2048)
-        .toInt();
+    final cacheHeight = (180 * pixelRatio).round().clamp(1, 2048).toInt();
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
