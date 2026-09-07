@@ -113,42 +113,6 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _result = result;
       });
-
-      final restaurantsCount = result.restaurants.length;
-      final productsCount = result.products.length;
-      final resultsCount = restaurantsCount + productsCount;
-
-      if (resultsCount == 0) {
-        unawaited(
-          _trackClientEvent(
-            eventName: 'search_no_results',
-            entityType: 'search_query',
-            entityId: query,
-            source: 'search_page',
-            metadata: {
-              'query': query,
-              'resultsCount': 0,
-              'restaurantsCount': 0,
-              'productsCount': 0,
-            },
-          ),
-        );
-      } else {
-        unawaited(
-          _trackClientEvent(
-            eventName: 'search',
-            entityType: 'search_query',
-            entityId: query,
-            source: 'search_page',
-            metadata: {
-              'query': query,
-              'resultsCount': resultsCount,
-              'restaurantsCount': restaurantsCount,
-              'productsCount': productsCount,
-            },
-          ),
-        );
-      }
     } catch (_) {
       if (!mounted) {
         return;
@@ -271,36 +235,25 @@ class _SearchPageState extends State<SearchPage> {
     required int position,
     Map<String, dynamic>? metadata,
   }) async {
-    await _trackClientEvent(
-      eventName: 'search_result_click',
-      entityType: entityType,
-      entityId: entityId,
-      source: 'search_results',
-      metadata: {
-        'query': query,
-        'entityType': entityType,
-        'entityId': entityId,
-        'title': title,
-        'position': position,
-        if (metadata != null) ...metadata,
-      },
-    );
-
     await _trackSearchClick(
+      searchQueryLogId: _result.searchQueryLogId,
       query: query,
       entityType: entityType,
       entityId: entityId,
       position: position,
       title: title,
+      metadata: metadata,
     );
   }
 
   Future<void> _trackSearchClick({
+    String? searchQueryLogId,
     required String query,
     required String entityType,
     required String entityId,
     required int position,
     required String title,
+    Map<String, dynamic>? metadata,
   }) async {
     try {
       final deviceId = await _apiClient.getDeviceId();
@@ -308,16 +261,20 @@ class _SearchPageState extends State<SearchPage> {
       await _apiClient.dio.post(
         '/search/click',
         data: {
+          if (searchQueryLogId?.trim().isNotEmpty == true)
+            'searchQueryLogId': searchQueryLogId!.trim(),
           'query': query,
           'entityType': entityType,
           'entityId': entityId,
+          'position': position,
+          'sessionId': _searchApi.sessionId,
           'deviceId': deviceId,
           'platform': _backendPlatformName(),
-          'appVersion': '1.0.0',
+          'appVersion': SearchApi.appVersion,
           'metadata': {
             'title': title,
-            'position': position,
             'source': 'search_page',
+            if (metadata != null) ...metadata,
           },
         },
       );
@@ -359,7 +316,7 @@ class _SearchPageState extends State<SearchPage> {
           'eventName': eventName,
           'deviceId': deviceId,
           'platform': _backendPlatformName(),
-          'appVersion': '1.0.0',
+          'appVersion': SearchApi.appVersion,
           if (entityType != null) 'entityType': entityType,
           if (entityId != null) 'entityId': entityId,
           if (source != null) 'source': source,
@@ -367,8 +324,7 @@ class _SearchPageState extends State<SearchPage> {
             'deviceId': deviceId,
             'platform': _clientPlatformName(),
             'app': 'client',
-            'appVersion': '1.0.0',
-            'locale': 'ru',
+            'appVersion': SearchApi.appVersion,
             'timezone': 'Asia/Almaty',
             if (metadata != null) ...metadata,
           },
@@ -388,6 +344,8 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   String _backendPlatformName() {
+    if (kIsWeb) return 'WEB';
+
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return 'ANDROID';
@@ -402,6 +360,8 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   String _clientPlatformName() {
+    if (kIsWeb) return 'web';
+
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return 'android';
