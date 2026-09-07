@@ -29,6 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          flutter pub get
           python3 - <<'PY'
           from pathlib import Path
 
@@ -133,11 +134,19 @@ jobs:
 
           git diff --check
           mapfile -t changed < <(git diff --name-only)
-          test "${#changed[@]}" -eq 1
-          test "${changed[0]}" = "lib/features/search/presentation/searchPage.dart"
+          expected='^(lib/features/search/presentation/searchPage\.dart|lib/features/search/data/searchApi\.dart|lib/features/search/domain/searchResult\.dart)$'
+          for path in "${changed[@]}"; do
+            if ! [[ "$path" =~ $expected ]]; then
+              echo "Unexpected file changed: $path" >&2
+              exit 1
+            fi
+          done
+          test "${#changed[@]}" -ge 1
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/features/search/presentation/searchPage.dart
+          git add lib/features/search/presentation/searchPage.dart \
+            lib/features/search/data/searchApi.dart \
+            lib/features/search/domain/searchResult.dart
           git commit -m "fix(search): correlate clicks with canonical search logs"
           git push origin HEAD:fix/search-analytics-correlation-v2
