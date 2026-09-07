@@ -50,7 +50,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _addressRepository.addListener(_handleAddressChanged);
     _availabilityTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => unawaited(_refreshAvailabilitySilently()),
+      (_) => unawaited(_refreshHomeSilently()),
     );
 
     unawaited(
@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_refreshAvailabilitySilently());
+      unawaited(_refreshHomeSilently());
     }
   }
 
@@ -85,10 +85,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     setState(() {});
   }
 
-  Future<void> _refreshAvailabilitySilently() async {
-    final current = _homeData;
+  Future<void> _refreshHomeSilently() async {
     if (!mounted ||
-        current == null ||
+        _homeData == null ||
         _isLoading ||
         _isBackgroundRefreshing) {
       return;
@@ -97,22 +96,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _isBackgroundRefreshing = true;
 
     try {
-      final pinnedRestaurants = await _homeApi.getPinnedRestaurants();
+      final data = await _homeApi.getHomeData();
       if (!mounted) return;
 
-      if (_samePinnedRestaurants(
-        current.pinnedRestaurants,
-        pinnedRestaurants,
-      )) {
-        return;
-      }
-
       setState(() {
-        _homeData = HomeData(
-          promo: current.promo,
-          categories: current.categories,
-          pinnedRestaurants: pinnedRestaurants,
-        );
+        _homeData = data;
         _error = null;
       });
     } catch (_) {
@@ -121,53 +109,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } finally {
       _isBackgroundRefreshing = false;
     }
-  }
-
-  Future<void> _refreshAllSilently() async {
-    if (!mounted || _isLoading || _isBackgroundRefreshing) return;
-
-    _isBackgroundRefreshing = true;
-    try {
-      final data = await _homeApi.getHomeData();
-      if (!mounted) return;
-      setState(() {
-        _homeData = data;
-        _error = null;
-      });
-    } catch (_) {
-      // Pull-to-refresh keeps the last usable snapshot on transient failure.
-    } finally {
-      _isBackgroundRefreshing = false;
-    }
-  }
-
-  bool _samePinnedRestaurants(
-    List<HomeRestaurantData> previous,
-    List<HomeRestaurantData> next,
-  ) {
-    if (previous.length != next.length) return false;
-
-    for (var index = 0; index < previous.length; index += 1) {
-      final a = previous[index];
-      final b = next[index];
-      if (a.id != b.id ||
-          a.nameRu != b.nameRu ||
-          a.nameKk != b.nameKk ||
-          a.address != b.address ||
-          a.workingHours != b.workingHours ||
-          a.coverImageUrl != b.coverImageUrl ||
-          a.ratingAvg != b.ratingAvg ||
-          a.ratingCount != b.ratingCount ||
-          a.status != b.status ||
-          a.runtimeStatus != b.runtimeStatus ||
-          a.isInApp != b.isInApp ||
-          a.isAcceptingOrders != b.isAcceptingOrders ||
-          a.blockedAt != b.blockedAt) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   Future<void> _load() async {
@@ -344,7 +285,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     onRetry: _load,
                   )
                 : RefreshIndicator(
-                    onRefresh: _refreshAllSilently,
+                    onRefresh: _load,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       children: [
@@ -566,23 +507,13 @@ class _PromoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = promo.fullImageUrl;
-    final targetWidth = _imageCacheWidth(
-      context,
-      MediaQuery.sizeOf(context).width - 32,
-    );
-
     return Container(
       height: 170,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        image: imageUrl != null
+        image: promo.fullImageUrl != null
             ? DecorationImage(
-                image: ResizeImage.resizeIfNeeded(
-                  targetWidth,
-                  null,
-                  NetworkImage(imageUrl),
-                ),
+                image: NetworkImage(promo.fullImageUrl!),
                 fit: BoxFit.cover,
               )
             : null,
@@ -672,9 +603,6 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageCacheWidth = _imageCacheWidth(context, 126);
-    final imageCacheHeight = _imageCacheWidth(context, 74);
-
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
@@ -701,8 +629,6 @@ class _CategoryCard extends StatelessWidget {
                     ? Image.network(
                         category.fullImageUrl!,
                         fit: BoxFit.cover,
-                        cacheWidth: imageCacheWidth,
-                        cacheHeight: imageCacheHeight,
                         errorBuilder: (_, __, ___) {
                           return Container(
                             color: const Color(0xFFEAF8F3),
@@ -779,11 +705,6 @@ class _PinnedRestaurantCard extends StatelessWidget {
         ? '0,0'
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
     final isOpen = restaurant.isOpenForOrders;
-    final imageUrl = restaurant.fullCoverImageUrl;
-    final targetWidth = _imageCacheWidth(
-      context,
-      MediaQuery.sizeOf(context).width - 32,
-    );
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -802,13 +723,9 @@ class _PinnedRestaurantCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF7DC963),
                   borderRadius: BorderRadius.circular(15),
-                  image: imageUrl != null
+                  image: restaurant.fullCoverImageUrl != null
                       ? DecorationImage(
-                          image: ResizeImage.resizeIfNeeded(
-                            targetWidth,
-                            null,
-                            NetworkImage(imageUrl),
-                          ),
+                          image: NetworkImage(restaurant.fullCoverImageUrl!),
                           fit: BoxFit.cover,
                         )
                       : null,
@@ -990,9 +907,4 @@ class _HomeErrorState extends StatelessWidget {
       ],
     );
   }
-}
-
-int _imageCacheWidth(BuildContext context, double logicalWidth) {
-  final ratio = MediaQuery.devicePixelRatioOf(context);
-  return (logicalWidth * ratio).round().clamp(1, 2048).toInt();
 }
