@@ -20,14 +20,15 @@ class HomeApi {
   const HomeApi(this.apiClient);
 
   Future<HomeData> getHomeData() async {
-    // If your ApiClient exposes requests not through .dio,
-    // replace only these 2 lines with your actual wrapper methods.
-    final homeResponse = await apiClient.dio.get<Map<String, dynamic>>(
-      '/home-cms/public',
-    );
-    final restaurantsResponse = await apiClient.dio.get<Map<String, dynamic>>(
-      '/restaurants/public/list',
-    );
+    // CMS and restaurant availability are independent requests. Run them in
+    // parallel so the home screen is not blocked by their combined latency.
+    final responses = await Future.wait([
+      apiClient.dio.get<Map<String, dynamic>>('/home-cms/public'),
+      apiClient.dio.get<Map<String, dynamic>>('/restaurants/public/list'),
+    ]);
+
+    final homeResponse = responses[0];
+    final restaurantsResponse = responses[1];
 
     final homeJson = homeResponse.data ?? const <String, dynamic>{};
     final restaurantsJson =
