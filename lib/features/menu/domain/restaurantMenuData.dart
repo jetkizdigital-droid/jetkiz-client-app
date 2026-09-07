@@ -91,8 +91,7 @@ class RestaurantMenuData extends Equatable {
 
       final firstItem = itemsInCategory.first;
 
-      final category =
-          categoryMeta[entry.key] ??
+      final category = categoryMeta[entry.key] ??
           RestaurantMenuCategory(
             id: entry.key,
             code: firstItem.categoryCode ?? '',
@@ -279,26 +278,26 @@ class RestaurantMenuRestaurant extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    number,
-    status,
-    isInApp,
-    isAcceptingOrders,
-    workingHours,
-    nameRu,
-    nameKk,
-    slug,
-    isPickupEnabled,
-    pickupPreparationMinutes,
-    descriptionRu,
-    descriptionKk,
-    coverImageUrl,
-    ratingAvg,
-    ratingCount,
-    address,
-    serverIsOpenNow,
-    serverCanAcceptOrders,
-  ];
+        id,
+        number,
+        status,
+        isInApp,
+        isAcceptingOrders,
+        workingHours,
+        nameRu,
+        nameKk,
+        slug,
+        isPickupEnabled,
+        pickupPreparationMinutes,
+        descriptionRu,
+        descriptionKk,
+        coverImageUrl,
+        ratingAvg,
+        ratingCount,
+        address,
+        serverIsOpenNow,
+        serverCanAcceptOrders,
+      ];
 }
 
 class RestaurantMenuCategory extends Equatable {
@@ -319,12 +318,11 @@ class RestaurantMenuCategory extends Equatable {
   final String? iconUrl;
 
   String get title => LocalizedValue.select(
-    ru: titleRu,
-    kk: titleKk,
-    fallback: LocalizedValue.language.name == 'kk'
-        ? 'Санатсыз'
-        : 'Без категории',
-  );
+        ru: titleRu,
+        kk: titleKk,
+        fallback:
+            LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
+      );
 
   factory RestaurantMenuCategory.fromJson(Map<String, dynamic> json) {
     return RestaurantMenuCategory(
@@ -383,10 +381,10 @@ class RestaurantMenuItem extends Equatable {
   }
 
   String get title => LocalizedValue.select(
-    ru: titleRu,
-    kk: titleKk,
-    fallback: LocalizedValue.language.name == 'kk' ? 'Тауар' : 'Товар',
-  );
+        ru: titleRu,
+        kk: titleKk,
+        fallback: LocalizedValue.language.name == 'kk' ? 'Тауар' : 'Товар',
+      );
 
   String get priceText => '$price ₸';
 
@@ -395,12 +393,11 @@ class RestaurantMenuItem extends Equatable {
   }
 
   String get categoryTitle => LocalizedValue.select(
-    ru: categoryNameRu,
-    kk: categoryNameKk,
-    fallback: LocalizedValue.language.name == 'kk'
-        ? 'Санатсыз'
-        : 'Без категории',
-  );
+        ru: categoryNameRu,
+        kk: categoryNameKk,
+        fallback:
+            LocalizedValue.language.name == 'kk' ? 'Санатсыз' : 'Без категории',
+      );
 
   String? get mainImageUrl {
     if (images.isNotEmpty) {
@@ -482,23 +479,23 @@ class RestaurantMenuItem extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    titleRu,
-    titleKk,
-    price,
-    imageUrl,
-    isAvailable,
-    categoryId,
-    categoryNameRu,
-    categoryNameKk,
-    categoryCode,
-    categorySortOrder,
-    weight,
-    composition,
-    description,
-    isDrink,
-    images,
-  ];
+        id,
+        titleRu,
+        titleKk,
+        price,
+        imageUrl,
+        isAvailable,
+        categoryId,
+        categoryNameRu,
+        categoryNameKk,
+        categoryCode,
+        categorySortOrder,
+        weight,
+        composition,
+        description,
+        isDrink,
+        images,
+      ];
 }
 
 class RestaurantMenuItemImage extends Equatable {

@@ -706,12 +706,12 @@ class _CategoryProductCard extends StatelessWidget {
                   !canOrder
                       ? const SizedBox.shrink()
                       : quantity > 0
-                      ? _QuantityStepper(
-                          quantity: quantity,
-                          onIncrementTap: onIncrementTap,
-                          onDecrementTap: onDecrementTap,
-                        )
-                      : _CompactAddButton(onTap: onAddTap),
+                          ? _QuantityStepper(
+                              quantity: quantity,
+                              onIncrementTap: onIncrementTap,
+                              onDecrementTap: onDecrementTap,
+                            )
+                          : _CompactAddButton(onTap: onAddTap),
                 ],
               ),
             ],
