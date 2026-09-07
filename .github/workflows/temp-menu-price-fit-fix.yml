@@ -23,6 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 <<'PY'
+          import re
           from pathlib import Path
 
           replacements = [
@@ -38,38 +39,46 @@ jobs:
 
           for path, price_expr in replacements:
               text = path.read_text(encoding='utf-8')
-              old = f"""                  Expanded(
-                    child: LocalizedText(
-                      {price_expr},
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        height: 1.0,
-                      ),
-                    ),
-                  ),"""
-              new = f"""                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: LocalizedText(
-                        {price_expr},
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
-                  ),"""
-              assert text.count(old) == 1, (path, text.count(old))
-              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+              pattern = re.compile(
+                  rf"(?P<i>^[ \t]+)Expanded\(\n"
+                  rf"(?P=i)  child: LocalizedText\(\n"
+                  rf"(?P=i)    {re.escape(price_expr)},\n"
+                  rf"(?P=i)    maxLines: 1,\n"
+                  rf"(?P=i)    overflow: TextOverflow\.ellipsis,\n"
+                  rf"(?P=i)    style: const TextStyle\(\n"
+                  rf"(?P=i)      color: Colors\.black,\n"
+                  rf"(?P=i)      fontSize: 22,\n"
+                  rf"(?P=i)      fontWeight: FontWeight\.w900,\n"
+                  rf"(?P=i)      height: 1\.0,\n"
+                  rf"(?P=i)    \),\n"
+                  rf"(?P=i)  \),\n"
+                  rf"(?P=i)\),",
+                  re.MULTILINE,
+              )
+              matches = list(pattern.finditer(text))
+              assert len(matches) == 1, (path, len(matches))
+              match = matches[0]
+              indent = match.group('i')
+              replacement = (
+                  f"{indent}Expanded(\n"
+                  f"{indent}  child: FittedBox(\n"
+                  f"{indent}    fit: BoxFit.scaleDown,\n"
+                  f"{indent}    alignment: Alignment.centerLeft,\n"
+                  f"{indent}    child: LocalizedText(\n"
+                  f"{indent}      {price_expr},\n"
+                  f"{indent}      maxLines: 1,\n"
+                  f"{indent}      overflow: TextOverflow.ellipsis,\n"
+                  f"{indent}      style: const TextStyle(\n"
+                  f"{indent}        color: Colors.black,\n"
+                  f"{indent}        fontSize: 22,\n"
+                  f"{indent}        fontWeight: FontWeight.w900,\n"
+                  f"{indent}        height: 1.0,\n"
+                  f"{indent}      ),\n"
+                  f"{indent}    ),\n"
+                  f"{indent}  ),\n"
+                  f"{indent}),"
+              )
+              path.write_text(pattern.sub(replacement, text, count=1), encoding='utf-8')
           PY
 
           git diff --check
