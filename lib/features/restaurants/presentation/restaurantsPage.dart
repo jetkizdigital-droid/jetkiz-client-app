@@ -113,6 +113,14 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     }
   }
 
+  Future<void> _refresh() async {
+    if (_restaurants.isEmpty) {
+      await _loadRestaurants();
+      return;
+    }
+    await _refreshRestaurantsSilently();
+  }
+
   Future<void> _loadRestaurants() async {
     setState(() {
       _isLoading = true;
@@ -170,6 +178,8 @@ class _RestaurantsPageState extends State<RestaurantsPage>
   @override
   Widget build(BuildContext context) {
     final restaurants = _filteredRestaurants;
+    final showEmpty = _restaurants.isEmpty || restaurants.isEmpty;
+    final itemCount = showEmpty ? 5 : 4 + restaurants.length;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -186,7 +196,7 @@ class _RestaurantsPageState extends State<RestaurantsPage>
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _loadRestaurants,
+        onRefresh: _refresh,
         child: Builder(
           builder: (context) {
             if (_isLoading) {
@@ -200,44 +210,51 @@ class _RestaurantsPageState extends State<RestaurantsPage>
               );
             }
 
-            return ListView(
+            return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                _SearchBox(
-                  controller: _searchController,
-                  query: _query,
-                ),
-                const SizedBox(height: 14),
-                _ResultHeader(
-                  totalCount: _restaurants.length,
-                  visibleCount: restaurants.length,
-                  query: _query,
-                ),
-                const SizedBox(height: 14),
-                if (_restaurants.isEmpty)
-                  const _PageEmpty(
-                    icon: Icons.restaurant_menu_outlined,
-                    title: 'Рестораны пока не добавлены',
-                    text: 'Список ресторанов появится здесь после публикации.',
-                  )
-                else if (restaurants.isEmpty)
-                  const _PageEmpty(
+              itemCount: itemCount,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _SearchBox(
+                    controller: _searchController,
+                    query: _query,
+                  );
+                }
+                if (index == 1) return const SizedBox(height: 14);
+                if (index == 2) {
+                  return _ResultHeader(
+                    totalCount: _restaurants.length,
+                    visibleCount: restaurants.length,
+                    query: _query,
+                  );
+                }
+                if (index == 3) return const SizedBox(height: 14);
+
+                if (showEmpty) {
+                  if (_restaurants.isEmpty) {
+                    return const _PageEmpty(
+                      icon: Icons.restaurant_menu_outlined,
+                      title: 'Рестораны пока не добавлены',
+                      text: 'Список ресторанов появится здесь после публикации.',
+                    );
+                  }
+                  return const _PageEmpty(
                     icon: Icons.search_off_rounded,
                     title: 'Ничего не найдено',
                     text: 'Попробуйте изменить запрос.',
-                  )
-                else
-                  ...restaurants.map(
-                    (restaurant) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: RestaurantCard(
-                        restaurant: restaurant,
-                        onTap: () => _openRestaurant(restaurant),
-                      ),
-                    ),
+                  );
+                }
+
+                final restaurant = restaurants[index - 4];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: RestaurantCard(
+                    restaurant: restaurant,
+                    onTap: () => _openRestaurant(restaurant),
                   ),
-              ],
+                );
+              },
             );
           },
         ),
@@ -488,6 +505,16 @@ class _RestaurantImage extends StatelessWidget {
       return const _RestaurantImagePlaceholder();
     }
 
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = ((MediaQuery.sizeOf(context).width - 32) * pixelRatio)
+        .round()
+        .clamp(1, 2048)
+        .toInt();
+    final cacheHeight = (180 * pixelRatio)
+        .round()
+        .clamp(1, 2048)
+        .toInt();
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       child: Image.network(
@@ -495,6 +522,8 @@ class _RestaurantImage extends StatelessWidget {
         height: 180,
         width: double.infinity,
         fit: BoxFit.cover,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         errorBuilder: (context, error, stackTrace) {
           return const _RestaurantImagePlaceholder();
         },
