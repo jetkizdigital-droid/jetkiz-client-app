@@ -1,0 +1,86 @@
+name: Temporary Menu Price Fit Fix
+
+on:
+  push:
+    branches:
+      - fix/menu-product-card-layout
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/menu-product-card-layout
+          fetch-depth: 0
+
+      - name: Keep prices readable beside cart controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          replacements = [
+              (
+                  Path('lib/features/menu/presentation/restaurantMenuPage.dart'),
+                  'formatMenuPrice(item.price)',
+              ),
+              (
+                  Path('lib/features/menu/presentation/categoryProductsPage.dart'),
+                  'formatMenuPrice(product.price)',
+              ),
+          ]
+
+          for path, price_expr in replacements:
+              text = path.read_text(encoding='utf-8')
+              old = f"""                  Expanded(
+                    child: LocalizedText(
+                      {price_expr},
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),"""
+              new = f"""                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: LocalizedText(
+                        {price_expr},
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),"""
+              assert text.count(old) == 1, (path, text.count(old))
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+          git diff --check
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add lib/features/menu/presentation/restaurantMenuPage.dart \
+                  lib/features/menu/presentation/categoryProductsPage.dart
+          git commit -m "fix(menu): keep prices readable beside cart controls"
+          git push origin HEAD:fix/menu-product-card-layout
