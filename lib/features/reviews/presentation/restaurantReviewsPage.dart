@@ -20,24 +20,60 @@ class RestaurantReviewsPage extends StatefulWidget {
 }
 
 class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
+  static const int _pageSize = 30;
+
   late final RestaurantReviewsApi _api;
+  late final ScrollController _scrollController;
 
   bool _loading = true;
+  bool _loadingMore = false;
+  bool _refreshing = false;
   String? _error;
-  RestaurantReviewPageData? _data;
+  String? _loadMoreError;
+  List<RestaurantReview> _items = const <RestaurantReview>[];
+  int _total = 0;
+  int _page = 1;
+
+  bool get _hasMore => _items.length < _total;
 
   @override
   void initState() {
     super.initState();
     _api = RestaurantReviewsApi(ApiClient());
-    _load();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+    _loadFirstPage();
   }
 
-  Future<void> _load({bool refresh = false}) async {
-    if (!refresh) {
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients || !_hasMore || _loadingMore || _loading) {
+      return;
+    }
+
+    if (_scrollController.position.extentAfter < 500) {
+      _loadNextPage();
+    }
+  }
+
+  Future<void> _loadFirstPage({bool refresh = false}) async {
+    if (refresh) {
+      if (_refreshing) return;
+      setState(() {
+        _refreshing = true;
+        _loadMoreError = null;
+      });
+    } else {
       setState(() {
         _loading = true;
         _error = null;
+        _loadMoreError = null;
       });
     }
 
@@ -45,7 +81,7 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
       final result = await _api.getRestaurantReviews(
         widget.restaurantId,
         page: 1,
-        limit: 30,
+        limit: _pageSize,
         includeUser: true,
         includeOrder: false,
       );
@@ -53,23 +89,70 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
       if (!mounted) return;
 
       setState(() {
-        _data = result;
+        _items = _dedupe(result.items);
+        _total = result.total;
+        _page = 1;
         _error = null;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Не удалось загрузить отзывы';
+        if (_items.isEmpty) {
+          _error = 'Не удалось загрузить отзывы';
+        }
       });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _refreshing = false;
+        });
+      }
     }
+  }
+
+  Future<void> _loadNextPage() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+
+    final nextPage = _page + 1;
+    setState(() {
+      _loadingMore = true;
+      _loadMoreError = null;
+    });
+
+    try {
+      final result = await _api.getRestaurantReviews(
+        widget.restaurantId,
+        page: nextPage,
+        limit: _pageSize,
+        includeUser: true,
+        includeOrder: false,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _items = _dedupe(<RestaurantReview>[..._items, ...result.items]);
+        _total = result.total;
+        _page = nextPage;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadMoreError = 'Не удалось загрузить следующие отзывы';
+      });
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  List<RestaurantReview> _dedupe(List<RestaurantReview> source) {
+    final seen = <String>{};
+    return source.where((item) => seen.add(item.id)).toList(growable: false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = _data?.items ?? const <RestaurantReview>[];
-
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
@@ -80,34 +163,87 @@ class _RestaurantReviewsPageState extends State<RestaurantReviewsPage> {
               onBackTap: () => Navigator.of(context).pop(),
             ),
             Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : _error != null
+              child: _loading && _items.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null && _items.isEmpty
                       ? _ReviewsErrorState(
                           message: _error!,
-                          onRetry: _load,
+                          onRetry: _loadFirstPage,
                         )
                       : RefreshIndicator(
-                          onRefresh: () => _load(refresh: true),
-                          child: items.isEmpty
+                          onRefresh: () => _loadFirstPage(refresh: true),
+                          child: _items.isEmpty
                               ? const _ReviewsEmptyState()
                               : ListView.separated(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
+                                  controller: _scrollController,
+                                  physics: const AlwaysScrollableScrollPhysics(),
                                   padding: const EdgeInsets.all(16),
-                                  itemCount: items.length,
+                                  itemCount: _items.length + 1,
                                   separatorBuilder: (_, __) =>
                                       const SizedBox(height: 14),
                                   itemBuilder: (context, index) {
-                                    return ReviewCard(
-                                      review: items[index],
+                                    if (index < _items.length) {
+                                      return ReviewCard(
+                                        key: ValueKey(_items[index].id),
+                                        review: _items[index],
+                                      );
+                                    }
+
+                                    if (_loadingMore) {
+                                      return const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 18),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (_loadMoreError != null) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 4, bottom: 18),
+                                        child: Center(
+                                          child: OutlinedButton(
+                                            onPressed: _loadNextPage,
+                                            child: const LocalizedText('Загрузить ещё'),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (_hasMore) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(top: 4, bottom: 18),
+                                        child: Center(
+                                          child: TextButton(
+                                            onPressed: _loadNextPage,
+                                            child: const LocalizedText('Загрузить ещё'),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 2, bottom: 18),
+                                      child: Center(
+                                        child: LocalizedText(
+                                          'Все отзывы загружены',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ),
                                     );
                                   },
                                 ),
                         ),
             ),
+            if (_refreshing)
+              const LinearProgressIndicator(minHeight: 2),
           ],
         ),
       ),
@@ -131,11 +267,7 @@ class _ReviewsHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: Color(0xFFE5E7EB),
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
       ),
       child: Row(
         children: [
@@ -174,11 +306,7 @@ class _ReviewsEmptyState extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 80, 24, 120),
       children: const [
-        Icon(
-          Icons.reviews_outlined,
-          size: 54,
-          color: Color(0xFF9CA3AF),
-        ),
+        Icon(Icons.reviews_outlined, size: 54, color: Color(0xFF9CA3AF)),
         SizedBox(height: 16),
         LocalizedText(
           'Пока нет отзывов',
@@ -193,11 +321,7 @@ class _ReviewsEmptyState extends StatelessWidget {
         LocalizedText(
           'Когда клиенты оставят отзывы, они появятся здесь.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            height: 1.45,
-            color: Color(0xFF6B7280),
-          ),
+          style: TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF6B7280)),
         ),
       ],
     );
@@ -221,11 +345,7 @@ class _ReviewsErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: Color(0xFFEF4444),
-            ),
+            const Icon(Icons.error_outline_rounded, size: 48, color: Color(0xFFEF4444)),
             const SizedBox(height: 12),
             LocalizedText(
               message,
