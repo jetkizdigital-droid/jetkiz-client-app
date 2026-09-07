@@ -17,7 +17,7 @@ class AppConfig {
   static const bool _isReleaseBuild = bool.fromEnvironment('dart.vm.product');
   static const String supportWhatsAppNumber = String.fromEnvironment(
     'JETKIZ_SUPPORT_WHATSAPP',
-    defaultValue: '',
+    defaultValue: '77085139728',
   );
 
   static String get baseUrl {

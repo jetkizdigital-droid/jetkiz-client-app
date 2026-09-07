@@ -47,10 +47,7 @@ import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart
 // - because of that this page must not invent description / grams text
 // - when real menu/product details contract is confirmed, add those fields from backend only
 class CategoryProductsPage extends StatefulWidget {
-  const CategoryProductsPage({
-    super.key,
-    required this.category,
-  });
+  const CategoryProductsPage({super.key, required this.category});
 
   final HomeCategoryData category;
 
@@ -225,10 +222,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       }
 
       groups.add(
-        _RestaurantGroup(
-          restaurant: restaurant,
-          products: entry.value,
-        ),
+        _RestaurantGroup(restaurant: restaurant, products: entry.value),
       );
     }
 
@@ -421,10 +415,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 }
 
 class _RestaurantGroup {
-  const _RestaurantGroup({
-    required this.restaurant,
-    required this.products,
-  });
+  const _RestaurantGroup({required this.restaurant, required this.products});
 
   final HomeCategoryProductRestaurant restaurant;
   final List<HomeCategoryProductData> products;
@@ -508,11 +499,7 @@ class _CategoryHeader extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 4),
-                      Icon(
-                        Icons.tune_rounded,
-                        size: 18,
-                        color: Colors.black,
-                      ),
+                      Icon(Icons.tune_rounded, size: 18, color: Colors.black),
                     ],
                   ),
                 ),
@@ -678,16 +665,20 @@ class _CategoryProductCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Expanded(
-                child: LocalizedText(
-                  product.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
+              SizedBox(
+                height: 30,
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: LocalizedText(
+                    product.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
                   ),
                 ),
               ),
@@ -696,15 +687,18 @@ class _CategoryProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: LocalizedText(
-                      '${product.price}₸',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        height: 1.0,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: LocalizedText(
+                        formatMenuPrice(product.price),
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          height: 1.0,
+                        ),
                       ),
                     ),
                   ),
@@ -729,9 +723,7 @@ class _CategoryProductCard extends StatelessWidget {
 }
 
 class _ProductImage extends StatelessWidget {
-  const _ProductImage({
-    required this.imageUrl,
-  });
+  const _ProductImage({required this.imageUrl});
 
   final String? imageUrl;
 
@@ -742,13 +734,12 @@ class _ProductImage extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: menuProductImageAspectRatio,
         child: imageUrl != null && imageUrl!.trim().isNotEmpty
             ? Image.network(
                 imageUrl!,
                 fit: BoxFit.cover,
                 cacheWidth: cacheSize,
-                cacheHeight: cacheSize,
                 errorBuilder: (_, __, ___) {
                   return const _ProductImagePlaceholder();
                 },
@@ -777,9 +768,7 @@ class _ProductImagePlaceholder extends StatelessWidget {
 }
 
 class _CompactAddButton extends StatelessWidget {
-  const _CompactAddButton({
-    required this.onTap,
-  });
+  const _CompactAddButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -789,7 +778,7 @@ class _CompactAddButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
-        width: 74,
+        width: 56,
         height: 36,
         decoration: ShapeDecoration(
           color: const Color(0xFF489F2A),
@@ -798,11 +787,7 @@ class _CompactAddButton extends StatelessWidget {
           ),
         ),
         alignment: Alignment.center,
-        child: const Icon(
-          Icons.add_rounded,
-          color: Colors.white,
-          size: 24,
-        ),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
       ),
     );
   }
@@ -822,15 +807,13 @@ class _QuantityStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 96,
+      width: 72,
       height: 36,
       decoration: ShapeDecoration(
         color: const Color(0xFF489F2A),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
           InkWell(
@@ -864,11 +847,7 @@ class _QuantityStepper extends StatelessWidget {
             child: const SizedBox(
               width: 20,
               child: Center(
-                child: Icon(
-                  Icons.add_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
+                child: Icon(Icons.add_rounded, color: Colors.white, size: 18),
               ),
             ),
           ),
@@ -898,11 +877,7 @@ class _EmptyCategoryState extends StatelessWidget {
           onFilterTap: onFilterTap,
         ),
         const SizedBox(height: 120),
-        const Icon(
-          Icons.fastfood_rounded,
-          size: 40,
-          color: Color(0xFF8B8B8B),
-        ),
+        const Icon(Icons.fastfood_rounded, size: 40, color: Color(0xFF8B8B8B)),
         const SizedBox(height: 16),
         const LocalizedText(
           'В этой категории пока нет товаров',

@@ -17,11 +17,32 @@ class SupportLauncher {
       return;
     }
 
-    final uri = Uri.https('wa.me', '/$number', {
-      'text': 'Здравствуйте! Нужна помощь в приложении JETKIZ.',
-    });
+    const message = 'Здравствуйте! Нужна помощь в приложении JETKIZ.';
+    final appUri = Uri(
+      scheme: 'whatsapp',
+      host: 'send',
+      queryParameters: {'phone': number, 'text': message},
+    );
 
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        appUri,
+        mode: LaunchMode.externalNonBrowserApplication,
+      );
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!opened) {
+      final webUri = Uri.https('wa.me', '/$number', {'text': message});
+      try {
+        opened = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        opened = false;
+      }
+    }
+
     if (!opened && context.mounted) {
       _showMessage(context, 'Не удалось открыть WhatsApp');
     }

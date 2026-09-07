@@ -102,10 +102,7 @@ class RestaurantMenuData extends Equatable {
           );
 
       result.add(
-        RestaurantMenuGroup(
-          category: category,
-          items: itemsInCategory,
-        ),
+        RestaurantMenuGroup(category: category, items: itemsInCategory),
       );
     }
 
@@ -138,9 +135,7 @@ class RestaurantMenuData extends Equatable {
     final itemsSource = rawItems.isNotEmpty ? rawItems : rawProducts;
 
     return RestaurantMenuData(
-      restaurant: RestaurantMenuRestaurant.fromJson(
-        _asMap(json['restaurant']),
-      ),
+      restaurant: RestaurantMenuRestaurant.fromJson(_asMap(json['restaurant'])),
       categories: _parseCategories(json['categories']),
       items: _parseItems(itemsSource),
     );
@@ -169,9 +164,7 @@ class RestaurantMenuData extends Equatable {
     return _asList(value)
         .whereType<Map>()
         .map((item) {
-          return RestaurantMenuItem.fromJson(
-            Map<String, dynamic>.from(item),
-          );
+          return RestaurantMenuItem.fromJson(Map<String, dynamic>.from(item));
         })
         .where((item) => item.id.trim().isNotEmpty)
         .toList();
@@ -196,6 +189,10 @@ class RestaurantMenuRestaurant extends Equatable {
     required this.pickupPreparationMinutes,
     this.descriptionRu,
     this.descriptionKk,
+    this.coverImageUrl,
+    this.ratingAvg,
+    this.ratingCount = 0,
+    this.address,
     this.serverIsOpenNow,
     this.serverCanAcceptOrders,
   });
@@ -213,6 +210,10 @@ class RestaurantMenuRestaurant extends Equatable {
   final int? pickupPreparationMinutes;
   final String? descriptionRu;
   final String? descriptionKk;
+  final String? coverImageUrl;
+  final double? ratingAvg;
+  final int ratingCount;
+  final String? address;
   final bool? serverIsOpenNow;
   final bool? serverCanAcceptOrders;
 
@@ -246,11 +247,8 @@ class RestaurantMenuRestaurant extends Equatable {
   }
 
   /// Restaurant description is localized content, unlike its brand name.
-  String get description => LocalizedValue.select(
-        ru: descriptionRu,
-        kk: descriptionKk,
-        fallback: '',
-      );
+  String get description =>
+      LocalizedValue.select(ru: descriptionRu, kk: descriptionKk, fallback: '');
 
   factory RestaurantMenuRestaurant.fromJson(Map<String, dynamic> json) {
     return RestaurantMenuRestaurant(
@@ -258,19 +256,21 @@ class RestaurantMenuRestaurant extends Equatable {
       number: _readNullableInt(json['number']),
       status: _readString(json['status'], fallback: 'CLOSED'),
       isInApp: _readBool(json['isInApp'], fallback: false),
-      isAcceptingOrders: _readBool(
-        json['isAcceptingOrders'],
-        fallback: false,
-      ),
+      isAcceptingOrders: _readBool(json['isAcceptingOrders'], fallback: false),
       workingHours: _readNullableString(json['workingHours']),
       nameRu: _readString(json['nameRu'] ?? json['name']),
       nameKk: _readString(json['nameKk']),
       slug: _readString(json['slug']),
       isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: false),
-      pickupPreparationMinutes:
-          _readNullableInt(json['pickupPreparationMinutes']),
+      pickupPreparationMinutes: _readNullableInt(
+        json['pickupPreparationMinutes'],
+      ),
       descriptionRu: _readNullableString(json['descriptionRu']),
       descriptionKk: _readNullableString(json['descriptionKk']),
+      coverImageUrl: normalizeUrl(json['coverImageUrl']),
+      ratingAvg: _readNullableDouble(json['ratingAvg'] ?? json['rating']),
+      ratingCount: _readInt(json['ratingCount']),
+      address: _readNullableString(json['address']),
       serverIsOpenNow: _readNullableBool(json['isOpenNow']),
       serverCanAcceptOrders: _readNullableBool(json['canAcceptOrders']),
     );
@@ -291,6 +291,10 @@ class RestaurantMenuRestaurant extends Equatable {
         pickupPreparationMinutes,
         descriptionRu,
         descriptionKk,
+        coverImageUrl,
+        ratingAvg,
+        ratingCount,
+        address,
         serverIsOpenNow,
         serverCanAcceptOrders,
       ];
@@ -521,10 +525,7 @@ class RestaurantMenuItemImage extends Equatable {
 }
 
 class RestaurantMenuGroup extends Equatable {
-  const RestaurantMenuGroup({
-    required this.category,
-    required this.items,
-  });
+  const RestaurantMenuGroup({required this.category, required this.items});
 
   final RestaurantMenuCategory category;
   final List<RestaurantMenuItem> items;
@@ -587,6 +588,15 @@ int _readInt(dynamic value) {
   if (text.isEmpty) return 0;
 
   return int.tryParse(text) ?? double.tryParse(text)?.round() ?? 0;
+}
+
+double? _readNullableDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+
+  final text = value.toString().trim().replaceAll(',', '.');
+  if (text.isEmpty || text.toLowerCase() == 'null') return null;
+  return double.tryParse(text);
 }
 
 int? _readNullableInt(dynamic value) {
