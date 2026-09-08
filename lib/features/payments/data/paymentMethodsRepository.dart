@@ -22,14 +22,16 @@ class PaymentMethodsRepository {
         throw const FormatException('Invalid saved payment methods payload');
       }
 
-      return raw
-          .whereType<Map>()
-          .map(
-            (item) => SavedPaymentCard.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .toList(growable: false);
+      final result = <SavedPaymentCard>[];
+      for (final item in raw) {
+        if (item is! Map) {
+          throw const FormatException('Invalid saved payment method item');
+        }
+        result.add(
+          SavedPaymentCard.fromJson(Map<String, dynamic>.from(item)),
+        );
+      }
+      return List<SavedPaymentCard>.unmodifiable(result);
     } on PaymentMethodsException {
       rethrow;
     } on DioException catch (error) {
