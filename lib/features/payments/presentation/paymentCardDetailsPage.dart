@@ -16,7 +16,8 @@ class PaymentCardDetailsPage extends StatefulWidget {
 }
 
 class _PaymentCardDetailsPageState extends State<PaymentCardDetailsPage> {
-  final PaymentMethodsRepository _repository = PaymentMethodsRepository.instance;
+  final PaymentMethodsRepository _repository =
+      PaymentMethodsRepository.instance;
 
   late SavedPaymentCard _card;
   bool _isBusy = false;
@@ -56,7 +57,8 @@ class _PaymentCardDetailsPageState extends State<PaymentCardDetailsPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(strings.deleteCardQuestion),
         content: Text(
-          strings.deleteCardDescription('${_card.brandLabel} ${_card.maskedNumber}'),
+          strings.deleteCardDescription(
+              '${_card.brandLabel} ${_card.maskedNumber}'),
         ),
         actions: [
           TextButton(

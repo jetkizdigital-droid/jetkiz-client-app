@@ -202,8 +202,8 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
   Widget build(BuildContext context) {
     final strings = PaymentStrings.of(context);
     final state = _state;
-    final failed = state != null &&
-        (state.isFailed || state.isTerminalWithoutSuccess);
+    final failed =
+        state != null && (state.isFailed || state.isTerminalWithoutSuccess);
 
     return PopScope(
       canPop: !_isOpeningProvider,
@@ -301,7 +301,9 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                       ),
                       icon: const Icon(Icons.open_in_browser_rounded),
                       label: Text(
-                        _providerOpened ? strings.openPayLink : strings.openPayLink,
+                        _providerOpened
+                            ? strings.openPayLink
+                            : strings.openPayLink,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),

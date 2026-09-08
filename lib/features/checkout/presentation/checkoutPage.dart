@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
-import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
 import 'package:jetkiz_mobile/features/addresses/domain/address.dart';
@@ -14,6 +13,13 @@ import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/orders/data/orderApi.dart';
 import 'package:jetkiz_mobile/features/orders/domain/createOrderPayload.dart';
 import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
+import 'package:jetkiz_mobile/features/payments/data/paymentCheckoutApi.dart';
+import 'package:jetkiz_mobile/features/payments/data/paymentMethodsRepository.dart';
+import 'package:jetkiz_mobile/features/payments/data/paymentPendingStore.dart';
+import 'package:jetkiz_mobile/features/payments/domain/paymentFlowState.dart';
+import 'package:jetkiz_mobile/features/payments/domain/savedPaymentCard.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnPage.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -32,8 +38,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
   late final FinanceConfigApi _financeConfigApi;
   late final ProfileApi _profileApi;
   late final OrderApi _orderApi;
+  late final PaymentCheckoutApi _paymentCheckoutApi;
+  final PaymentMethodsRepository _paymentMethodsRepository =
+      PaymentMethodsRepository.instance;
+  final PaymentPendingStore _paymentPendingStore = PaymentPendingStore();
 
-  int? _selectedCardId;
+  String? _selectedCardId;
+  List<SavedPaymentCard> _savedCards = const [];
+  bool _useNewCard = true;
+  bool _saveNewCard = false;
+  bool _isCardsLoading = true;
+  String? _cardsError;
   int _deliveryFee = 0;
   bool _isDeliveryLoading = true;
   bool _hasDeliveryError = false;
@@ -48,21 +63,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   int get _effectiveDeliveryFee => _isPickup ? 0 : _deliveryFee;
 
-  final List<_CheckoutCard> _savedCards = const [
-    _CheckoutCard(
-      id: 1,
-      maskedNumber: '**** **** **** 4242',
-      type: 'Visa',
-      expiry: '12/25',
-    ),
-    _CheckoutCard(
-      id: 2,
-      maskedNumber: '**** **** **** 8888',
-      type: 'Mastercard',
-      expiry: '08/26',
-    ),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -71,11 +71,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _financeConfigApi = FinanceConfigApi(apiClient);
     _profileApi = ProfileApi(apiClient);
     _orderApi = OrderApi(apiClient);
+    _paymentCheckoutApi = PaymentCheckoutApi(apiClient);
 
-    _selectedCardId = _savedCards.isNotEmpty ? _savedCards.first.id : null;
     _cartRepository.addListener(_handleExternalStateChanged);
     _addressRepository.addListener(_handleExternalStateChanged);
     _loadDeliveryFee();
+    _loadSavedCards();
   }
 
   @override
@@ -111,6 +112,45 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
+  Future<void> _loadSavedCards() async {
+    if (mounted) {
+      setState(() {
+        _isCardsLoading = true;
+        _cardsError = null;
+      });
+    }
+
+    try {
+      final cards = await _paymentMethodsRepository.getSavedCards();
+      if (!mounted) return;
+
+      String? preferredId;
+      for (final card in cards) {
+        if (card.isDefault) {
+          preferredId = card.id;
+          break;
+        }
+      }
+      preferredId ??= cards.isNotEmpty ? cards.first.id : null;
+
+      setState(() {
+        _savedCards = cards;
+        _selectedCardId = preferredId;
+        _useNewCard = cards.isEmpty;
+        _isCardsLoading = false;
+      });
+    } on PaymentMethodsException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _savedCards = const [];
+        _selectedCardId = null;
+        _useNewCard = true;
+        _cardsError = error.message;
+        _isCardsLoading = false;
+      });
+    }
+  }
+
   Future<void> _changeAddress() async {
     final selected = await Navigator.of(context).push<Address>(
       MaterialPageRoute(
@@ -131,17 +171,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cartState = _cartRepository.state;
 
     if (_isSubmitting || _orderPlaced) return;
-
-    // Never allow the temporary client-side payment stub to create a real
-    // unpaid order in a production build.
-    if (kReleaseMode) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: LocalizedText('Оплата временно недоступна'),
-        ),
-      );
-      return;
-    }
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,7 +194,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
-    if (_selectedCardId == null) {
+    if (!_useNewCard && _selectedCardId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: LocalizedText('Выберите карту для оплаты')),
       );
@@ -228,18 +257,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
         throw Exception('Phone is empty');
       }
 
-      /// ВАЖНО:
-      /// Payment provider/backend пока не подключён.
-      /// Здесь временно используется client-side positive payment stub,
-      /// после которого создаётся реальный заказ через POST /orders.
-      ///
-      /// Когда backend payment flow будет подтверждён, этот участок нужно
-      /// заменить на:
-      /// 1. create payment session / intent
-      /// 2. confirm payment
-      /// 3. create order после успешного payment result
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-
       final orderItems = _cartRepository.toOrderItemsJson();
 
       final payload = CreateOrderPayload(
@@ -274,18 +291,62 @@ class _CheckoutPageState extends State<CheckoutPage> {
         payload,
         idempotencyKey: _pendingOrderKey,
       );
+      final createdOrder = _CreatedOrderView.fromJson(order);
+      final orderId = createdOrder.id?.trim() ?? '';
+      if (orderId.isEmpty) {
+        throw const _CheckoutBlockedException(
+          'Сервер не вернул номер созданного заказа',
+        );
+      }
+
+      final checkout = await _paymentCheckoutApi.createCheckout(
+        orderId: orderId,
+        savedPaymentMethodId: _useNewCard ? null : _selectedCardId,
+        saveCard: _useNewCard && _saveNewCard,
+      );
+      if (checkout.secureCheckoutUri == null || checkout.checkoutUrl.isEmpty) {
+        throw const _CheckoutBlockedException(
+          'Не удалось получить безопасную ссылку оплаты',
+        );
+      }
+
+      await _paymentPendingStore.save(
+        PendingPaymentReference(
+          orderId: orderId,
+          paymentId: checkout.paymentId,
+        ),
+      );
+
+      if (!mounted) return;
+      final paymentResult =
+          await Navigator.of(context).push<PaymentReturnResult>(
+        MaterialPageRoute(
+          builder: (_) => PaymentReturnPage(
+            orderId: orderId,
+            checkoutUrl: checkout.checkoutUrl,
+          ),
+        ),
+      );
+
+      if (paymentResult != PaymentReturnResult.secured) {
+        return;
+      }
 
       _cartRepository.clear();
-
       if (!mounted) return;
 
       setState(() {
-        _createdOrder = _CreatedOrderView.fromJson(order);
+        _createdOrder = createdOrder;
         _orderPlaced = true;
       });
     } on _CheckoutBlockedException catch (error) {
       if (!mounted) return;
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: LocalizedText(error.message)),
+      );
+    } on PaymentCheckoutException catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: LocalizedText(error.message)),
       );
@@ -369,11 +430,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final subtotal = cartState.subtotal;
     final deliveryFee = _effectiveDeliveryFee;
     final total = subtotal + deliveryFee;
+    final paymentStrings = PaymentStrings.of(context);
 
     final isConfirmDisabled = cartState.isEmpty ||
         (!_isPickup && address == null) ||
         (!_isPickup && _hasDeliveryError) ||
-        _selectedCardId == null ||
+        _isCardsLoading ||
+        (!_useNewCard && _selectedCardId == null) ||
         _isDeliveryLoading ||
         _isSubmitting;
 
@@ -453,34 +516,109 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   const SizedBox(height: 10),
                   _CheckoutItemsCard(items: items),
                   const SizedBox(height: 18),
-                  const _CheckoutSectionTitle(title: 'Выбор карты'),
+                  const _CheckoutSectionTitle(title: 'Способ оплаты'),
                   const SizedBox(height: 10),
-                  ..._savedCards.map(
-                    (card) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _CheckoutCardTile(
-                        card: card,
-                        isSelected: _selectedCardId == card.id,
-                        onTap: () {
-                          if (_isSubmitting) return;
-                          setState(() {
-                            _selectedCardId = card.id;
-                          });
-                        },
+                  if (_isCardsLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: Center(
+                        child: CircularProgressIndicator(color: _green),
+                      ),
+                    )
+                  else ...[
+                    if (_cardsError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF6E8),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFF0D9AD)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: Color(0xFF9A6A18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                paymentStrings.cardsLoadError,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B4A12),
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _loadSavedCards,
+                              child: Text(paymentStrings.retry),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    ..._savedCards.map(
+                      (card) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _CheckoutCardTile(
+                          card: card,
+                          isSelected:
+                              !_useNewCard && _selectedCardId == card.id,
+                          onTap: () {
+                            if (_isSubmitting) return;
+                            setState(() {
+                              _useNewCard = false;
+                              _selectedCardId = card.id;
+                              _saveNewCard = false;
+                            });
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  _AddNewCardTile(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: LocalizedText(
-                            'Экран добавления карты подключим после подтверждения payment flow',
+                    _AddNewCardTile(
+                      isSelected: _useNewCard,
+                      onTap: () {
+                        if (_isSubmitting) return;
+                        setState(() {
+                          _useNewCard = true;
+                          _selectedCardId = null;
+                        });
+                      },
+                    ),
+                    if (_useNewCard) ...[
+                      const SizedBox(height: 8),
+                      CheckboxListTile(
+                        value: _saveNewCard,
+                        onChanged: _isSubmitting
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _saveNewCard = value == true;
+                                });
+                              },
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: _green,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text(
+                          paymentStrings.saveCardForFuture,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      );
-                    },
-                  ),
+                        subtitle: Text(
+                          paymentStrings.secureProviderHint,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 18),
                   const _CheckoutSectionTitle(title: 'Итого'),
                   const SizedBox(height: 10),
@@ -836,7 +974,7 @@ class _CheckoutCardTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final _CheckoutCard card;
+  final SavedPaymentCard card;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -880,7 +1018,7 @@ class _CheckoutCardTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     LocalizedText(
-                      card.type,
+                      card.brandLabel,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -889,7 +1027,9 @@ class _CheckoutCardTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     LocalizedText(
-                      '${card.maskedNumber} • ${card.expiry}',
+                      card.issuerBank == null
+                          ? card.maskedNumber
+                          : '${card.maskedNumber} • ${card.issuerBank}',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF6B7280),
@@ -936,15 +1076,17 @@ class _CheckoutCardTile extends StatelessWidget {
 
 class _AddNewCardTile extends StatelessWidget {
   const _AddNewCardTile({
+    required this.isSelected,
     required this.onTap,
   });
 
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: isSelected ? const Color(0xFFF2FAEE) : Colors.transparent,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -954,8 +1096,10 @@ class _AddNewCardTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: const Color(0xFFD1D5DB),
-              style: BorderStyle.solid,
+              color: isSelected
+                  ? const Color(0xFF489F2A)
+                  : const Color(0xFFD1D5DB),
+              width: isSelected ? 1.5 : 1,
             ),
           ),
           child: const Row(
@@ -1126,7 +1270,7 @@ class _CheckoutBottomBar extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const LocalizedText(
-                        'Подтвердить заказ',
+                        'Оплатить',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -1290,30 +1434,22 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
 
 class _CreatedOrderView {
   const _CreatedOrderView({
+    required this.id,
     required this.pickupCode,
   });
 
+  final String? id;
   final String? pickupCode;
 
   factory _CreatedOrderView.fromJson(Map<String, dynamic> json) {
-    final raw = json['pickupCode']?.toString().trim() ?? '';
+    final rawId = json['id']?.toString().trim() ?? '';
+    final rawPickup = json['pickupCode']?.toString().trim() ?? '';
 
     return _CreatedOrderView(
-      pickupCode: raw.isEmpty || raw.toLowerCase() == 'null' ? null : raw,
+      id: rawId.isEmpty || rawId.toLowerCase() == 'null' ? null : rawId,
+      pickupCode: rawPickup.isEmpty || rawPickup.toLowerCase() == 'null'
+          ? null
+          : rawPickup,
     );
   }
-}
-
-class _CheckoutCard {
-  const _CheckoutCard({
-    required this.id,
-    required this.maskedNumber,
-    required this.type,
-    required this.expiry,
-  });
-
-  final int id;
-  final String maskedNumber;
-  final String type;
-  final String expiry;
 }

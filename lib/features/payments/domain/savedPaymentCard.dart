@@ -86,10 +86,8 @@ class SavedPaymentCard {
 }
 
 PaymentCardBrand parsePaymentCardBrand(String? raw) {
-  final normalized = raw
-      ?.trim()
-      .toUpperCase()
-      .replaceAll(RegExp(r'[^A-Z]'), '');
+  final normalized =
+      raw?.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
 
   switch (normalized) {
     case 'VISA':

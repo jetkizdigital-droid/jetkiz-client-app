@@ -16,7 +16,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
   static const Color _green = Color(0xFF489F2A);
   static const Color _background = Color(0xFFF7FAF5);
 
-  final PaymentMethodsRepository _repository = PaymentMethodsRepository.instance;
+  final PaymentMethodsRepository _repository =
+      PaymentMethodsRepository.instance;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -76,7 +77,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(strings.deleteCardQuestion),
         content: Text(
-          strings.deleteCardDescription('${card.brandLabel} ${card.maskedNumber}'),
+          strings
+              .deleteCardDescription('${card.brandLabel} ${card.maskedNumber}'),
         ),
         actions: [
           TextButton(
@@ -180,7 +182,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 48, color: Color(0xFF7A8378)),
+            const Icon(Icons.cloud_off_rounded,
+                size: 48, color: Color(0xFF7A8378)),
             const SizedBox(height: 16),
             Text(
               _errorMessage ?? strings.cardsLoadError,
@@ -245,7 +248,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                         if (card.isDefault) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _green.withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(999),
@@ -266,7 +270,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                       const SizedBox(height: 5),
                       Text(
                         card.issuerBank!,
-                        style: const TextStyle(fontSize: 13, color: Color(0xFF7C857A)),
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF7C857A)),
                       ),
                     ],
                   ],
@@ -335,7 +340,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                             icon: const Icon(Icons.info_outline_rounded),
                             label: Text(
                               strings.addCard,
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
                             ),
                           ),
                         ],

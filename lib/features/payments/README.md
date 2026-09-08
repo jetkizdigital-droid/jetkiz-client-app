@@ -1,26 +1,29 @@
-# Payment client foundation
+# Payment client
 
-The mobile app must remain provider-agnostic.
+JETKIZ mobile remains provider-agnostic: Flutter talks only to the JETKIZ backend.
 
 ## Security boundaries
 
-- Flutter talks only to the JETKIZ backend.
-- Provider API keys, webhook secrets and merchant credentials stay on the backend.
-- Full card PAN and CVV are never persisted by JETKIZ.
-- If the provider supports card-on-file, JETKIZ stores only provider tokens/IDs plus display metadata such as brand and last4.
-- Payment success is authoritative only after backend verification/webhook processing. Returning to the app from a hosted checkout is not proof of payment.
+- PayLink API keys and merchant credentials exist only on backend.
+- PAN/CVV are entered only on the PayLink hosted HTTPS page and never pass through Flutter or JETKIZ backend.
+- Saved-card provider tokens never leave backend and are encrypted at rest there. Flutter receives only display metadata such as brand, last4 and issuer bank.
+- Hosted checkout URLs are treated as sensitive session data: they are redacted from app debug logging and are not persisted locally.
+- A PayLink redirect/browser return is never proof of payment. Flutter accepts success only after `GET /payments/orders/:orderId` returns `fundsSecured=true`.
 
-## Expected checkout flow
+## Production checkout flow
 
-1. Sync cart and validate availability/prices.
-2. Create CARD order with an idempotency key.
-3. Request checkout from `POST /payments` using the created order ID.
-4. Open provider checkout URL / SDK supplied by the provider.
-5. Return to the app via a verified app link when provider integration is known.
-6. Re-read order/payment status from JETKIZ backend.
-7. Clear cart only after backend confirms the payment/order state expected by the final contract.
-8. Persist a non-sensitive pending order/payment reference so an interrupted app can recover the flow.
+1. Sync cart and revalidate prices/availability.
+2. Create a CARD order with an idempotency key.
+3. Call `POST /payments` with the order ID and either `savedPaymentMethodId` or explicit `saveCard=true` for a new card.
+4. Open only an HTTPS checkout URL returned by JETKIZ backend.
+5. Poll JETKIZ backend for the payment state after returning from PayLink.
+6. Treat `AUTHORIZED` (or `PAID`) as secured funds; restaurant acceptance triggers backend CAPTURE.
+7. Keep the cart when payment fails/pends; clear it only after backend confirms secured funds.
+8. Persist only order/payment IDs for interrupted-flow recovery.
 
 ## Saved cards
 
-The current card screens are UI foundation only. The repository intentionally returns no cards and does not implement create/delete/default operations until PayLink confirms tokenization/card-on-file support and its exact API contract.
+- `GET /payments/methods` lists display-safe methods.
+- `PATCH /payments/methods/:id/default` changes the default method.
+- `DELETE /payments/methods/:id` removes a method.
+- New cards are tokenized during a real PayLink checkout. JETKIZ intentionally does not implement a fake/zero-amount standalone add-card transaction.

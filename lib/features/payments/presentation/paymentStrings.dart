@@ -76,6 +76,7 @@ class PaymentStrings {
       _kk ? 'Карталарды жүктеу мүмкін болмады' : 'Не удалось загрузить карты';
   String get retry => _kk ? 'Қайталау' : 'Повторить';
   String get removingCard => _kk ? 'Карта жойылуда…' : 'Удаляем карту…';
-  String get defaultUpdated => _kk ? 'Негізгі карта жаңартылды' : 'Основная карта обновлена';
+  String get defaultUpdated =>
+      _kk ? 'Негізгі карта жаңартылды' : 'Основная карта обновлена';
   String get cardDeleted => _kk ? 'Карта жойылды' : 'Карта удалена';
 }

@@ -51,7 +51,8 @@ class PaymentMethodsRepository {
     }
 
     try {
-      final response = await _apiClient.dio.patch('/payments/methods/$id/default');
+      final response =
+          await _apiClient.dio.patch('/payments/methods/$id/default');
       if (response.data is! Map) {
         throw const FormatException('Invalid saved payment method payload');
       }
