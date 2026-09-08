@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 enum OrderFulfillmentType {
   delivery,
   pickup,
@@ -82,11 +80,9 @@ class CreateOrderPayload {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{
       'restaurantId': restaurantId.trim(),
-      // Checkout is blocked in release builds until the real payment provider
-      // is connected. Debug builds use the positive payment stub, so mark
-      // those test orders as CASH instead of creating a CARD/PENDING order
-      // that production correctly expires after the unpaid-card timeout.
-      'paymentMethod': kReleaseMode ? 'CARD' : 'CASH',
+      // JETKIZ is CARD-only in every build. Payment status is confirmed only
+      // by the backend after the PayLink provider callback/status flow.
+      'paymentMethod': 'CARD',
       'fulfillmentType': fulfillmentType.wireName,
       'leaveAtDoor':
           fulfillmentType == OrderFulfillmentType.pickup ? false : leaveAtDoor,
