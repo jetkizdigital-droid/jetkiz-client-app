@@ -16,8 +16,8 @@ enum PaymentReturnResult {
 /// Hosted PayLink checkout shell.
 ///
 /// Returning from the provider is never treated as proof of payment. This page
-/// only reports success after JETKIZ backend returns `fundsSecured=true`, which
-/// is backed by the PayLink callback/server-side reconciliation contract.
+/// reports success only after the authenticated JETKIZ backend confirms a CARD
+/// order in AUTHORIZED/PAID state with `fundsSecured=true`.
 class PaymentReturnPage extends StatefulWidget {
   const PaymentReturnPage({
     super.key,
@@ -47,7 +47,6 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
   DateTime? _pollStartedAt;
   bool _isOpeningProvider = false;
   bool _isChecking = false;
-  bool _providerOpened = false;
   PaymentOrderState? _state;
   String? _errorMessage;
 
@@ -63,6 +62,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
         _openProvider();
       }
       _startPolling(resetDeadline: true);
+      _checkOnce();
     });
   }
 
@@ -90,7 +90,8 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
     final uri = Uri.tryParse(widget.checkoutUrl.trim());
     if (uri == null ||
         uri.scheme.toLowerCase() != 'https' ||
-        uri.host.trim().isEmpty) {
+        uri.host.trim().isEmpty ||
+        uri.userInfo.isNotEmpty) {
       return null;
     }
     return uri;
@@ -117,9 +118,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
         uri,
         mode: LaunchMode.externalApplication,
       );
-      if (!mounted) return;
-      setState(() => _providerOpened = opened);
-      if (!opened) {
+      if (!opened && mounted) {
         setState(() {
           _errorMessage = 'Не удалось открыть защищённую страницу PayLink';
         });
@@ -150,9 +149,6 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
         DateTime.now().difference(startedAt) > _maxForegroundWait) {
       _pollTimer?.cancel();
       _pollTimer = null;
-      if (mounted && _state?.fundsSecured != true) {
-        setState(() => _errorMessage = null);
-      }
       return;
     }
 
@@ -166,20 +162,17 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
       if (!mounted) return;
       setState(() => _state = state);
 
-      if (state.fundsSecured) {
+      if (state.isSecuredCardPayment) {
         _pollTimer?.cancel();
         await _pendingStore.clear();
         if (!mounted) return;
-        await Future<void>.delayed(const Duration(milliseconds: 350));
-        if (mounted) Navigator.of(context).pop(PaymentReturnResult.secured);
+        Navigator.of(context).pop(PaymentReturnResult.secured);
         return;
       }
 
       if (state.isFailed || state.isTerminalWithoutSuccess) {
         _pollTimer?.cancel();
         await _pendingStore.clear();
-        if (!mounted) return;
-        setState(() {});
       }
     } on PaymentCheckoutException catch (error) {
       if (!mounted) return;
@@ -301,9 +294,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                       ),
                       icon: const Icon(Icons.open_in_browser_rounded),
                       label: Text(
-                        _providerOpened
-                            ? strings.openPayLink
-                            : strings.openPayLink,
+                        strings.openPayLink,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
