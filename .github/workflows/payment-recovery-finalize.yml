@@ -53,7 +53,8 @@ jobs:
             exit 1
           fi
           grep -F "fundsSecured" lib/features/payments/data/paymentCheckoutApi.dart
-          grep -F "paymentMethod.toUpperCase() != 'CARD'" lib/features/payments/data/paymentCheckoutApi.dart
+          grep -F "method == 'CARD'" lib/features/payments/data/paymentCheckoutApi.dart
+          grep -F "status == 'AUTHORIZED' || status == 'PAID'" lib/features/payments/data/paymentCheckoutApi.dart
           grep -F "payment_pending_order_id" lib/features/payments/data/paymentPendingStore.dart
           grep -F "_legacyCheckoutUrlKey" lib/features/payments/data/paymentPendingStore.dart
           grep -F "_recoverPendingPayment" lib/features/checkout/presentation/checkoutPage.dart
