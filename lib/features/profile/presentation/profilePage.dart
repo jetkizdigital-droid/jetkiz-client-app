@@ -15,6 +15,7 @@ import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersPage.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentMethodsPage.dart';
 import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
 import 'package:jetkiz_mobile/features/profile/presentation/widgets/editProfileSheet.dart';
@@ -222,10 +223,6 @@ class _ProfilePageState extends State<ProfilePage> {
     widget.onLoggedOut?.call();
   }
 
-  void _showComingSoon(String title) {
-    _showSnack('$title скоро будет доступно.');
-  }
-
   Future<void> _openWebPage(String url) async {
     final uri = Uri.parse(url);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -256,7 +253,14 @@ class _ProfilePageState extends State<ProfilePage> {
         icon: Icons.credit_card_outlined,
         label: strings.profileAddCard,
         iconColor: const Color(0xFF8B5CF6),
-        onTap: () => _showComingSoon(strings.profileAddCard),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const PaymentMethodsPage(),
+            ),
+          );
+        },
       ),
       _ProfileMenuItem(
         icon: Icons.settings_outlined,

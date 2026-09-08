@@ -471,6 +471,9 @@ class ApiClient {
 
         if (lowerKey.contains('token') ||
             lowerKey.contains('password') ||
+            lowerKey.contains('checkouturl') ||
+            lowerKey.contains('paymenturl') ||
+            lowerKey.contains('authorizationurl') ||
             lowerKey == 'code' ||
             lowerKey == 'otp' ||
             lowerKey == 'smscode') {

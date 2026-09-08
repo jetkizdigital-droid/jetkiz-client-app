@@ -1,10 +1,10 @@
 import 'package:jetkiz_mobile/features/payments/domain/savedPaymentCard.dart';
 
-/// Boundary reserved for provider-backed card tokenization/card-on-file.
+/// Provider-agnostic saved-card boundary.
 ///
-/// This is deliberately not connected to any guessed PayLink endpoint.
-/// The implementation must only be added after provider documentation is
-/// confirmed.
+/// PayLink card-on-file is implemented only through the JETKIZ backend. Flutter
+/// never receives provider card tokens and never handles PAN/CVV. New cards are
+/// tokenized during a real hosted checkout using the backend `saveCard` option.
 abstract interface class PaymentCardProvisioningApi {
   Future<List<SavedPaymentCard>> listCards();
 
