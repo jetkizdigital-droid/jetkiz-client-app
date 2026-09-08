@@ -25,7 +25,7 @@ jobs:
           set -euo pipefail
           python3 tools/apply_payment_recovery_patch.py
 
-      - name: Make recovery lifecycle-safe
+      - name: Make recovery lifecycle-safe and clean placeholders
         shell: bash
         run: |
           set -euo pipefail
@@ -38,6 +38,13 @@ jobs:
           if old not in s:
               raise SystemExit('recovery init anchor missing')
           p.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          profile = Path('lib/features/profile/presentation/profilePage.dart')
+          ps = profile.read_text(encoding='utf-8')
+          stale = "  void _showComingSoon(String title) {\n    _showSnack('$title скоро будет доступно.');\n  }\n\n"
+          if stale in ps:
+              ps = ps.replace(stale, '', 1)
+          profile.write_text(ps, encoding='utf-8')
           PY
 
       - name: Verify payment security invariants
@@ -59,6 +66,10 @@ jobs:
           grep -F "_legacyCheckoutUrlKey" lib/features/payments/data/paymentPendingStore.dart
           grep -F "_recoverPendingPayment" lib/features/checkout/presentation/checkoutPage.dart
           grep -F "PaymentMethodsPage" lib/features/profile/presentation/profilePage.dart
+          if grep -F "_showComingSoon(strings.profileAddCard)" lib/features/profile/presentation/profilePage.dart; then
+            echo 'Profile still contains payment placeholder'
+            exit 1
+          fi
           echo 'Payment security invariants verified'
 
       - name: Setup Flutter
