@@ -33,12 +33,9 @@ class _PaymentCardDetailsPageState extends State<PaymentCardDetailsPage> {
     setState(() => _isBusy = true);
 
     try {
-      final updated = await _repository.setDefaultCard(_card.id);
+      await _repository.setDefaultCard(_card.id);
       if (!mounted) return;
-      setState(() => _card = updated);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(PaymentStrings.of(context).defaultUpdated)),
-      );
+      Navigator.of(context).pop(true);
     } on PaymentMethodsException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
