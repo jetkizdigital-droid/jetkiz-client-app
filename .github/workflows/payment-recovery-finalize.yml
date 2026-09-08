@@ -33,18 +33,8 @@ jobs:
           from pathlib import Path
           p = Path('lib/features/checkout/presentation/checkoutPage.dart')
           s = p.read_text(encoding='utf-8')
-          old = """    _loadDeliveryFee();
-    _loadSavedCards();
-    _recoverPendingPayment();
-"""
-          new = """    _loadDeliveryFee();
-    _loadSavedCards();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _recoverPendingPayment();
-      }
-    });
-"""
+          old = "    _loadDeliveryFee();\n    _loadSavedCards();\n    _recoverPendingPayment();\n"
+          new = "    _loadDeliveryFee();\n    _loadSavedCards();\n    WidgetsBinding.instance.addPostFrameCallback((_) {\n      if (mounted) {\n        _recoverPendingPayment();\n      }\n    });\n"
           if old not in s:
               raise SystemExit('recovery init anchor missing')
           p.write_text(s.replace(old, new, 1), encoding='utf-8')
@@ -54,12 +44,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -R -n -E 'PAYLINK_API_KEY|X-API-KEY|PAYMENT_TOKEN_ENCRYPTION_KEY' lib || true
           if grep -R -n -E 'PAYLINK_API_KEY|X-API-KEY|PAYMENT_TOKEN_ENCRYPTION_KEY' lib; then
             echo 'Provider/server secret reference found in Flutter source'
             exit 1
           fi
-          ! grep -n -E 'Text(Form)?Field' lib/features/payments/presentation/addPaymentCardPage.dart
+          if grep -n -E 'Text(Form)?Field' lib/features/payments/presentation/addPaymentCardPage.dart; then
+            echo 'PAN/CVV-style input field found in add-card page'
+            exit 1
+          fi
           grep -F "fundsSecured" lib/features/payments/data/paymentCheckoutApi.dart
           grep -F "paymentMethod.toUpperCase() != 'CARD'" lib/features/payments/data/paymentCheckoutApi.dart
           grep -F "payment_pending_order_id" lib/features/payments/data/paymentPendingStore.dart
