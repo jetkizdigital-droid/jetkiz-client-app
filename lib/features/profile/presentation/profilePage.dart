@@ -223,10 +223,6 @@ class _ProfilePageState extends State<ProfilePage> {
     widget.onLoggedOut?.call();
   }
 
-  void _showComingSoon(String title) {
-    _showSnack('$title скоро будет доступно.');
-  }
-
   Future<void> _openWebPage(String url) async {
     final uri = Uri.parse(url);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
