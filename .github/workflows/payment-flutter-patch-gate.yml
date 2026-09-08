@@ -1,0 +1,54 @@
+name: Payment Flutter Patch Gate
+
+on:
+  push:
+    branches:
+      - payment/paylink-production-flutter-20260908
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: payment/paylink-production-flutter-20260908
+
+      - name: Apply production payment patch
+        run: python3 tools/apply_paylink_flutter_patch.py
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Commit production changes and remove temporary patch tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f tools/apply_paylink_flutter_patch.py
+          rm -f .github/workflows/payment-flutter-patch-gate.yml
+          git config user.name "jetkizdigital-droid"
+          git config user.email "jetkizdigital@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(payments): connect production PayLink checkout in Flutter"
+          git push origin HEAD:payment/paylink-production-flutter-20260908
