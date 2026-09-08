@@ -3,8 +3,8 @@ import 'package:jetkiz_mobile/core/network/apiClient.dart';
 
 /// Provider-agnostic payment checkout contract.
 ///
-/// Flutter only talks to the JETKIZ backend. Provider credentials, webhook
-/// secrets and card data must never be placed in the mobile application.
+/// Flutter talks only to the JETKIZ backend. PayLink credentials, provider
+/// tokens, webhook data and card PAN/CVV must never be placed in the app.
 class PaymentCheckoutApi {
   PaymentCheckoutApi(this._apiClient);
 
@@ -12,21 +12,110 @@ class PaymentCheckoutApi {
 
   Future<PaymentCheckoutSession> createCheckout({
     required String orderId,
+    String? savedPaymentMethodId,
+    bool saveCard = false,
   }) async {
+    final normalizedOrderId = orderId.trim();
+    final normalizedSavedMethodId = savedPaymentMethodId?.trim() ?? '';
+
+    if (normalizedOrderId.isEmpty) {
+      throw const PaymentCheckoutException(
+        message: 'Некорректный заказ для оплаты',
+      );
+    }
+
     try {
       final response = await _apiClient.dio.post(
         '/payments',
-        data: {'orderId': orderId},
+        data: <String, dynamic>{
+          'orderId': normalizedOrderId,
+          if (normalizedSavedMethodId.isNotEmpty)
+            'savedPaymentMethodId': normalizedSavedMethodId,
+          if (normalizedSavedMethodId.isEmpty && saveCard) 'saveCard': true,
+        },
       );
+
+      if (response.data is! Map) {
+        throw const FormatException('Invalid payment checkout payload');
+      }
+
       return PaymentCheckoutSession.fromJson(
         Map<String, dynamic>.from(response.data as Map),
       );
+    } on PaymentCheckoutException {
+      rethrow;
     } on DioException catch (error) {
       throw PaymentCheckoutException(
         statusCode: error.response?.statusCode,
+        message: _messageFor(error),
       );
     } catch (_) {
-      throw const PaymentCheckoutException();
+      throw const PaymentCheckoutException(
+        message: 'Не удалось открыть оплату. Попробуйте ещё раз.',
+      );
+    }
+  }
+
+  Future<PaymentOrderState> getOrderPaymentState(String orderId) async {
+    final normalizedOrderId = orderId.trim();
+    if (normalizedOrderId.isEmpty) {
+      throw const PaymentCheckoutException(
+        message: 'Некорректный заказ для проверки оплаты',
+      );
+    }
+
+    try {
+      final response = await _apiClient.dio.get(
+        '/payments/orders/$normalizedOrderId',
+      );
+      if (response.data is! Map) {
+        throw const FormatException('Invalid payment state payload');
+      }
+
+      return PaymentOrderState.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } on PaymentCheckoutException {
+      rethrow;
+    } on DioException catch (error) {
+      throw PaymentCheckoutException(
+        statusCode: error.response?.statusCode,
+        message: _messageFor(error),
+      );
+    } catch (_) {
+      throw const PaymentCheckoutException(
+        message: 'Не удалось проверить оплату. Проверьте интернет.',
+      );
+    }
+  }
+
+  static String _messageFor(DioException error) {
+    final status = error.response?.statusCode;
+    if (status == 401) return 'Нужно снова войти в аккаунт';
+    if (status == 404) return 'Заказ или платёж не найден';
+    if (status == 409) {
+      return 'Этот платёж уже обрабатывается. Проверьте его статус.';
+    }
+    if (status == 429) {
+      return 'Слишком много попыток. Подождите немного и повторите.';
+    }
+    if (status != null && status >= 500) {
+      return 'Платёжный сервис временно недоступен. Попробуйте позже.';
+    }
+
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.connectionError:
+        return 'Нет устойчивого соединения с сервером. Проверьте интернет.';
+      case DioExceptionType.badCertificate:
+        return 'Ошибка безопасного соединения';
+      case DioExceptionType.cancel:
+        return 'Запрос оплаты отменён';
+      case DioExceptionType.badResponse:
+      case DioExceptionType.unknown:
+        return 'Не удалось выполнить операцию оплаты';
     }
   }
 }
@@ -41,6 +130,8 @@ class PaymentCheckoutSession {
     this.providerPaymentId,
     this.amount,
     this.currency,
+    this.tokenizationRequested = false,
+    this.savedPaymentMethodId,
   });
 
   final String paymentId;
@@ -51,18 +142,41 @@ class PaymentCheckoutSession {
   final String? providerPaymentId;
   final int? amount;
   final String? currency;
+  final bool tokenizationRequested;
+  final String? savedPaymentMethodId;
 
   factory PaymentCheckoutSession.fromJson(Map<String, dynamic> json) {
+    final paymentId = json['paymentId']?.toString().trim() ?? '';
+    final orderId = json['orderId']?.toString().trim() ?? '';
+    final status = json['status']?.toString().trim() ?? '';
+    final checkoutUrl = json['checkoutUrl']?.toString().trim() ?? '';
+
+    if (paymentId.isEmpty || orderId.isEmpty || status.isEmpty) {
+      throw const FormatException('Invalid payment checkout payload');
+    }
+
     return PaymentCheckoutSession(
-      paymentId: json['paymentId']?.toString() ?? '',
-      orderId: json['orderId']?.toString() ?? '',
-      status: json['status']?.toString() ?? '',
-      checkoutUrl: json['checkoutUrl']?.toString() ?? '',
-      provider: json['provider']?.toString(),
-      providerPaymentId: json['providerPaymentId']?.toString(),
+      paymentId: paymentId,
+      orderId: orderId,
+      status: status,
+      checkoutUrl: checkoutUrl,
+      provider: _nullableString(json['provider']),
+      providerPaymentId: _nullableString(json['providerPaymentId']),
       amount: _asInt(json['amount']),
-      currency: json['currency']?.toString(),
+      currency: _nullableString(json['currency']),
+      tokenizationRequested: json['tokenizationRequested'] == true,
+      savedPaymentMethodId: _nullableString(json['savedPaymentMethodId']),
     );
+  }
+
+  Uri? get secureCheckoutUri {
+    final parsed = Uri.tryParse(checkoutUrl);
+    if (parsed == null ||
+        parsed.scheme.toLowerCase() != 'https' ||
+        parsed.host.trim().isEmpty) {
+      return null;
+    }
+    return parsed;
   }
 
   static int? _asInt(dynamic value) {
@@ -72,8 +186,77 @@ class PaymentCheckoutSession {
   }
 }
 
+class PaymentOrderState {
+  const PaymentOrderState({
+    required this.orderId,
+    required this.paymentMethod,
+    required this.paymentStatus,
+    required this.paymentRecordStatus,
+    required this.fundsSecured,
+    required this.captured,
+    this.provider,
+    this.providerPaymentId,
+    this.checkoutUrl,
+  });
+
+  final String orderId;
+  final String paymentMethod;
+  final String paymentStatus;
+  final String? paymentRecordStatus;
+  final String? provider;
+  final String? providerPaymentId;
+  final String? checkoutUrl;
+  final bool fundsSecured;
+  final bool captured;
+
+  factory PaymentOrderState.fromJson(Map<String, dynamic> json) {
+    final orderId = json['orderId']?.toString().trim() ?? '';
+    if (orderId.isEmpty) {
+      throw const FormatException('Invalid payment state payload');
+    }
+
+    return PaymentOrderState(
+      orderId: orderId,
+      paymentMethod: json['paymentMethod']?.toString().trim() ?? '',
+      paymentStatus: json['paymentStatus']?.toString().trim() ?? '',
+      paymentRecordStatus: _nullableString(json['paymentRecordStatus']),
+      provider: _nullableString(json['provider']),
+      providerPaymentId: _nullableString(json['providerPaymentId']),
+      checkoutUrl: _nullableString(json['checkoutUrl']),
+      fundsSecured: json['fundsSecured'] == true,
+      captured: json['captured'] == true,
+    );
+  }
+
+  bool get isFailed {
+    final status = paymentStatus.toUpperCase();
+    final record = paymentRecordStatus?.toUpperCase();
+    return status == 'FAILED' || record == 'FAILED' || record == 'CANCELED';
+  }
+
+  bool get isTerminalWithoutSuccess {
+    final status = paymentStatus.toUpperCase();
+    final record = paymentRecordStatus?.toUpperCase();
+    return status == 'VOIDED' ||
+        status == 'REFUNDED' ||
+        record == 'VOIDED' ||
+        record == 'REFUNDED';
+  }
+}
+
+String? _nullableString(dynamic value) {
+  final normalized = value?.toString().trim() ?? '';
+  return normalized.isEmpty || normalized.toLowerCase() == 'null'
+      ? null
+      : normalized;
+}
+
 class PaymentCheckoutException implements Exception {
-  const PaymentCheckoutException({this.statusCode});
+  const PaymentCheckoutException({
+    this.statusCode,
+    this.message = 'Не удалось выполнить операцию оплаты',
+  });
 
   final int? statusCode;
+  final String message;
 }
