@@ -471,7 +471,7 @@ class AppStrings {
       : 'Фотоны жүктеу мүмкін болмады: $error';
 
   String get profileMyData => _ru ? 'Мои данные' : 'Менің деректерім';
-  String get profileAddCard => _ru ? 'Добавить карту' : 'Карта қосу';
+  String get profileAddCard => _ru ? 'Мои карты' : 'Менің карталарым';
   String get profileSettings => _ru ? 'Настройки' : 'Баптаулар';
   String get profileAddress => _ru ? 'Адрес' : 'Мекенжай';
   String get profileAddresses => _ru ? 'Адреса' : 'Мекенжайлар';
