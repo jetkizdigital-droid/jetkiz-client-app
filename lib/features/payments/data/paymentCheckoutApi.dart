@@ -173,7 +173,8 @@ class PaymentCheckoutSession {
     final parsed = Uri.tryParse(checkoutUrl);
     if (parsed == null ||
         parsed.scheme.toLowerCase() != 'https' ||
-        parsed.host.trim().isEmpty) {
+        parsed.host.trim().isEmpty ||
+        parsed.userInfo.isNotEmpty) {
       return null;
     }
     return parsed;
@@ -226,6 +227,29 @@ class PaymentOrderState {
       fundsSecured: json['fundsSecured'] == true,
       captured: json['captured'] == true,
     );
+  }
+
+  /// Defense in depth: a malformed/inconsistent backend response must never
+  /// make Flutter treat a non-card or non-secured state as a successful order.
+  bool get isSecuredCardPayment {
+    final method = paymentMethod.toUpperCase();
+    final status = paymentStatus.toUpperCase();
+    return method == 'CARD' &&
+        fundsSecured &&
+        (status == 'AUTHORIZED' || status == 'PAID');
+  }
+
+  Uri? get secureCheckoutUri {
+    final raw = checkoutUrl?.trim() ?? '';
+    if (raw.isEmpty) return null;
+    final parsed = Uri.tryParse(raw);
+    if (parsed == null ||
+        parsed.scheme.toLowerCase() != 'https' ||
+        parsed.host.trim().isEmpty ||
+        parsed.userInfo.isNotEmpty) {
+      return null;
+    }
+    return parsed;
   }
 
   bool get isFailed {
