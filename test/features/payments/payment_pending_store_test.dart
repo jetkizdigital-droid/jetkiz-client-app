@@ -12,7 +12,7 @@ void main() {
   });
 
   test('recovery belongs to current user', () async {
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final store = PaymentPendingStore(storage: storage);
 
     await storage.write(key: 'accessToken', value: _jwtFor('user-a'));
@@ -43,7 +43,7 @@ void main() {
       'payment_pending_payment_id': 'legacy-payment',
     });
 
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     final store = PaymentPendingStore(storage: storage);
 
     expect(await store.read(), isNull);
@@ -61,7 +61,7 @@ void main() {
       'payment_pending_checkout_url': 'https://legacy.invalid',
     });
 
-    final storage = const FlutterSecureStorage();
+    const storage = FlutterSecureStorage();
     await AuthStorage().clear();
 
     expect(await storage.read(key: 'accessToken'), isNull);
