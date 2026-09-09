@@ -195,11 +195,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
         if (state.isSecuredCardPayment) {
           await _paymentPendingStore.clear();
           if (!mounted) return;
+          _cartRepository.clear();
           setState(() {
             _recoverablePayment = null;
             _recoverableCheckoutUrl = null;
             _paymentRecoveryError = null;
             _isPaymentRecoveryLoading = false;
+            _createdOrder = _CreatedOrderView(
+              id: pending.orderId,
+              pickupCode: null,
+            );
+            _orderPlaced = true;
           });
           if (showResolvedNotice) {
             _showPaymentNotice(strings.previousPaymentConfirmed);
@@ -279,9 +285,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       if (state.isSecuredCardPayment) {
         await _paymentPendingStore.clear();
         if (!mounted) return;
-        if (_activeCheckoutOrderId == pending.orderId) {
-          _cartRepository.clear();
-        }
+        _cartRepository.clear();
         setState(() {
           _recoverablePayment = null;
           _recoverableCheckoutUrl = null;
@@ -332,9 +336,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       if (!mounted) return;
 
       if (result == PaymentReturnResult.secured) {
-        if (_activeCheckoutOrderId == pending.orderId) {
-          _cartRepository.clear();
-        }
+        _cartRepository.clear();
         setState(() {
           _recoverablePayment = null;
           _recoverableCheckoutUrl = null;
