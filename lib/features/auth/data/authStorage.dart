@@ -7,6 +7,15 @@ class AuthStorage {
   static const String _refreshTokenKey = 'refreshToken';
   static const String _deviceIdKey = 'deviceId';
 
+  // Payment recovery is session-bound state. It must be cleared together with
+  // auth credentials so an interrupted checkout cannot leak into the next
+  // account on the same device.
+  static const String _pendingPaymentOrderIdKey = 'payment_pending_order_id';
+  static const String _pendingPaymentIdKey = 'payment_pending_payment_id';
+  static const String _pendingPaymentOwnerUserIdKey = 'payment_pending_user_id';
+  static const String _legacyPendingCheckoutUrlKey =
+      'payment_pending_checkout_url';
+
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<void> saveAccessToken(String token) async {
@@ -56,8 +65,14 @@ class AuthStorage {
   }
 
   Future<void> clear() async {
-    await _storage.delete(key: _accessTokenKey);
-    await _storage.delete(key: _refreshTokenKey);
+    await Future.wait([
+      _storage.delete(key: _accessTokenKey),
+      _storage.delete(key: _refreshTokenKey),
+      _storage.delete(key: _pendingPaymentOrderIdKey),
+      _storage.delete(key: _pendingPaymentIdKey),
+      _storage.delete(key: _pendingPaymentOwnerUserIdKey),
+      _storage.delete(key: _legacyPendingCheckoutUrlKey),
+    ]);
   }
 
   String _generateDeviceId() {
