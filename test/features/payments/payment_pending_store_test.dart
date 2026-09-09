@@ -76,7 +76,9 @@ void main() {
 String _jwtFor(String userId) {
   final headerJson = jsonEncode({'alg': 'none', 'typ': 'JWT'});
   final payloadJson = jsonEncode({'sub': userId});
-  final header = base64Url.encode(utf8.encode(headerJson)).replaceAll('=', '');
-  final payload = base64Url.encode(utf8.encode(payloadJson)).replaceAll('=', '');
+  final headerBytes = utf8.encode(headerJson);
+  final payloadBytes = utf8.encode(payloadJson);
+  final header = base64Url.encode(headerBytes).replaceAll('=', '');
+  final payload = base64Url.encode(payloadBytes).replaceAll('=', '');
   return '$header.$payload.signature';
 }
