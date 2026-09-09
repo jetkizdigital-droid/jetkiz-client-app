@@ -13,7 +13,7 @@ enum PaymentReturnResult {
   pending,
 }
 
-/// Hosted PayLink checkout shell.
+/// Hosted payment checkout shell.
 ///
 /// Returning from the provider is never treated as proof of payment. This page
 /// reports success only after the authenticated JETKIZ backend confirms a CARD
@@ -120,13 +120,13 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
       );
       if (!opened && mounted) {
         setState(() {
-          _errorMessage = 'Не удалось открыть защищённую страницу PayLink';
+          _errorMessage = 'Не удалось открыть защищённую страницу оплаты';
         });
       }
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Не удалось открыть защищённую страницу PayLink';
+        _errorMessage = 'Не удалось открыть защищённую страницу оплаты';
       });
     } finally {
       if (mounted) setState(() => _isOpeningProvider = false);

@@ -9,10 +9,7 @@ import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart
 import 'package:jetkiz_mobile/features/reviews/presentation/createReviewPage.dart';
 
 class OrderDetailsPage extends StatefulWidget {
-  const OrderDetailsPage({
-    super.key,
-    required this.orderId,
-  });
+  const OrderDetailsPage({super.key, required this.orderId});
 
   final String orderId;
 
@@ -32,6 +29,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
 
   OrderDetailsData? _order;
   bool _isLoading = true;
+  bool _isCanceling = false;
   String? _errorText;
 
   @override
@@ -66,6 +64,67 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
   }
 
+  bool get _canCancelOrder {
+    final order = _order;
+    if (order == null) return false;
+    final status = order.statusUpper;
+    final paymentStatus = order.paymentStatus.trim().toUpperCase();
+    return (status == 'CREATED' || status == 'ACCEPTED') &&
+        (paymentStatus == 'AUTHORIZED' || paymentStatus == 'PAID');
+  }
+
+  Future<void> _cancelOrder() async {
+    if (_isCanceling || !_canCancelOrder) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const LocalizedText('Отменить заказ?'),
+        content: const LocalizedText(
+          'После отмены восстановить заказ будет нельзя.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const LocalizedText('Оставить заказ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            child: const LocalizedText('Отменить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    setState(() => _isCanceling = true);
+
+    try {
+      await _ordersApi.cancelOrder(widget.orderId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: LocalizedText('Заказ отменён')));
+      await _load();
+    } on OrdersApiException catch (error) {
+      if (!mounted) return;
+      final message = error.statusCode == 409
+          ? 'Заказ уже готовится. Отмена недоступна.'
+          : error.message;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: LocalizedText(message)));
+      if (error.statusCode == 409) {
+        await _load();
+      }
+    } finally {
+      if (mounted) setState(() => _isCanceling = false);
+    }
+  }
+
   Future<void> _repeatOrder() async {
     final order = _order;
     if (order == null) return;
@@ -87,7 +146,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         builder: (context) => AlertDialog(
           title: const LocalizedText('Заменить товары в корзине?'),
           content: const LocalizedText(
-              'В корзине уже есть блюда другого ресторана.'),
+            'В корзине уже есть блюда другого ресторана.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -127,9 +187,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
 
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(
-        content: LocalizedText('Добавлено в корзину'),
-      ),
+      const SnackBar(content: LocalizedText('Добавлено в корзину')),
     );
 
     Navigator.of(context).pushNamed('/cart');
@@ -188,10 +246,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
 
     if (_errorText != null) {
-      return _OrderDetailsErrorView(
-        message: _errorText!,
-        onRetry: _load,
-      );
+      return _OrderDetailsErrorView(message: _errorText!, onRetry: _load);
     }
 
     final order = _order;
@@ -236,8 +291,9 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     _StatusBlock(
                       statusUi: statusUi,
                       orderDateText: _formatDateTime(order.createdAt),
-                      paymentStatusText:
-                          _paymentStatusLabel(order.paymentStatus),
+                      paymentStatusText: _paymentStatusLabel(
+                        order.paymentStatus,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     if (order.restaurant != null) ...[
@@ -258,7 +314,10 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                     _PriceSummaryBlock(order: order),
                     const SizedBox(height: 18),
                     _ActionButtonsBlock(
+                      canCancel: _canCancelOrder,
+                      isCanceling: _isCanceling,
                       canLeaveReview: order.canLeaveReview,
+                      onCancel: _cancelOrder,
                       onRepeatOrder: _repeatOrder,
                       onLeaveReview: _leaveReview,
                     ),
@@ -307,10 +366,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
   }
 
-  static _StatusUi _resolveStatusUi(
-    String raw, {
-    String? fulfillmentType,
-  }) {
+  static _StatusUi _resolveStatusUi(String raw, {String? fulfillmentType}) {
     final status = raw.toUpperCase();
     final isPickup = fulfillmentType?.trim().toUpperCase() == 'PICKUP';
 
@@ -392,10 +448,7 @@ class _DetailsHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       child: Row(
         children: [
-          _RoundIconButton(
-            icon: Icons.arrow_back_rounded,
-            onTap: onBackTap,
-          ),
+          _RoundIconButton(icon: Icons.arrow_back_rounded, onTap: onBackTap),
           Expanded(
             child: LocalizedText(
               'Заказ №$number',
@@ -418,10 +471,7 @@ class _DetailsHeader extends StatelessWidget {
 }
 
 class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _RoundIconButton({required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback onTap;
@@ -439,11 +489,7 @@ class _RoundIconButton extends StatelessWidget {
           color: Colors.transparent,
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          icon,
-          size: 22,
-          color: _OrderDetailsPageState._textMain,
-        ),
+        child: Icon(icon, size: 22, color: _OrderDetailsPageState._textMain),
       ),
     );
   }
@@ -475,11 +521,7 @@ class _StatusBlock extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    statusUi.icon,
-                    size: 22,
-                    color: statusUi.textColor,
-                  ),
+                  Icon(statusUi.icon, size: 22, color: statusUi.textColor),
                   const SizedBox(width: 8),
                   LocalizedText(
                     statusUi.label,
@@ -612,10 +654,7 @@ class _RestaurantBlock extends StatelessWidget {
               ),
               child: const LocalizedText(
                 'Открыть ресторан',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               ),
             ),
           ),
@@ -626,9 +665,7 @@ class _RestaurantBlock extends StatelessWidget {
 }
 
 class _DeliveryInfoBlock extends StatelessWidget {
-  const _DeliveryInfoBlock({
-    required this.order,
-  });
+  const _DeliveryInfoBlock({required this.order});
 
   final OrderDetailsData order;
 
@@ -737,9 +774,7 @@ class _DeliveryInfoBlock extends StatelessWidget {
 }
 
 class _PickupCodeBlock extends StatelessWidget {
-  const _PickupCodeBlock({
-    required this.order,
-  });
+  const _PickupCodeBlock({required this.order});
 
   final OrderDetailsData order;
 
@@ -811,9 +846,7 @@ class _PickupCodeBlock extends StatelessWidget {
 }
 
 class _OrderItemsBlock extends StatelessWidget {
-  const _OrderItemsBlock({
-    required this.items,
-  });
+  const _OrderItemsBlock({required this.items});
 
   final List<OrderDetailsItem> items;
 
@@ -905,9 +938,7 @@ class _OrderItemsBlock extends StatelessWidget {
 }
 
 class _PriceSummaryBlock extends StatelessWidget {
-  const _PriceSummaryBlock({
-    required this.order,
-  });
+  const _PriceSummaryBlock({required this.order});
 
   final OrderDetailsData order;
 
@@ -941,10 +972,7 @@ class _PriceSummaryBlock extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _PriceRow(
-            title: 'Стоимость товаров',
-            value: '${order.subtotal} ₸',
-          ),
+          _PriceRow(title: 'Стоимость товаров', value: '${order.subtotal} ₸'),
           const SizedBox(height: 10),
           _PriceRow(
             title: order.isPickup ? 'Самовывоз' : 'Доставка',
@@ -965,16 +993,9 @@ class _PriceSummaryBlock extends StatelessWidget {
           ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 14),
-            child: Divider(
-              height: 1,
-              color: Color(0xFFE5E7EB),
-            ),
+            child: Divider(height: 1, color: Color(0xFFE5E7EB)),
           ),
-          _PriceRow(
-            title: 'Итого',
-            value: '${order.total} ₸',
-            isTotal: true,
-          ),
+          _PriceRow(title: 'Итого', value: '${order.total} ₸', isTotal: true),
         ],
       ),
     );
@@ -983,12 +1004,18 @@ class _PriceSummaryBlock extends StatelessWidget {
 
 class _ActionButtonsBlock extends StatelessWidget {
   const _ActionButtonsBlock({
+    required this.canCancel,
+    required this.isCanceling,
     required this.canLeaveReview,
+    required this.onCancel,
     required this.onRepeatOrder,
     required this.onLeaveReview,
   });
 
+  final bool canCancel;
+  final bool isCanceling;
   final bool canLeaveReview;
+  final VoidCallback onCancel;
   final VoidCallback onRepeatOrder;
   final VoidCallback onLeaveReview;
 
@@ -996,6 +1023,40 @@ class _ActionButtonsBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        if (canCancel) ...[
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: isCanceling ? null : onCancel,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFDC2626)),
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: isCanceling
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFDC2626),
+                      ),
+                    )
+                  : const LocalizedText(
+                      'Отменить заказ',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -1011,10 +1072,7 @@ class _ActionButtonsBlock extends StatelessWidget {
             ),
             child: const LocalizedText(
               'Повторить заказ',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
           ),
         ),
@@ -1038,10 +1096,7 @@ class _ActionButtonsBlock extends StatelessWidget {
               ),
               child: const LocalizedText(
                 'Оставить отзыв',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
             ),
           ),
@@ -1052,9 +1107,7 @@ class _ActionButtonsBlock extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.child,
-  });
+  const _SectionCard({required this.child});
 
   final Widget child;
 
@@ -1137,10 +1190,7 @@ class _ThinDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 14),
-      child: Divider(
-        height: 1,
-        color: Color(0xFFF3F4F6),
-      ),
+      child: Divider(height: 1, color: Color(0xFFF3F4F6)),
     );
   }
 }
@@ -1230,11 +1280,7 @@ class _NetworkImageOrPlaceholder extends StatelessWidget {
         color: const Color(0xFFE5E7EB),
         borderRadius: BorderRadius.circular(borderRadius),
       ),
-      child: Icon(
-        placeholderIcon,
-        color: const Color(0xFF9CA3AF),
-        size: 28,
-      ),
+      child: Icon(placeholderIcon, color: const Color(0xFF9CA3AF), size: 28),
     );
   }
 }
@@ -1268,10 +1314,7 @@ class _OrderDetailsLoadingView extends StatelessWidget {
 }
 
 class _OrderDetailsErrorView extends StatelessWidget {
-  const _OrderDetailsErrorView({
-    required this.message,
-    required this.onRetry,
-  });
+  const _OrderDetailsErrorView({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
