@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/payments/data/paymentCheckoutApi.dart';
 import 'package:jetkiz_mobile/features/payments/data/paymentPendingStore.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnBridge.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentSuccessPage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 enum PaymentReturnResult {
@@ -53,6 +55,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
   @override
   void initState() {
     super.initState();
+    PaymentReturnSessionRegistry.hostedCheckoutActive = true;
     WidgetsBinding.instance.addObserver(this);
     _payments = PaymentCheckoutApi(ApiClient());
 
@@ -68,6 +71,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
 
   @override
   void dispose() {
+    PaymentReturnSessionRegistry.hostedCheckoutActive = false;
     WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     super.dispose();
@@ -166,7 +170,13 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
         _pollTimer?.cancel();
         await _pendingStore.clear();
         if (!mounted) return;
-        Navigator.of(context).pop(PaymentReturnResult.secured);
+        PaymentReturnSessionRegistry.hostedCheckoutActive = false;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => PaymentSuccessPage(orderId: widget.orderId),
+          ),
+          (route) => false,
+        );
         return;
       }
 
