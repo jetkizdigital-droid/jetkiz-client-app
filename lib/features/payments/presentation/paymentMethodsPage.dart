@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/features/payments/data/paymentMethodsRepository.dart';
 import 'package:jetkiz_mobile/features/payments/domain/savedPaymentCard.dart';
-import 'package:jetkiz_mobile/features/payments/presentation/addPaymentCardPage.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentCardDetailsPage.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
 
@@ -54,12 +53,6 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     }
   }
 
-  Future<void> _openAddCard() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const AddPaymentCardPage()),
-    );
-  }
-
   Future<void> _openCard(SavedPaymentCard card) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => PaymentCardDetailsPage(card: card)),
@@ -77,8 +70,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       builder: (dialogContext) => AlertDialog(
         title: Text(strings.deleteCardQuestion),
         content: Text(
-          strings
-              .deleteCardDescription('${card.brandLabel} ${card.maskedNumber}'),
+          strings.deleteCardDescription(
+            '${card.brandLabel} ${card.maskedNumber}',
+          ),
         ),
         actions: [
           TextButton(
@@ -99,15 +93,13 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     try {
       await _repository.deleteCard(card.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.cardDeleted)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(strings.cardDeleted)));
       await _loadCards();
     } on PaymentMethodsException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) setState(() => _deletingCardId = null);
     }
@@ -149,26 +141,6 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 color: Color(0xFF667064),
               ),
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _openAddCard,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                icon: const Icon(Icons.info_outline_rounded),
-                label: Text(
-                  strings.addCard,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -182,8 +154,11 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded,
-                size: 48, color: Color(0xFF7A8378)),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 48,
+              color: Color(0xFF7A8378),
+            ),
             const SizedBox(height: 16),
             Text(
               _errorMessage ?? strings.cardsLoadError,
@@ -249,7 +224,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: _green.withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(999),
@@ -271,7 +248,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                       Text(
                         card.issuerBank!,
                         style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF7C857A)),
+                          fontSize: 13,
+                          color: Color(0xFF7C857A),
+                        ),
                       ),
                     ],
                   ],
@@ -316,37 +295,20 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: _green))
           : _errorMessage != null
-              ? _buildError(strings)
-              : _cards.isEmpty
-                  ? _buildEmptyState(strings)
-                  : RefreshIndicator(
-                      onRefresh: _loadCards,
-                      color: _green,
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-                        children: [
-                          ..._cards.map((card) => _buildCard(card, strings)),
-                          const SizedBox(height: 8),
-                          OutlinedButton.icon(
-                            onPressed: _openAddCard,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _green,
-                              side: const BorderSide(color: _green),
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            icon: const Icon(Icons.info_outline_rounded),
-                            label: Text(
-                              strings.addCard,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+          ? _buildError(strings)
+          : _cards.isEmpty
+          ? _buildEmptyState(strings)
+          : RefreshIndicator(
+              onRefresh: _loadCards,
+              color: _green,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+                children: _cards
+                    .map((card) => _buildCard(card, strings))
+                    .toList(),
+              ),
+            ),
     );
   }
 }

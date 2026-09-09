@@ -226,8 +226,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         setState(() {
           _recoverablePayment = pending;
           _recoverableCheckoutUrl = checkoutUri?.toString();
-          _paymentRecoveryError =
-              checkoutUri == null ? strings.recoveryCheckError : null;
+          _paymentRecoveryError = checkoutUri == null
+              ? strings.recoveryCheckError
+              : null;
           _isPaymentRecoveryLoading = false;
         });
       } on PaymentCheckoutException {
@@ -253,9 +254,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void _showPaymentNotice(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     });
   }
 
@@ -389,15 +389,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: LocalizedText('Не удалось рассчитать доставку')),
+          content: LocalizedText('Не удалось рассчитать доставку'),
+        ),
       );
       return;
     }
 
     if (cartState.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Корзина пуста')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: LocalizedText('Корзина пуста')));
       return;
     }
 
@@ -419,7 +420,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (restaurantId == null || restaurantId.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: LocalizedText('Не удалось определить ресторан заказа')),
+          content: LocalizedText('Не удалось определить ресторан заказа'),
+        ),
       );
       return;
     }
@@ -428,14 +430,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (!_isPickup && (addressId == null || addressId.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: LocalizedText('Не удалось определить адрес доставки')),
+          content: LocalizedText('Не удалось определить адрес доставки'),
+        ),
       );
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       final syncResult = await _cartRepository.syncWithServer();
@@ -448,31 +449,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
       if (syncResult.priceChanged) {
         _cartRepository.consumePendingPriceUpdateNotification();
-
-        if (mounted) {
-          await _showPriceUpdatedDialog();
-        }
-
+        if (mounted) await _showPriceUpdatedDialog();
         return;
       }
 
       if (_cartRepository.hasBlockingItems) {
-        if (mounted) {
-          await _showCartBlockedDialog();
-        }
-
+        if (mounted) await _showCartBlockedDialog();
         return;
       }
 
       final profile = await _profileApi.getMe();
-
       final phone = profile.phone.trim();
       if (phone.isEmpty) {
         throw Exception('Phone is empty');
       }
 
       final orderItems = _cartRepository.toOrderItemsJson();
-
       final payload = CreateOrderPayload(
         restaurantId: restaurantId,
         fulfillmentType: _fulfillmentType,
@@ -501,6 +493,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _pendingOrderKey = 'client-order-$timestamp-$random';
       }
 
+      // The backend keeps this row as an internal checkout attempt until funds
+      // are server-confirmed. It is intentionally hidden from client history and
+      // emits no "order created" notification before authorization.
       final order = await _orderApi.createOrder(
         payload,
         idempotencyKey: _pendingOrderKey,
@@ -509,7 +504,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final orderId = createdOrder.id?.trim() ?? '';
       if (orderId.isEmpty) {
         throw const _CheckoutBlockedException(
-          'Сервер не вернул номер созданного заказа',
+          'Не удалось начать оплату. Попробуйте снова.',
         );
       }
       _activeCheckoutOrderId = orderId;
@@ -521,7 +516,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
       if (checkout.secureCheckoutUri == null || checkout.checkoutUrl.isEmpty) {
         throw const _CheckoutBlockedException(
-          'Не удалось получить безопасную ссылку оплаты',
+          'Не удалось открыть оплату. Попробуйте снова.',
         );
       }
 
@@ -533,15 +528,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
 
       if (!mounted) return;
-      final paymentResult =
-          await Navigator.of(context).push<PaymentReturnResult>(
-        MaterialPageRoute(
-          builder: (_) => PaymentReturnPage(
-            orderId: orderId,
-            checkoutUrl: checkout.checkoutUrl,
-          ),
-        ),
-      );
+      final paymentResult = await Navigator.of(context)
+          .push<PaymentReturnResult>(
+            MaterialPageRoute(
+              builder: (_) => PaymentReturnPage(
+                orderId: orderId,
+                checkoutUrl: checkout.checkoutUrl,
+              ),
+            ),
+          );
 
       if (paymentResult != PaymentReturnResult.secured) {
         await _recoverPendingPayment(showResolvedNotice: false);
@@ -557,34 +552,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
       });
     } on _CheckoutBlockedException catch (error) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: LocalizedText(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: LocalizedText(error.message)));
     } on PaymentCheckoutException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: LocalizedText(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: LocalizedText(error.message)));
     } on CreateOrderException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: LocalizedText(error.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: LocalizedText(error.message)));
     } catch (_) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: LocalizedText('Не удалось создать заказ'),
+          content: LocalizedText('Не удалось начать оплату. Попробуйте снова.'),
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -633,10 +619,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   Widget build(BuildContext context) {
     if (_orderPlaced) {
-      return _CheckoutSuccessScreen(
-        order: _createdOrder,
-        onGoHome: _goHome,
-      );
+      return _CheckoutSuccessScreen(order: _createdOrder, onGoHome: _goHome);
     }
 
     final cartState = _cartRepository.state;
@@ -652,19 +635,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final canResumeHostedCheckout =
         _recoverablePayment != null && _recoverableCheckoutUrl != null;
 
-    final normalCheckoutDisabled = cartState.isEmpty ||
+    final normalCheckoutDisabled =
+        cartState.isEmpty ||
         (!_isPickup && address == null) ||
         (!_isPickup && _hasDeliveryError) ||
         _isCardsLoading ||
         (!_useNewCard && _selectedCardId == null) ||
         _isDeliveryLoading;
-    final isConfirmDisabled = _isPaymentRecoveryLoading ||
+    final isConfirmDisabled =
+        _isPaymentRecoveryLoading ||
         _isSubmitting ||
         (!hasPaymentRecoveryAction && normalCheckoutDisabled);
     final primaryActionLabel = hasPaymentRecoveryAction
         ? (canResumeHostedCheckout
-            ? paymentStrings.resumePayment
-            : paymentStrings.verifyPreviousPayment)
+              ? paymentStrings.resumePayment
+              : paymentStrings.verifyPreviousPayment)
         : null;
 
     return Scaffold(
@@ -731,9 +716,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     value: _fulfillmentType,
                     enabled: !_isSubmitting && !hasPaymentRecoveryAction,
                     onChanged: (value) {
-                      setState(() {
-                        _fulfillmentType = value;
-                      });
+                      setState(() => _fulfillmentType = value);
                     },
                   ),
                   const SizedBox(height: 18),
@@ -744,119 +727,97 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     const SizedBox(height: 10),
                     _CheckoutAddressCard(
                       address: address,
-                      onTap: _changeAddress,
+                      onTap: hasPaymentRecoveryAction ? () {} : _changeAddress,
                     ),
                   ],
                   const SizedBox(height: 18),
                   const _CheckoutSectionTitle(title: 'Ваш заказ'),
                   const SizedBox(height: 10),
                   _CheckoutItemsCard(items: items),
-                  const SizedBox(height: 18),
-                  const _CheckoutSectionTitle(title: 'Способ оплаты'),
-                  const SizedBox(height: 10),
-                  if (_isCardsLoading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      child: Center(
-                        child: CircularProgressIndicator(color: _green),
-                      ),
-                    )
-                  else ...[
-                    if (_cardsError != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF6E8),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFF0D9AD)),
+                  if (!hasPaymentRecoveryAction) ...[
+                    const SizedBox(height: 18),
+                    const _CheckoutSectionTitle(title: 'Способ оплаты'),
+                    const SizedBox(height: 10),
+                    if (_isCardsLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        child: Center(
+                          child: CircularProgressIndicator(color: _green),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.info_outline_rounded,
-                              color: Color(0xFF9A6A18),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                paymentStrings.cardsLoadError,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF6B4A12),
+                      )
+                    else ...[
+                      if (_cardsError != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF6E8),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFF0D9AD)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                color: Color(0xFF9A6A18),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  paymentStrings.cardsLoadError,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF6B4A12),
+                                  ),
                                 ),
                               ),
-                            ),
-                            TextButton(
-                              onPressed: _loadSavedCards,
-                              child: Text(paymentStrings.retry),
-                            ),
-                          ],
+                              TextButton(
+                                onPressed: _loadSavedCards,
+                                child: Text(paymentStrings.retry),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      ..._savedCards.map(
+                        (card) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _CheckoutCardTile(
+                            card: card,
+                            isSelected:
+                                !_useNewCard && _selectedCardId == card.id,
+                            onTap: () {
+                              if (_isSubmitting) return;
+                              setState(() {
+                                _useNewCard = false;
+                                _selectedCardId = card.id;
+                                _saveNewCard = false;
+                              });
+                            },
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                    ],
-                    ..._savedCards.map(
-                      (card) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _CheckoutCardTile(
-                          card: card,
-                          isSelected:
-                              !_useNewCard && _selectedCardId == card.id,
-                          onTap: () {
-                            if (_isSubmitting || hasPaymentRecoveryAction) {
-                              return;
-                            }
-                            setState(() {
-                              _useNewCard = false;
-                              _selectedCardId = card.id;
-                              _saveNewCard = false;
-                            });
+                      _AddNewCardTile(
+                        isSelected: _useNewCard,
+                        onTap: () {
+                          if (_isSubmitting) return;
+                          setState(() {
+                            _useNewCard = true;
+                            _selectedCardId = null;
+                          });
+                        },
+                      ),
+                      if (_useNewCard) ...[
+                        const SizedBox(height: 8),
+                        _SaveCardOption(
+                          value: _saveNewCard,
+                          enabled: !_isSubmitting,
+                          label: paymentStrings.saveCardForFuture,
+                          onChanged: (value) {
+                            setState(() => _saveNewCard = value);
                           },
                         ),
-                      ),
-                    ),
-                    _AddNewCardTile(
-                      isSelected: _useNewCard,
-                      onTap: () {
-                        if (_isSubmitting || hasPaymentRecoveryAction) {
-                          return;
-                        }
-                        setState(() {
-                          _useNewCard = true;
-                          _selectedCardId = null;
-                        });
-                      },
-                    ),
-                    if (_useNewCard) ...[
-                      const SizedBox(height: 8),
-                      CheckboxListTile(
-                        value: _saveNewCard,
-                        onChanged: (_isSubmitting || hasPaymentRecoveryAction)
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  _saveNewCard = value == true;
-                                });
-                              },
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: _green,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: Text(
-                          paymentStrings.saveCardForFuture,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        subtitle: Text(
-                          paymentStrings.secureProviderHint,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ),
+                      ],
                     ],
                   ],
                   const SizedBox(height: 18),
@@ -932,10 +893,7 @@ class _PendingPaymentBanner extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.shield_outlined,
-                color: Color(0xFF956313),
-              ),
+              const Icon(Icons.shield_outlined, color: Color(0xFF956313)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -1007,9 +965,7 @@ class _PendingPaymentBanner extends StatelessWidget {
 }
 
 class _CheckoutSectionTitle extends StatelessWidget {
-  const _CheckoutSectionTitle({
-    required this.title,
-  });
+  const _CheckoutSectionTitle({required this.title});
 
   final String title;
 
@@ -1053,8 +1009,9 @@ class _FulfillmentSelector extends StatelessWidget {
         ),
       ],
       selected: {value},
-      onSelectionChanged:
-          enabled ? (selected) => onChanged(selected.first) : null,
+      onSelectionChanged: enabled
+          ? (selected) => onChanged(selected.first)
+          : null,
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: const Color(0xFFEAF7E4),
         selectedForegroundColor: const Color(0xFF489F2A),
@@ -1077,10 +1034,7 @@ class _PickupInfoCard extends StatelessWidget {
       ),
       child: const Row(
         children: [
-          Icon(
-            Icons.shopping_bag_outlined,
-            color: Color(0xFF489F2A),
-          ),
+          Icon(Icons.shopping_bag_outlined, color: Color(0xFF489F2A)),
           SizedBox(width: 12),
           Expanded(
             child: LocalizedText(
@@ -1099,10 +1053,7 @@ class _PickupInfoCard extends StatelessWidget {
 }
 
 class _CheckoutAddressCard extends StatelessWidget {
-  const _CheckoutAddressCard({
-    required this.address,
-    required this.onTap,
-  });
+  const _CheckoutAddressCard({required this.address, required this.onTap});
 
   final Address? address;
   final VoidCallback onTap;
@@ -1208,9 +1159,7 @@ class _CheckoutAddressCard extends StatelessWidget {
 }
 
 class _CheckoutItemsCard extends StatelessWidget {
-  const _CheckoutItemsCard({
-    required this.items,
-  });
+  const _CheckoutItemsCard({required this.items});
 
   final List<CartItem> items;
 
@@ -1266,9 +1215,7 @@ class _CheckoutItemsCard extends StatelessWidget {
 }
 
 class _CheckoutItemRow extends StatelessWidget {
-  const _CheckoutItemRow({
-    required this.item,
-  });
+  const _CheckoutItemRow({required this.item});
 
   final CartItem item;
 
@@ -1423,10 +1370,7 @@ class _CheckoutCardTile extends StatelessWidget {
 }
 
 class _AddNewCardTile extends StatelessWidget {
-  const _AddNewCardTile({
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _AddNewCardTile({required this.isSelected, required this.onTap});
 
   final bool isSelected;
   final VoidCallback onTap;
@@ -1453,17 +1397,62 @@ class _AddNewCardTile extends StatelessWidget {
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.add_rounded,
-                color: Color(0xFF6B7280),
-              ),
+              Icon(Icons.credit_card_outlined, color: Color(0xFF6B7280)),
               SizedBox(width: 8),
               LocalizedText(
-                'Добавить новую карту',
+                'Оплатить другой картой',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF6B7280),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SaveCardOption extends StatelessWidget {
+  const _SaveCardOption({
+    required this.value,
+    required this.enabled,
+    required this.label,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final bool enabled;
+  final String label;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? () => onChanged(!value) : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Checkbox(
+                value: value,
+                onChanged: enabled ? (next) => onChanged(next == true) : null,
+                activeColor: const Color(0xFF489F2A),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
                 ),
               ),
             ],
@@ -1501,15 +1490,9 @@ class _CheckoutSummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _CheckoutSummaryRow(
-            label: 'Стоимость товаров',
-            value: '$subtotal ₸',
-          ),
+          _CheckoutSummaryRow(label: 'Стоимость товаров', value: '$subtotal ₸'),
           const SizedBox(height: 10),
-          _CheckoutSummaryRow(
-            label: 'Доставка',
-            value: deliveryText,
-          ),
+          _CheckoutSummaryRow(label: 'Доставка', value: deliveryText),
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
@@ -1657,10 +1640,7 @@ class _CheckoutBottomBar extends StatelessWidget {
 }
 
 class _CheckoutSuccessScreen extends StatefulWidget {
-  const _CheckoutSuccessScreen({
-    required this.order,
-    required this.onGoHome,
-  });
+  const _CheckoutSuccessScreen({required this.order, required this.onGoHome});
 
   final _CreatedOrderView? order;
   final VoidCallback onGoHome;
@@ -1675,10 +1655,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(
-      const Duration(seconds: 3),
-      widget.onGoHome,
-    );
+    _timer = Timer(const Duration(seconds: 3), widget.onGoHome);
   }
 
   @override
@@ -1725,7 +1702,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
               ),
               const SizedBox(height: 10),
               const LocalizedText(
-                'Ожидайте звонка от ресторана для подтверждения',
+                'Ресторан получил заказ',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -1796,10 +1773,7 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
 }
 
 class _CreatedOrderView {
-  const _CreatedOrderView({
-    required this.id,
-    required this.pickupCode,
-  });
+  const _CreatedOrderView({required this.id, required this.pickupCode});
 
   final String? id;
   final String? pickupCode;

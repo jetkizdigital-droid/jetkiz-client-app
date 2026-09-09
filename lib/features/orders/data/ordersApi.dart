@@ -8,15 +8,6 @@ class OrdersApi {
 
   final ApiClient apiClient;
 
-  /// Client orders list.
-  ///
-  /// Backend contract:
-  /// GET /orders/my?page=1&limit=20
-  ///
-  /// Important:
-  /// - Use /orders/my for Flutter client.
-  /// - /orders also works for client, but /orders/my is clearer and safer.
-  /// - List response is compact: full address/items are loaded through details.
   Future<OrdersHistoryPageData> getMyOrders({
     int page = 1,
     int limit = 20,
@@ -27,10 +18,7 @@ class OrdersApi {
 
       final response = await apiClient.dio.get<Map<String, dynamic>>(
         '/orders/my',
-        queryParameters: {
-          'page': safePage,
-          'limit': safeLimit,
-        },
+        queryParameters: {'page': safePage, 'limit': safeLimit},
       );
 
       final json = response.data ?? const <String, dynamic>{};
@@ -44,17 +32,11 @@ class OrdersApi {
     }
   }
 
-  /// Full order details.
-  ///
-  /// Backend contract:
-  /// GET /orders/:id
   Future<OrderDetailsData> getOrderById(String orderId) async {
     final normalizedOrderId = orderId.trim();
 
     if (normalizedOrderId.isEmpty) {
-      throw const OrdersApiException(
-        message: 'Некорректный ID заказа',
-      );
+      throw const OrdersApiException(message: 'Некорректный ID заказа');
     }
 
     try {
@@ -64,6 +46,28 @@ class OrdersApi {
 
       final json = response.data ?? const <String, dynamic>{};
       return OrderDetailsData.fromJson(json);
+    } on DioException catch (error) {
+      throw OrdersApiException(
+        message: _extractErrorMessage(error),
+        statusCode: error.response?.statusCode,
+        raw: error.response?.data,
+      );
+    }
+  }
+
+  Future<OrderCancellationResult> cancelOrder(String orderId) async {
+    final normalizedOrderId = orderId.trim();
+    if (normalizedOrderId.isEmpty) {
+      throw const OrdersApiException(message: 'Некорректный ID заказа');
+    }
+
+    try {
+      final response = await apiClient.dio.post<Map<String, dynamic>>(
+        '/orders/$normalizedOrderId/cancel',
+      );
+      return OrderCancellationResult.fromJson(
+        response.data ?? const <String, dynamic>{},
+      );
     } on DioException catch (error) {
       throw OrdersApiException(
         message: _extractErrorMessage(error),
@@ -88,47 +92,64 @@ class OrdersApi {
       }
 
       final errorText = data['error'];
-
       if (errorText is String && errorText.trim().isNotEmpty) {
         return errorText.trim();
       }
     }
 
     final statusCode = error.response?.statusCode;
-
-    if (statusCode == 401) {
-      return 'Нужно войти в аккаунт';
+    if (statusCode == 401) return 'Нужно войти в аккаунт';
+    if (statusCode == 403) return 'Нет доступа к заказу';
+    if (statusCode == 404) return 'Заказ не найден';
+    if (statusCode == 409) {
+      return 'Заказ уже нельзя отменить. Обновите его статус.';
     }
-
-    if (statusCode == 403) {
-      return 'Нет доступа к заказу';
-    }
-
-    if (statusCode == 404) {
-      return 'Заказ не найден';
-    }
-
     if (statusCode != null && statusCode >= 500) {
       return 'Ошибка сервера. Попробуйте позже';
     }
 
-    return 'Не удалось загрузить заказы';
+    return 'Не удалось выполнить операцию с заказом';
+  }
+}
+
+class OrderCancellationResult {
+  const OrderCancellationResult({
+    required this.canceled,
+    required this.orderId,
+    required this.refundStatus,
+    this.orderNumber,
+  });
+
+  final bool canceled;
+  final String orderId;
+  final int? orderNumber;
+  final String refundStatus;
+
+  factory OrderCancellationResult.fromJson(Map<String, dynamic> json) {
+    final orderId = json['orderId']?.toString().trim() ?? '';
+    if (orderId.isEmpty || json['canceled'] != true) {
+      throw const FormatException('Invalid cancellation response');
+    }
+
+    final rawNumber = json['orderNumber'];
+    return OrderCancellationResult(
+      canceled: true,
+      orderId: orderId,
+      orderNumber: rawNumber is num
+          ? rawNumber.toInt()
+          : int.tryParse(rawNumber?.toString() ?? ''),
+      refundStatus: json['refundStatus']?.toString().trim() ?? 'PENDING',
+    );
   }
 }
 
 class OrdersApiException implements Exception {
-  const OrdersApiException({
-    required this.message,
-    this.statusCode,
-    this.raw,
-  });
+  const OrdersApiException({required this.message, this.statusCode, this.raw});
 
   final String message;
   final int? statusCode;
   final dynamic raw;
 
   @override
-  String toString() {
-    return message;
-  }
+  String toString() => message;
 }
