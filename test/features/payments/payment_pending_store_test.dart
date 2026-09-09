@@ -11,30 +11,33 @@ void main() {
     FlutterSecureStorage.setMockInitialValues(<String, String>{});
   });
 
-  test('pending payment is readable only by the same authenticated user', () async {
-    final storage = const FlutterSecureStorage();
-    final store = PaymentPendingStore(storage: storage);
+  test(
+    'pending payment is readable only by the same authenticated user',
+    () async {
+      final storage = const FlutterSecureStorage();
+      final store = PaymentPendingStore(storage: storage);
 
-    await storage.write(key: 'accessToken', value: _jwtFor('user-a'));
-    await store.save(
-      const PendingPaymentReference(
-        orderId: 'order-a',
-        paymentId: 'payment-a',
-      ),
-    );
+      await storage.write(key: 'accessToken', value: _jwtFor('user-a'));
+      await store.save(
+        const PendingPaymentReference(
+          orderId: 'order-a',
+          paymentId: 'payment-a',
+        ),
+      );
 
-    final sameUser = await store.read();
-    expect(sameUser?.orderId, 'order-a');
-    expect(sameUser?.paymentId, 'payment-a');
+      final sameUser = await store.read();
+      expect(sameUser?.orderId, 'order-a');
+      expect(sameUser?.paymentId, 'payment-a');
 
-    await storage.write(key: 'accessToken', value: _jwtFor('user-b'));
+      await storage.write(key: 'accessToken', value: _jwtFor('user-b'));
 
-    final otherUser = await store.read();
-    expect(otherUser, isNull);
-    expect(await storage.read(key: 'payment_pending_order_id'), isNull);
-    expect(await storage.read(key: 'payment_pending_payment_id'), isNull);
-    expect(await storage.read(key: 'payment_pending_user_id'), isNull);
-  });
+      final otherUser = await store.read();
+      expect(otherUser, isNull);
+      expect(await storage.read(key: 'payment_pending_order_id'), isNull);
+      expect(await storage.read(key: 'payment_pending_payment_id'), isNull);
+      expect(await storage.read(key: 'payment_pending_user_id'), isNull);
+    },
+  );
 
   test('legacy device-global pending payment is discarded', () async {
     FlutterSecureStorage.setMockInitialValues(<String, String>{
@@ -51,35 +54,38 @@ void main() {
     expect(await storage.read(key: 'payment_pending_payment_id'), isNull);
   });
 
-  test('logout clears pending payment recovery together with auth tokens', () async {
-    FlutterSecureStorage.setMockInitialValues(<String, String>{
-      'accessToken': _jwtFor('user-a'),
-      'refreshToken': 'refresh-a',
-      'payment_pending_order_id': 'order-a',
-      'payment_pending_payment_id': 'payment-a',
-      'payment_pending_user_id': 'user-a',
-      'payment_pending_checkout_url': 'https://legacy.invalid',
-    });
+  test(
+    'logout clears pending payment recovery together with auth tokens',
+    () async {
+      FlutterSecureStorage.setMockInitialValues(<String, String>{
+        'accessToken': _jwtFor('user-a'),
+        'refreshToken': 'refresh-a',
+        'payment_pending_order_id': 'order-a',
+        'payment_pending_payment_id': 'payment-a',
+        'payment_pending_user_id': 'user-a',
+        'payment_pending_checkout_url': 'https://legacy.invalid',
+      });
 
-    final storage = const FlutterSecureStorage();
-    await AuthStorage().clear();
+      final storage = const FlutterSecureStorage();
+      await AuthStorage().clear();
 
-    expect(await storage.read(key: 'accessToken'), isNull);
-    expect(await storage.read(key: 'refreshToken'), isNull);
-    expect(await storage.read(key: 'payment_pending_order_id'), isNull);
-    expect(await storage.read(key: 'payment_pending_payment_id'), isNull);
-    expect(await storage.read(key: 'payment_pending_user_id'), isNull);
-    expect(await storage.read(key: 'payment_pending_checkout_url'), isNull);
-  });
+      expect(await storage.read(key: 'accessToken'), isNull);
+      expect(await storage.read(key: 'refreshToken'), isNull);
+      expect(await storage.read(key: 'payment_pending_order_id'), isNull);
+      expect(await storage.read(key: 'payment_pending_payment_id'), isNull);
+      expect(await storage.read(key: 'payment_pending_user_id'), isNull);
+      expect(await storage.read(key: 'payment_pending_checkout_url'), isNull);
+    },
+  );
 }
 
 String _jwtFor(String userId) {
-  final header = base64Url.encode(utf8.encode(jsonEncode(<String, dynamic>{
+  final headerJson = jsonEncode(<String, dynamic>{
     'alg': 'none',
     'typ': 'JWT',
-  }))).replaceAll('=', '');
-  final payload = base64Url.encode(utf8.encode(jsonEncode(<String, dynamic>{
-    'sub': userId,
-  }))).replaceAll('=', '');
+  });
+  final payloadJson = jsonEncode(<String, dynamic>{'sub': userId});
+  final header = base64Url.encode(utf8.encode(headerJson)).replaceAll('=', '');
+  final payload = base64Url.encode(utf8.encode(payloadJson)).replaceAll('=', '');
   return '$header.$payload.signature';
 }
