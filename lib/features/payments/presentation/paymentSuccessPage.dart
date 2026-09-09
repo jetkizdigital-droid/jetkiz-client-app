@@ -74,9 +74,8 @@ class PaymentSuccessPage extends StatelessWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => OrdersHistoryPage(
-                            initialOrderId: orderId.trim().isEmpty
-                                ? null
-                                : orderId.trim(),
+                            initialOrderId:
+                                orderId.trim().isEmpty ? null : orderId.trim(),
                           ),
                         ),
                       );
