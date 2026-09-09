@@ -47,7 +47,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _recoverableCheckoutUrl;
   String? _paymentRecoveryError;
   bool _isPaymentRecoveryLoading = true;
-  String? _activeCheckoutOrderId;
 
   String? _selectedCardId;
   List<SavedPaymentCard> _savedCards = const [];
@@ -508,8 +507,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
           'Не удалось начать оплату. Попробуйте снова.',
         );
       }
-      _activeCheckoutOrderId = orderId;
-
       final checkout = await _paymentCheckoutApi.createCheckout(
         orderId: orderId,
         savedPaymentMethodId: _useNewCard ? null : _selectedCardId,
