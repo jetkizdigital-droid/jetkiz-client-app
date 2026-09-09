@@ -295,20 +295,20 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: _green))
           : _errorMessage != null
-          ? _buildError(strings)
-          : _cards.isEmpty
-          ? _buildEmptyState(strings)
-          : RefreshIndicator(
-              onRefresh: _loadCards,
-              color: _green,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-                children: _cards
-                    .map((card) => _buildCard(card, strings))
-                    .toList(),
-              ),
-            ),
+              ? _buildError(strings)
+              : _cards.isEmpty
+                  ? _buildEmptyState(strings)
+                  : RefreshIndicator(
+                      onRefresh: _loadCards,
+                      color: _green,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+                        children: _cards
+                            .map((card) => _buildCard(card, strings))
+                            .toList(),
+                      ),
+                    ),
     );
   }
 }

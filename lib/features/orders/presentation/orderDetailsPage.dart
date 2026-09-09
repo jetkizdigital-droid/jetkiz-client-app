@@ -784,8 +784,8 @@ class _PickupCodeBlock extends StatelessWidget {
     final value = order.isDelivered
         ? 'Заказ получен'
         : code.isEmpty
-        ? 'Код самовывоза недоступен'
-        : code;
+            ? 'Код самовывоза недоступен'
+            : code;
 
     return _SectionCard(
       child: Column(
@@ -979,8 +979,8 @@ class _PriceSummaryBlock extends StatelessWidget {
             value: order.isPickup
                 ? '0 ₸'
                 : order.deliveryFee == 0
-                ? 'Бесплатно'
-                : '${order.deliveryFee} ₸',
+                    ? 'Бесплатно'
+                    : '${order.deliveryFee} ₸',
           ),
           if (order.finalDiscount > 0) ...[
             const SizedBox(height: 10),

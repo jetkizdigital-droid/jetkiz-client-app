@@ -74,8 +74,8 @@ class _OrderHistoryCardState extends State<OrderHistoryCard> {
       final message = result.refundStatus == 'REFUNDED'
           ? 'Заказ отменён. Возврат выполнен.'
           : result.refundStatus == 'PENDING'
-          ? 'Заказ отменён. Возврат обрабатывается.'
-          : 'Заказ отменён.';
+              ? 'Заказ отменён. Возврат обрабатывается.'
+              : 'Заказ отменён.';
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: LocalizedText(message)));
     } on OrdersApiException catch (error) {
@@ -101,9 +101,9 @@ class _OrderHistoryCardState extends State<OrderHistoryCard> {
     final previewText = item.previewItems.isEmpty
         ? 'Состав заказа недоступен'
         : item.previewItems
-              .take(2)
-              .map((e) => '${e.title} x${e.quantity}')
-              .join(', ');
+            .take(2)
+            .map((e) => '${e.title} x${e.quantity}')
+            .join(', ');
     final displayStatus = _canceledLocally ? 'CANCELED' : item.status;
 
     return Container(

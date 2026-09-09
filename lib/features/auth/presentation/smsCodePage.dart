@@ -100,8 +100,8 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
     final now = DateTime.now();
     final secondsLeft =
         resendAvailableAt != null && resendAvailableAt.isAfter(now)
-        ? resendAvailableAt.difference(now).inSeconds + 1
-        : _resendCooldownSeconds;
+            ? resendAvailableAt.difference(now).inSeconds + 1
+            : _resendCooldownSeconds;
 
     if (mounted) {
       setState(() => _secondsLeft = secondsLeft);
@@ -143,9 +143,8 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
 
   void _onCodeChanged(String value) {
     final digits = _extractDigits(value);
-    final safe = digits.length > _otpLength
-        ? digits.substring(0, _otpLength)
-        : digits;
+    final safe =
+        digits.length > _otpLength ? digits.substring(0, _otpLength) : digits;
 
     if (safe != value) {
       _codeController.value = TextEditingValue(
@@ -274,8 +273,8 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
             color: _errorText != null
                 ? const Color(0xFFE53935)
                 : isActive
-                ? const Color(0xFF489F2A)
-                : Colors.transparent,
+                    ? const Color(0xFF489F2A)
+                    : Colors.transparent,
             width: isActive || _errorText != null ? 2 : 1,
           ),
         ),

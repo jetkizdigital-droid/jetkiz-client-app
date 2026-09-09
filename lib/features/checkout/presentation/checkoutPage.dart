@@ -226,9 +226,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         setState(() {
           _recoverablePayment = pending;
           _recoverableCheckoutUrl = checkoutUri?.toString();
-          _paymentRecoveryError = checkoutUri == null
-              ? strings.recoveryCheckError
-              : null;
+          _paymentRecoveryError =
+              checkoutUri == null ? strings.recoveryCheckError : null;
           _isPaymentRecoveryLoading = false;
         });
       } on PaymentCheckoutException {
@@ -528,15 +527,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
 
       if (!mounted) return;
-      final paymentResult = await Navigator.of(context)
-          .push<PaymentReturnResult>(
-            MaterialPageRoute(
-              builder: (_) => PaymentReturnPage(
-                orderId: orderId,
-                checkoutUrl: checkout.checkoutUrl,
-              ),
-            ),
-          );
+      final paymentResult =
+          await Navigator.of(context).push<PaymentReturnResult>(
+        MaterialPageRoute(
+          builder: (_) => PaymentReturnPage(
+            orderId: orderId,
+            checkoutUrl: checkout.checkoutUrl,
+          ),
+        ),
+      );
 
       if (paymentResult != PaymentReturnResult.secured) {
         await _recoverPendingPayment(showResolvedNotice: false);
@@ -635,21 +634,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final canResumeHostedCheckout =
         _recoverablePayment != null && _recoverableCheckoutUrl != null;
 
-    final normalCheckoutDisabled =
-        cartState.isEmpty ||
+    final normalCheckoutDisabled = cartState.isEmpty ||
         (!_isPickup && address == null) ||
         (!_isPickup && _hasDeliveryError) ||
         _isCardsLoading ||
         (!_useNewCard && _selectedCardId == null) ||
         _isDeliveryLoading;
-    final isConfirmDisabled =
-        _isPaymentRecoveryLoading ||
+    final isConfirmDisabled = _isPaymentRecoveryLoading ||
         _isSubmitting ||
         (!hasPaymentRecoveryAction && normalCheckoutDisabled);
     final primaryActionLabel = hasPaymentRecoveryAction
         ? (canResumeHostedCheckout
-              ? paymentStrings.resumePayment
-              : paymentStrings.verifyPreviousPayment)
+            ? paymentStrings.resumePayment
+            : paymentStrings.verifyPreviousPayment)
         : null;
 
     return Scaffold(
@@ -1009,9 +1006,8 @@ class _FulfillmentSelector extends StatelessWidget {
         ),
       ],
       selected: {value},
-      onSelectionChanged: enabled
-          ? (selected) => onChanged(selected.first)
-          : null,
+      onSelectionChanged:
+          enabled ? (selected) => onChanged(selected.first) : null,
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: const Color(0xFFEAF7E4),
         selectedForegroundColor: const Color(0xFF489F2A),
