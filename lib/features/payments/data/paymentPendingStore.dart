@@ -29,7 +29,11 @@ class PaymentPendingStore {
   Future<void> save(PendingPaymentReference reference) async {
     final orderId = reference.orderId.trim();
     if (orderId.isEmpty) {
-      throw ArgumentError.value(reference.orderId, 'orderId', 'must not be empty');
+      throw ArgumentError.value(
+        reference.orderId,
+        'orderId',
+        'must not be empty',
+      );
     }
 
     final ownerUserId = await _currentUserId();
@@ -38,7 +42,9 @@ class PaymentPendingStore {
       // unavailable, checkout recovery is safer disabled than shared across
       // accounts.
       await clear();
-      throw StateError('Cannot persist payment recovery without authenticated user');
+      throw StateError(
+        'Cannot persist payment recovery without authenticated user',
+      );
     }
 
     await _storage.write(key: _orderIdKey, value: orderId);
@@ -62,7 +68,9 @@ class PaymentPendingStore {
     // Records created before user-scoped recovery was introduced have no owner.
     // They are intentionally discarded instead of being guessed to belong to
     // whoever happens to be signed in now.
-    if (storedOwner.isEmpty || currentOwner == null || storedOwner != currentOwner) {
+    if (storedOwner.isEmpty ||
+        currentOwner == null ||
+        storedOwner != currentOwner) {
       await clear();
       return null;
     }
