@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:jetkiz_mobile/core/config/appBuildInfo.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
 
@@ -33,7 +34,7 @@ class AuthPostLoginService {
         data: {
           'deviceId': deviceId,
           'platform': _backendPlatformName(),
-          'appVersion': '1.0.0',
+          'appVersion': AppBuildInfo.fullVersion,
         },
       );
 
@@ -74,13 +75,13 @@ class AuthPostLoginService {
           'eventName': 'app_open',
           'deviceId': deviceId,
           'platform': _backendPlatformName(),
-          'appVersion': '1.0.0',
+          'appVersion': AppBuildInfo.fullVersion,
           'metadata': {
             'source': 'after_login',
             'deviceId': deviceId,
             'platform': _clientPlatformName(),
             'app': 'client',
-            'appVersion': '1.0.0',
+            'appVersion': AppBuildInfo.fullVersion,
             'locale': 'ru',
             'timezone': 'Asia/Almaty',
           },
