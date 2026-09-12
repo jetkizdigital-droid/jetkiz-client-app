@@ -21,8 +21,8 @@ import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
 /// - Это отдельный экран настроек из ProfilePage.
 /// - Язык меняется ГЛОБАЛЬНО на уровне всего приложения через
 ///   AppLocalizationScope.
-/// - Удаление аккаунта доступно здесь как отдельное явное действие и
-///   дополнительно остаётся доступным в ProfilePage.
+/// - Удаление аккаунта доступно только здесь, чтобы в профиле не было
+///   дублирующего опасного действия.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -54,14 +54,19 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadNotificationPreference() async {
     final service = PushNotificationService(_apiClient);
     final localEnabled = await PushNotificationService.isEnabled();
-    final backendEnabled = await service.getBackendPushEnabled();
+
+    var ready = false;
+    if (localEnabled) {
+      ready = await service.ensureCurrentDeviceReady(
+        requestPermissionIfNeeded: false,
+      );
+    }
 
     if (!mounted) return;
     setState(() {
-      // A false value on either side means the device is not actually ready
-      // to receive push. Legacy mismatches therefore become visible instead
-      // of the UI claiming notifications are enabled when backend blocks them.
-      notificationsEnabled = localEnabled && (backendEnabled ?? true);
+      // The switch reflects the real OS + FCM + backend device registration,
+      // not just a persisted preference.
+      notificationsEnabled = localEnabled && ready;
     });
   }
 
