@@ -734,6 +734,10 @@ class _CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final imageCacheWidth = (96 * pixelRatio).round().clamp(1, 512).toInt();
+    final imageCacheHeight = (112 * pixelRatio).round().clamp(1, 512).toInt();
+
     final subtitleParts = <String>[
       if ((item.description ?? '').trim().isNotEmpty) item.description!.trim(),
       if ((item.weight ?? '').trim().isNotEmpty) item.weight!.trim(),
@@ -767,6 +771,10 @@ class _CartItemCard extends StatelessWidget {
                   ? Image.network(
                       item.imageUrl!,
                       fit: BoxFit.cover,
+                      cacheWidth: imageCacheWidth,
+                      cacheHeight: imageCacheHeight,
+                      filterQuality: FilterQuality.low,
+                      gaplessPlayback: true,
                       errorBuilder: (_, __, ___) => _imageFallback(),
                     )
                   : _imageFallback(),

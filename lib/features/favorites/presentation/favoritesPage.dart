@@ -371,6 +371,14 @@ class _RestaurantFavoriteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final restaurant = item.restaurant;
     final availability = restaurant.availability;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final coverCacheWidth =
+        ((MediaQuery.sizeOf(context).width - 32) * pixelRatio)
+            .round()
+            .clamp(1, 2048)
+            .toInt();
+    final coverCacheHeight = (170 * pixelRatio).round().clamp(1, 1024).toInt();
+
     final subtitle = <String>[
       if ((restaurant.address ?? '').trim().isNotEmpty)
         restaurant.address!.trim(),
@@ -392,6 +400,10 @@ class _RestaurantFavoriteCard extends StatelessWidget {
                 child: Image.network(
                   restaurant.coverImageUrl!,
                   fit: BoxFit.cover,
+                  cacheWidth: coverCacheWidth,
+                  cacheHeight: coverCacheHeight,
+                  filterQuality: FilterQuality.low,
+                  gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => const _ImagePlaceholder(),
                 ),
               )
@@ -493,6 +505,10 @@ class _ProductFavoriteCard extends StatelessWidget {
     final canOrder = product.isAvailable && restaurantAvailability.canOrder;
     final imageUrl = product.effectiveImageUrl ?? product.imageUrl;
     final priceText = '${product.price} ₸';
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final thumbnailCacheWidth = (92 * pixelRatio).round().clamp(1, 512).toInt();
+    final thumbnailCacheHeight =
+        (92 * pixelRatio).round().clamp(1, 512).toInt();
     final disabledReason =
         product.isAvailable ? restaurantAvailability.label : 'Недоступно';
 
@@ -516,6 +532,10 @@ class _ProductFavoriteCard extends StatelessWidget {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
+                            cacheWidth: thumbnailCacheWidth,
+                            cacheHeight: thumbnailCacheHeight,
+                            filterQuality: FilterQuality.low,
+                            gaplessPlayback: true,
                             errorBuilder: (_, __, ___) =>
                                 const _ImagePlaceholder(),
                           )
