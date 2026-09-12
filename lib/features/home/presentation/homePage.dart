@@ -42,17 +42,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addObserver(this);
     _homeApi = HomeApi(_apiClient);
     _analyticsService = AnalyticsService(_apiClient);
-
     _addressRepository.addListener(_handleAddressChanged);
     _availabilityTimer = Timer.periodic(
       const Duration(seconds: 30),
       (_) => unawaited(_refreshHomeSilently()),
     );
-
     unawaited(
       _analyticsService.trackScreenView(
         screen: 'home',
@@ -60,7 +57,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         source: 'app_navigation',
       ),
     );
-
     _load();
   }
 
@@ -80,9 +76,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void _handleAddressChanged() {
-    if (!mounted) return;
-
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _refreshHomeSilently() async {
@@ -94,18 +88,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     _isBackgroundRefreshing = true;
-
     try {
       final data = await _homeApi.getHomeData();
       if (!mounted) return;
-
       setState(() {
         _homeData = data;
         _error = null;
       });
     } catch (_) {
-      // Keep the last successful Home snapshot. A background refresh failure
-      // must not replace a usable screen with an error state.
+      // Keep the last successful snapshot during transient refresh failures.
     } finally {
       _isBackgroundRefreshing = false;
     }
@@ -119,28 +110,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     try {
       final data = await _homeApi.getHomeData();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _homeData = data;
-      });
+      if (!mounted) return;
+      setState(() => _homeData = data);
     } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _error = 'Не удалось загрузить главную страницу';
-      });
+      if (!mounted) return;
+      setState(() => _error = 'Не удалось загрузить главную страницу');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -162,18 +138,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       ),
     );
 
-    if (selectedAddress == null || !mounted) {
-      return;
-    }
-
+    if (selectedAddress == null || !mounted) return;
     _addressRepository.setSelectedAddress(selectedAddress);
   }
 
   void _openSearchPage() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const SearchPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const SearchPage()),
     );
   }
 
@@ -228,11 +199,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         source: 'home_restaurants_section',
       ),
     );
-
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const RestaurantsPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const RestaurantsPage()),
     );
   }
 
@@ -249,7 +217,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _openOrderById(String? orderId, int? orderNumber) async {
     final normalizedOrderId = orderId?.trim() ?? '';
-
     if (normalizedOrderId.isNotEmpty) {
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -273,6 +240,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final data = _homeData;
     final selectedAddress = _addressRepository.selectedAddress;
+    final pinnedRestaurants = data?.pinnedRestaurants ?? const [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F9),
@@ -280,70 +248,83 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _HomeErrorState(
-                    message: _error!,
-                    onRetry: _load,
-                  )
+                ? _HomeErrorState(message: _error!, onRetry: _load)
                 : RefreshIndicator(
                     onRefresh: _load,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      children: [
-                        _SearchRow(
-                          onSearchTap: _openSearchPage,
-                          onOpenOrderFromNotification: _openOrderById,
-                          onOpenNotifications: _openNotificationsPage,
-                        ),
-                        const SizedBox(height: 16),
-                        _AddressCard(
-                          selectedAddress: selectedAddress,
-                          onTap: _openAddresses,
-                        ),
-                        const SizedBox(height: 20),
-                        if (data?.promo != null && data!.promo!.isActive) ...[
-                          _PromoBanner(promo: data.promo!),
-                          const SizedBox(height: 20),
-                        ],
-                        if ((data?.categories.isNotEmpty ?? false)) ...[
-                          SizedBox(
-                            height: 108,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: data!.categories.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 12),
-                              itemBuilder: (context, index) {
-                                final category = data.categories[index];
-
-                                return _CategoryCard(
-                                  category: category,
-                                  onTap: () {
-                                    _openCategoryProducts(category);
-                                  },
-                                );
-                              },
-                            ),
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          sliver: SliverList.list(
+                            children: [
+                              _SearchRow(
+                                onSearchTap: _openSearchPage,
+                                onOpenOrderFromNotification: _openOrderById,
+                                onOpenNotifications: _openNotificationsPage,
+                              ),
+                              const SizedBox(height: 16),
+                              _AddressCard(
+                                selectedAddress: selectedAddress,
+                                onTap: _openAddresses,
+                              ),
+                              const SizedBox(height: 20),
+                              if (data?.promo != null &&
+                                  data!.promo!.isActive) ...[
+                                _PromoBanner(promo: data.promo!),
+                                const SizedBox(height: 20),
+                              ],
+                              if ((data?.categories.isNotEmpty ?? false)) ...[
+                                SizedBox(
+                                  height: 108,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: data!.categories.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(width: 12),
+                                    itemBuilder: (context, index) {
+                                      final category = data.categories[index];
+                                      return _CategoryCard(
+                                        category: category,
+                                        onTap: () =>
+                                            _openCategoryProducts(category),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              _RestaurantsSectionHeader(
+                                onTap: _openRestaurantsPage,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                        ],
-                        _RestaurantsSectionHeader(
-                          onTap: _openRestaurantsPage,
                         ),
-                        const SizedBox(height: 12),
-                        if (data?.pinnedRestaurants.isEmpty ?? true)
-                          const _EmptyBlock(
-                            text: 'Закрепленные рестораны пока не добавлены',
+                        if (pinnedRestaurants.isEmpty)
+                          const SliverPadding(
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            sliver: SliverToBoxAdapter(
+                              child: _EmptyBlock(
+                                text:
+                                    'Закрепленные рестораны пока не добавлены',
+                              ),
+                            ),
                           )
                         else
-                          ...data!.pinnedRestaurants.map(
-                            (restaurant) => Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: _PinnedRestaurantCard(
-                                restaurant: restaurant,
-                                onTap: () {
-                                  _openRestaurantMenu(restaurant);
-                                },
-                              ),
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            sliver: SliverList.separated(
+                              itemCount: pinnedRestaurants.length,
+                              itemBuilder: (context, index) {
+                                final restaurant = pinnedRestaurants[index];
+                                return _PinnedRestaurantCard(
+                                  restaurant: restaurant,
+                                  onTap: () => _openRestaurantMenu(restaurant),
+                                );
+                              },
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 14),
                             ),
                           ),
                       ],
@@ -429,26 +410,19 @@ class _SearchRow extends StatelessWidget {
 }
 
 class _AddressCard extends StatelessWidget {
-  const _AddressCard({
-    required this.selectedAddress,
-    required this.onTap,
-  });
+  const _AddressCard({required this.selectedAddress, required this.onTap});
 
   final Address? selectedAddress;
   final VoidCallback onTap;
 
   String _buildSubtitle() {
-    if (selectedAddress == null) {
-      return 'Укажите адрес доставки';
-    }
-
+    if (selectedAddress == null) return 'Укажите адрес доставки';
     return selectedAddress!.fullSubtitle;
   }
 
   @override
   Widget build(BuildContext context) {
     final hasAddress = selectedAddress != null;
-
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
@@ -507,47 +481,59 @@ class _PromoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 170,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        image: promo.fullImageUrl != null
-            ? DecorationImage(
-                image: NetworkImage(promo.fullImageUrl!),
+    final imageUrl = promo.fullImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(
+      context,
+      MediaQuery.sizeOf(context).width - 32,
+    );
+    final cacheHeight = _imageCacheWidth(context, 170);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: SizedBox(
+        height: 170,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (imageUrl != null && imageUrl.isNotEmpty)
+              Image.network(
+                imageUrl,
                 fit: BoxFit.cover,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+                filterQuality: FilterQuality.low,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) =>
+                    const ColoredBox(color: Color(0xFF1F2328)),
               )
-            : null,
-        color: const Color(0xFF1F2328),
-      ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: LocalizedText(
-                promo.title.isNotEmpty ? promo.title : 'Акция дня',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.05,
+            else
+              const ColoredBox(color: Color(0xFF1F2328)),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: LocalizedText(
+                  promo.title.isNotEmpty ? promo.title : 'Акция дня',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.05,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _RestaurantsSectionHeader extends StatelessWidget {
-  const _RestaurantsSectionHeader({
-    required this.onTap,
-  });
+  const _RestaurantsSectionHeader({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -593,16 +579,17 @@ class _RestaurantsSectionHeader extends StatelessWidget {
 }
 
 class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
-    required this.category,
-    required this.onTap,
-  });
+  const _CategoryCard({required this.category, required this.onTap});
 
   final HomeCategoryData category;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = category.fullImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(context, 126);
+    final cacheHeight = _imageCacheWidth(context, 74);
+
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
@@ -620,36 +607,21 @@ class _CategoryCard extends StatelessWidget {
                 topLeft: Radius.circular(18),
                 topRight: Radius.circular(18),
               ),
-              child: Container(
+              child: SizedBox(
                 width: double.infinity,
                 height: 74,
-                color: const Color(0xFFEAF8F3),
-                child: category.fullImageUrl != null &&
-                        category.fullImageUrl!.trim().isNotEmpty
+                child: imageUrl != null && imageUrl.isNotEmpty
                     ? Image.network(
-                        category.fullImageUrl!,
+                        imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) {
-                          return Container(
-                            color: const Color(0xFFEAF8F3),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.fastfood_rounded,
-                              size: 42,
-                              color: Color(0xFF489F2A),
-                            ),
-                          );
-                        },
+                        cacheWidth: cacheWidth,
+                        cacheHeight: cacheHeight,
+                        filterQuality: FilterQuality.low,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, __, ___) =>
+                            const _CategoryImagePlaceholder(),
                       )
-                    : Container(
-                        color: const Color(0xFFEAF8F3),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.fastfood_rounded,
-                          size: 42,
-                          color: Color(0xFF489F2A),
-                        ),
-                      ),
+                    : const _CategoryImagePlaceholder(),
               ),
             ),
             Expanded(
@@ -678,6 +650,24 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
+class _CategoryImagePlaceholder extends StatelessWidget {
+  const _CategoryImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFEAF8F3),
+      child: Center(
+        child: Icon(
+          Icons.fastfood_rounded,
+          size: 42,
+          color: Color(0xFF489F2A),
+        ),
+      ),
+    );
+  }
+}
+
 class _PinnedRestaurantCard extends StatelessWidget {
   const _PinnedRestaurantCard({
     required this.restaurant,
@@ -691,11 +681,9 @@ class _PinnedRestaurantCard extends StatelessWidget {
     if (restaurant.workingHours?.trim().isNotEmpty == true) {
       return restaurant.workingHours!.trim();
     }
-
     if (restaurant.address?.trim().isNotEmpty == true) {
       return restaurant.address!.trim();
     }
-
     return 'Доставка 30-35 мин';
   }
 
@@ -705,6 +693,12 @@ class _PinnedRestaurantCard extends StatelessWidget {
         ? '0,0'
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
     final isOpen = restaurant.isOpenForOrders;
+    final imageUrl = restaurant.fullCoverImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(
+      context,
+      MediaQuery.sizeOf(context).width - 32,
+    );
+    final cacheHeight = _imageCacheWidth(context, 113);
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -718,17 +712,23 @@ class _PinnedRestaurantCard extends StatelessWidget {
               left: 0,
               right: 0,
               top: 0,
-              child: Container(
-                height: 113,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7DC963),
-                  borderRadius: BorderRadius.circular(15),
-                  image: restaurant.fullCoverImageUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(restaurant.fullCoverImageUrl!),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: SizedBox(
+                  height: 113,
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
                           fit: BoxFit.cover,
+                          cacheWidth: cacheWidth,
+                          cacheHeight: cacheHeight,
+                          filterQuality: FilterQuality.low,
+                          gaplessPlayback: true,
+                          errorBuilder: (_, __, ___) => const ColoredBox(
+                            color: Color(0xFF7DC963),
+                          ),
                         )
-                      : null,
+                      : const ColoredBox(color: Color(0xFF7DC963)),
                 ),
               ),
             ),
@@ -747,7 +747,9 @@ class _PinnedRestaurantCard extends StatelessWidget {
                 child: LocalizedText(
                   isOpen ? 'Открыто' : 'Закрыто',
                   style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w700),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -759,10 +761,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 14, right: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFFDFD),
-                  border: Border.all(
-                    color: const Color(0xFF489F2A),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFF489F2A)),
                   borderRadius: BorderRadius.circular(19),
                 ),
                 child: Row(
@@ -867,10 +866,7 @@ class _EmptyBlock extends StatelessWidget {
 }
 
 class _HomeErrorState extends StatelessWidget {
-  const _HomeErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _HomeErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -907,4 +903,11 @@ class _HomeErrorState extends StatelessWidget {
       ],
     );
   }
+}
+
+int _imageCacheWidth(BuildContext context, double logicalPixels) {
+  final physical = (logicalPixels * MediaQuery.devicePixelRatioOf(context))
+      .round()
+      .clamp(1, 2048);
+  return physical.toInt();
 }
