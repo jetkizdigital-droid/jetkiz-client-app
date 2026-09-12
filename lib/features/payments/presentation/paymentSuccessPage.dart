@@ -23,7 +23,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage> {
   late final PaymentCheckoutApi _payments;
   PaymentOrderState? _state;
   Timer? _retryTimer;
-  int _remainingCardSaveChecks = 3;
+  int _remainingCardSaveChecks = 30;
 
   @override
   void initState() {
