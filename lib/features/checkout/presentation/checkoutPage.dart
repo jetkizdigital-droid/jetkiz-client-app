@@ -507,11 +507,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
           'Не удалось начать оплату. Попробуйте снова.',
         );
       }
+      final saveCardRequested = _useNewCard && _saveNewCard;
       final checkout = await _paymentCheckoutApi.createCheckout(
         orderId: orderId,
         savedPaymentMethodId: _useNewCard ? null : _selectedCardId,
-        saveCard: _useNewCard && _saveNewCard,
+        saveCard: saveCardRequested,
       );
+      if (saveCardRequested && !checkout.tokenizationRequested) {
+        throw const _CheckoutBlockedException(
+          'Не удалось запросить сохранение карты. Оплата не начата.',
+        );
+      }
       if (checkout.secureCheckoutUri == null || checkout.checkoutUrl.isEmpty) {
         throw const _CheckoutBlockedException(
           'Не удалось открыть оплату. Попробуйте снова.',
