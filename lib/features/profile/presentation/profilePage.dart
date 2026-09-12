@@ -192,8 +192,20 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _isDeletingAccount = true);
 
     try {
-      await PushNotificationService(_apiClient).unregisterCurrentToken();
+      // Server-side deletion removes every registered push/device row. Token
+      // unregister is only an extra cleanup step and must never prevent the
+      // user's account-deletion request from reaching the backend.
+      try {
+        await PushNotificationService(_apiClient).unregisterCurrentToken();
+      } catch (_) {
+        // Best-effort only.
+      }
+
       await _profileApi.deleteMyAccount();
+
+      // A deleted account must not leave its app-scoped device identifier for
+      // the next account using the same physical phone.
+      await AuthStorage().resetDeviceId();
       await _clearLocalSessionAndExit();
     } on ProfileApiException catch (error) {
       if (!mounted) return;
@@ -311,7 +323,7 @@ class _ProfilePageState extends State<ProfilePage> {
         icon: Icons.description_outlined,
         label: strings.profilePublicOffer,
         iconColor: const Color(0xFF6366F1),
-        onTap: () => _openWebPage('https://jetkiz.asia/privacy'),
+        onTap: () => _openWebPage('https://jetkiz.asia/offer'),
       ),
     ];
 
