@@ -161,7 +161,6 @@ Future<void> _configureCrashReporting() async {
   };
 }
 
-
 class _StartupLoaderApp extends StatelessWidget {
   const _StartupLoaderApp();
 
