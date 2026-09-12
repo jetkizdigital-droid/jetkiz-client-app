@@ -5,6 +5,7 @@ import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
+import 'package:jetkiz_mobile/features/auth/presentation/kazakhstanPhoneInputFormatter.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/smsCodePage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -126,48 +127,14 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   }
 
   bool get _canSubmit {
-    final digits = _extractDigits(_phoneController.text);
+    final digits = kazakhstanLocalPhoneDigits(_phoneController.text);
     return _isAgreementAccepted && digits.length == 10 && !_isSubmitting;
-  }
-
-  String _extractDigits(String value) {
-    return value.replaceAll(RegExp(r'[^0-9]'), '');
-  }
-
-  void _onPhoneChanged(String value) {
-    final digits = _extractDigits(value);
-    final safe = digits.length > 10 ? digits.substring(0, 10) : digits;
-    final formatted = _formatRuPhone(safe);
-
-    if (formatted != value) {
-      _phoneController.value = TextEditingValue(
-        text: formatted,
-        selection: TextSelection.collapsed(offset: formatted.length),
-      );
-    }
-
-    setState(() {});
-  }
-
-  String _formatRuPhone(String digits) {
-    if (digits.isEmpty) return '';
-
-    final buffer = StringBuffer();
-
-    for (int i = 0; i < digits.length; i++) {
-      if (i == 0) buffer.write('(');
-      if (i == 3) buffer.write(') ');
-      if (i == 6 || i == 8) buffer.write('-');
-      buffer.write(digits[i]);
-    }
-
-    return buffer.toString();
   }
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
 
-    final localDigits = _extractDigits(_phoneController.text);
+    final localDigits = kazakhstanLocalPhoneDigits(_phoneController.text);
     final normalizedPhone = '+7$localDigits';
 
     setState(() {
@@ -309,7 +276,10 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                     child: TextField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
-                      onChanged: _onPhoneChanged,
+                      inputFormatters: const [
+                        KazakhstanPhoneInputFormatter(),
+                      ],
+                      onChanged: (_) => setState(() {}),
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
