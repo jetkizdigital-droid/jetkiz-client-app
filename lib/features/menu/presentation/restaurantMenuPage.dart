@@ -974,19 +974,10 @@ class _HeroImageLayer extends StatelessWidget {
       return const _RestaurantHeroPlaceholder();
     }
 
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth = (MediaQuery.sizeOf(context).width * pixelRatio)
-        .round()
-        .clamp(1, 2048)
-        .toInt();
-    final cacheHeight = (180 * pixelRatio).round().clamp(1, 1024).toInt();
-
     return Image.network(
       normalized,
       fit: BoxFit.cover,
-      cacheWidth: cacheWidth,
-      cacheHeight: cacheHeight,
-      filterQuality: FilterQuality.low,
+      filterQuality: FilterQuality.medium,
       gaplessPlayback: true,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded) {

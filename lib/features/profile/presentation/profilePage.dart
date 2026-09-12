@@ -47,7 +47,6 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   bool _isUploadingAvatar = false;
   bool _isLoggingOut = false;
-  bool _isDeletingAccount = false;
   String? _errorText;
 
   @override
@@ -161,50 +160,6 @@ class _ProfilePageState extends State<ProfilePage> {
       await _profileApi.logout();
     } finally {
       await _clearLocalSessionAndExit();
-    }
-  }
-
-  Future<void> _confirmAndDeleteAccount() async {
-    if (_isDeletingAccount) return;
-
-    final strings = AppLocalizationScope.of(context).strings;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: LocalizedText(strings.deleteAccountTitle),
-        content: LocalizedText(strings.deleteAccountWarning),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: LocalizedText(strings.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: LocalizedText(strings.deleteForever),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _isDeletingAccount = true);
-
-    try {
-      await PushNotificationService(_apiClient).unregisterCurrentToken();
-      await _profileApi.deleteMyAccount();
-      await _clearLocalSessionAndExit();
-    } on ProfileApiException catch (error) {
-      if (!mounted) return;
-      final message = error.statusCode == 409
-          ? strings.accountDeleteBlocked
-          : strings.accountDeleteFailed;
-      _showSnack(message);
-    } catch (_) {
-      if (mounted) _showSnack(strings.accountDeleteFailed);
-    } finally {
-      if (mounted) setState(() => _isDeletingAccount = false);
     }
   }
 
@@ -392,33 +347,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         borderRadius: BorderRadius.circular(18),
                       ),
                       elevation: 0,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed:
-                      _isDeletingAccount ? null : _confirmAndDeleteAccount,
-                  icon: _isDeletingAccount
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.red,
-                          ),
-                        )
-                      : const Icon(Icons.delete_outline_rounded),
-                  label: LocalizedText(
-                    _isDeletingAccount
-                        ? strings.deletingAccount
-                        : strings.deleteAccount,
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
                     ),
                   ),
                 ),

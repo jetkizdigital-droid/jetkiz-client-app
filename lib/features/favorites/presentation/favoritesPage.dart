@@ -402,7 +402,7 @@ class _RestaurantFavoriteCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   cacheWidth: coverCacheWidth,
                   cacheHeight: coverCacheHeight,
-                  filterQuality: FilterQuality.low,
+                  filterQuality: FilterQuality.medium,
                   gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => const _ImagePlaceholder(),
                 ),
@@ -505,10 +505,6 @@ class _ProductFavoriteCard extends StatelessWidget {
     final canOrder = product.isAvailable && restaurantAvailability.canOrder;
     final imageUrl = product.effectiveImageUrl ?? product.imageUrl;
     final priceText = '${product.price} ₸';
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final thumbnailCacheWidth = (92 * pixelRatio).round().clamp(1, 512).toInt();
-    final thumbnailCacheHeight =
-        (92 * pixelRatio).round().clamp(1, 512).toInt();
     final disabledReason =
         product.isAvailable ? restaurantAvailability.label : 'Недоступно';
 
@@ -532,9 +528,7 @@ class _ProductFavoriteCard extends StatelessWidget {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            cacheWidth: thumbnailCacheWidth,
-                            cacheHeight: thumbnailCacheHeight,
-                            filterQuality: FilterQuality.low,
+                            filterQuality: FilterQuality.medium,
                             gaplessPlayback: true,
                             errorBuilder: (_, __, ___) =>
                                 const _ImagePlaceholder(),
@@ -544,47 +538,48 @@ class _ProductFavoriteCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: SizedBox(
-                    height: 92,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LocalizedText(
-                          product.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      LocalizedText(
+                        product.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          height: 1.2,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(height: 6),
-                        LocalizedText(
-                          product.restaurant.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      LocalizedText(
+                        product.restaurant.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                          fontWeight: FontWeight.w500,
                         ),
-                        const Spacer(),
-                        Row(
-                          children: [
-                            LocalizedText(
-                              priceText,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          LocalizedText(
+                            priceText,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
                             ),
-                            const SizedBox(width: 8),
-                            if (!canOrder)
-                              _AvailabilityPill(text: disabledReason),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (!canOrder)
+                            Flexible(
+                              child: _AvailabilityPill(text: disabledReason),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
