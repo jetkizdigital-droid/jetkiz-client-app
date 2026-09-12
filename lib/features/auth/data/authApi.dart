@@ -8,12 +8,25 @@ class AuthApi {
 
   Future<RequestSmsCodeResponse> requestSmsCode({
     required String phone,
+    String deliveryChannel = 'SMS',
   }) async {
+    final normalizedChannel = deliveryChannel.trim().toUpperCase();
+    if (normalizedChannel != 'SMS' &&
+        normalizedChannel != 'WHATSAPP' &&
+        normalizedChannel != 'AUTO') {
+      throw const AuthApiException(AuthApiErrorType.serverError);
+    }
+
     try {
       final response = await _apiClient.dio.post(
         '/auth/request-code',
         data: {
           'phone': phone,
+          // The consumer app intentionally requests SMS by default. WhatsApp
+          // depends on mobile data on the recipient device, while SMS remains
+          // usable when the customer has weak/no data after the request reached
+          // JETKIZ. AUTO/WHATSAPP stay available for explicit future flows.
+          'deliveryChannel': normalizedChannel,
         },
       );
 
