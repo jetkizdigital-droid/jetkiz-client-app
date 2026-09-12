@@ -372,10 +372,11 @@ class _RestaurantFavoriteCard extends StatelessWidget {
     final restaurant = item.restaurant;
     final availability = restaurant.availability;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final coverCacheWidth = ((MediaQuery.sizeOf(context).width - 32) * pixelRatio)
-        .round()
-        .clamp(1, 2048)
-        .toInt();
+    final coverCacheWidth =
+        ((MediaQuery.sizeOf(context).width - 32) * pixelRatio)
+            .round()
+            .clamp(1, 2048)
+            .toInt();
     final coverCacheHeight = (170 * pixelRatio).round().clamp(1, 1024).toInt();
 
     final subtitle = <String>[
@@ -505,8 +506,7 @@ class _ProductFavoriteCard extends StatelessWidget {
     final imageUrl = product.effectiveImageUrl ?? product.imageUrl;
     final priceText = '${product.price} ₸';
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final thumbnailCacheWidth =
-        (92 * pixelRatio).round().clamp(1, 512).toInt();
+    final thumbnailCacheWidth = (92 * pixelRatio).round().clamp(1, 512).toInt();
     final thumbnailCacheHeight =
         (92 * pixelRatio).round().clamp(1, 512).toInt();
     final disabledReason =
