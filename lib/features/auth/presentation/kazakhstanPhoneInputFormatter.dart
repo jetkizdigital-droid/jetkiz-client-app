@@ -45,14 +45,16 @@ class KazakhstanPhoneInputFormatter extends TextInputFormatter {
     final localDigits = kazakhstanLocalPhoneDigits(newValue.text);
     final formatted = formatKazakhstanLocalPhone(localDigits);
 
-    final rawCursor = newValue.selection.extentOffset
-        .clamp(0, newValue.text.length);
+    final rawCursor = newValue.selection.extentOffset.clamp(
+      0,
+      newValue.text.length,
+    );
     final rawBeforeCursor = newValue.text.substring(0, rawCursor);
-    final digitsBeforeCursor =
-        kazakhstanLocalPhoneDigits(rawBeforeCursor).length.clamp(
-              0,
-              localDigits.length,
-            );
+    final cursorDigits = kazakhstanLocalPhoneDigits(rawBeforeCursor);
+    final digitsBeforeCursor = cursorDigits.length.clamp(
+      0,
+      localDigits.length,
+    );
 
     return TextEditingValue(
       text: formatted,
