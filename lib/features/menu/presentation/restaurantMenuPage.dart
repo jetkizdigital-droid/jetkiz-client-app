@@ -847,8 +847,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                     return _MenuProductRow(
                                       first: row.first!,
                                       second: row.second,
-                                      favoriteProductIds:
-                                          _favorites.productIds,
+                                      favoriteProductIds: _favorites.productIds,
                                       favoritePendingProductIds:
                                           _favorites.busyProductIds,
                                       restaurantCanOrder:
@@ -1479,9 +1478,7 @@ class _MenuProductRow extends StatelessWidget {
         Expanded(child: _buildCard(first)),
         const SizedBox(width: 14),
         Expanded(
-          child: second == null
-              ? const SizedBox.shrink()
-              : _buildCard(second!),
+          child: second == null ? const SizedBox.shrink() : _buildCard(second!),
         ),
       ],
     );
