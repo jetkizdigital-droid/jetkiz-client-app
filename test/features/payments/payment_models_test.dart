@@ -17,6 +17,20 @@ void main() {
       expect(session.secureCheckoutUri!.scheme, 'https');
     });
 
+    test('parses explicit tokenization acceptance from checkout response', () {
+      final session = PaymentCheckoutSession.fromJson({
+        'paymentId': 'payment-1',
+        'orderId': 'order-1',
+        'status': 'PENDING',
+        'checkoutUrl': 'https://checkout.paylink.kz/session/save',
+        'tokenizationRequested': true,
+        'cardSaveStatus': 'REQUESTED',
+      });
+
+      expect(session.tokenizationRequested, isTrue);
+      expect(session.cardSaveStatus, 'REQUESTED');
+    });
+
     test('rejects non-HTTPS and credential-bearing checkout URLs', () {
       const base = {
         'paymentId': 'payment-1',
@@ -82,6 +96,53 @@ void main() {
       expect(paid.isSecuredCardPayment, isTrue);
       expect(inconsistentStatus.isSecuredCardPayment, isFalse);
       expect(nonCard.isSecuredCardPayment, isFalse);
+    });
+
+    test('keeps payment success separate from saved-card persistence', () {
+      final pendingSave = PaymentOrderState.fromJson({
+        'orderId': 'order-save-pending',
+        'paymentMethod': 'CARD',
+        'paymentStatus': 'PAID',
+        'paymentRecordStatus': 'PAID',
+        'fundsSecured': true,
+        'captured': true,
+        'cardSaveRequested': true,
+        'cardSaveStatus': 'REQUESTED',
+      });
+      final saved = PaymentOrderState.fromJson({
+        'orderId': 'order-save-ok',
+        'paymentMethod': 'CARD',
+        'paymentStatus': 'PAID',
+        'paymentRecordStatus': 'PAID',
+        'fundsSecured': true,
+        'captured': true,
+        'cardSaveRequested': true,
+        'cardSaveStatus': 'SAVED',
+        'savedPaymentMethodId': 'method-1',
+        'cardSavedAt': '2026-09-12T10:00:00.000Z',
+      });
+      final failedSave = PaymentOrderState.fromJson({
+        'orderId': 'order-save-failed',
+        'paymentMethod': 'CARD',
+        'paymentStatus': 'PAID',
+        'paymentRecordStatus': 'PAID',
+        'fundsSecured': true,
+        'captured': true,
+        'cardSaveRequested': true,
+        'cardSaveStatus': 'FAILED',
+        'cardSaveFailureCode': 'PAYMENT_SAVED_CARD_TOKEN_MISSING',
+      });
+
+      expect(pendingSave.isSecuredCardPayment, isTrue);
+      expect(pendingSave.isCardSavePending, isTrue);
+      expect(saved.isCardSaved, isTrue);
+      expect(saved.cardSavedAt, DateTime.parse('2026-09-12T10:00:00.000Z'));
+      expect(failedSave.isSecuredCardPayment, isTrue);
+      expect(failedSave.isCardSaveFailed, isTrue);
+      expect(
+        failedSave.cardSaveFailureCode,
+        'PAYMENT_SAVED_CARD_TOKEN_MISSING',
+      );
     });
 
     test('classifies failed and settlement terminal states', () {
