@@ -34,6 +34,10 @@ import 'package:jetkiz_mobile/firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Draw a neutral loading frame immediately so native launch branding never
+  // remains on screen while storage/Firebase initialize.
+  runApp(const _StartupLoaderApp());
+
   final apiClient = ApiClient();
   await apiClient.init();
 
@@ -155,4 +159,29 @@ Future<void> _configureCrashReporting() async {
     crashlytics.recordError(error, stack, fatal: true);
     return true;
   };
+}
+
+
+class _StartupLoaderApp extends StatelessWidget {
+  const _StartupLoaderApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: Color(0xFF489F2A),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
