@@ -41,12 +41,14 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
   static const Color _green = Color(0xFF489F2A);
   static const Duration _pollInterval = Duration(seconds: 2);
   static const Duration _maxForegroundWait = Duration(minutes: 3);
+  static const Duration _cardSaveGrace = Duration(seconds: 8);
 
   late final PaymentCheckoutApi _payments;
   final PaymentPendingStore _pendingStore = PaymentPendingStore();
 
   Timer? _pollTimer;
   DateTime? _pollStartedAt;
+  DateTime? _fundsSecuredAt;
   bool _isOpeningProvider = false;
   bool _isChecking = false;
   PaymentOrderState? _state;
@@ -167,13 +169,27 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
       setState(() => _state = state);
 
       if (state.isSecuredCardPayment) {
+        _fundsSecuredAt ??= DateTime.now();
+
+        // PayLink exposes a newly-created reusable token only in the callback.
+        // Canonical invoice reconciliation can confirm the payment slightly
+        // earlier, so keep polling briefly when card saving was requested.
+        if (state.isCardSavePending &&
+            DateTime.now().difference(_fundsSecuredAt!) < _cardSaveGrace) {
+          return;
+        }
+
         _pollTimer?.cancel();
         await _pendingStore.clear();
         if (!mounted) return;
         PaymentReturnSessionRegistry.hostedCheckoutActive = false;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => PaymentSuccessPage(orderId: widget.orderId),
+            builder: (_) => PaymentSuccessPage(
+              orderId: widget.orderId,
+              cardSaveStatus:
+                  state.cardSaveRequested ? state.normalizedCardSaveStatus : null,
+            ),
           ),
           (route) => false,
         );
