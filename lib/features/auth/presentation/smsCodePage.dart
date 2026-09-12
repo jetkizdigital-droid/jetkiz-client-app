@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authApi.dart';
@@ -12,12 +13,14 @@ import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 class SmsCodePage extends StatefulWidget {
   final String phone;
   final DateTime? resendAvailableAt;
+  final OtpDeliveryChannel initialDeliveryChannel;
   final VoidCallback? onAuthorized;
 
   const SmsCodePage({
     super.key,
     required this.phone,
     this.resendAvailableAt,
+    this.initialDeliveryChannel = OtpDeliveryChannel.auto,
     this.onAuthorized,
   });
 
@@ -39,6 +42,7 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
   bool _isSubmitting = false;
   bool _isResending = false;
   String? _errorText;
+  late OtpDeliveryChannel _deliveryChannel;
 
   Timer? _resendTimer;
   int _secondsLeft = _resendCooldownSeconds;
@@ -49,6 +53,7 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _authApi = AuthApi(_apiClient);
     _postLoginService = AuthPostLoginService(_apiClient);
+    _deliveryChannel = widget.initialDeliveryChannel;
     _startResendTimer(resendAvailableAt: widget.resendAvailableAt);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -212,8 +217,12 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _resendCode() async {
+  Future<void> _resendCode({
+    OtpDeliveryChannel? deliveryChannel,
+  }) async {
     if (!_canResend) return;
+
+    final requestedChannel = deliveryChannel ?? _deliveryChannel;
 
     setState(() {
       _isResending = true;
@@ -221,15 +230,27 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
     });
 
     try {
-      final response = await _authApi.requestSmsCode(phone: widget.phone);
+      final response = await _authApi.requestSmsCode(
+        phone: widget.phone,
+        deliveryChannel: requestedChannel,
+      );
       if (!mounted) return;
 
       _codeController.clear();
+      setState(() {
+        _deliveryChannel =
+            response.deliveryChannel ?? requestedChannel;
+      });
       _startResendTimer(resendAvailableAt: response.resendAvailableAt);
       _focusCodeInput();
 
+      final strings = AppLocalizationScope.of(context).strings;
+      final sentMessage = _deliveryChannel == OtpDeliveryChannel.sms
+          ? strings.otpSentViaSms
+          : strings.otpSentViaWhatsApp;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: LocalizedText('Код отправлен повторно.')),
+        SnackBar(content: LocalizedText(sentMessage)),
       );
     } on AuthApiException catch (error) {
       if (!mounted) return;
@@ -340,8 +361,14 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
     final formattedPhone = _formatPhone(widget.phone);
     final digits = _digits;
+    final deliveryLabel = _deliveryChannel == OtpDeliveryChannel.sms
+        ? strings.otpSentViaSms
+        : _deliveryChannel == OtpDeliveryChannel.whatsapp
+            ? strings.otpSentViaWhatsApp
+            : null;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -414,6 +441,18 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
                     height: 1.3,
                   ),
                 ),
+                if (deliveryLabel != null) ...[
+                  const SizedBox(height: 8),
+                  LocalizedText(
+                    deliveryLabel,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 28),
                 _buildOtpInput(digits),
                 const SizedBox(height: 22),
@@ -444,32 +483,50 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
                   ),
                 const SizedBox(height: 8),
                 if (_canResend)
-                  TextButton(
-                    onPressed: _resendCode,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 8,
+                  Column(
+                    children: [
+                      TextButton(
+                        onPressed: () => _resendCode(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                        ),
+                        child: _isResending
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF489F2A),
+                                ),
+                              )
+                            : const LocalizedText(
+                                'Отправить код повторно',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
+                              ),
                       ),
-                    ),
-                    child: _isResending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF489F2A),
-                            ),
-                          )
-                        : const LocalizedText(
-                            'Отправить код повторно',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black,
+                      if (_deliveryChannel != OtpDeliveryChannel.sms)
+                        TextButton(
+                          onPressed: () => _resendCode(
+                            deliveryChannel: OtpDeliveryChannel.sms,
+                          ),
+                          child: LocalizedText(
+                            strings.otpSendViaSms,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1565C0),
                             ),
                           ),
+                        ),
+                    ],
                   )
                 else
                   LocalizedText(
