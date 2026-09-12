@@ -39,9 +39,31 @@ class PaymentCheckoutApi {
         throw const FormatException('Invalid payment checkout payload');
       }
 
-      return PaymentCheckoutSession.fromJson(
+      final session = PaymentCheckoutSession.fromJson(
         Map<String, dynamic>.from(response.data as Map),
       );
+
+      // Fail closed before opening PayLink if the server silently lost the
+      // user's explicit save-card choice. A successful payment without
+      // tokenization cannot reconstruct the one-time card token afterwards.
+      if (normalizedSavedMethodId.isEmpty &&
+          saveCard &&
+          !session.tokenizationRequested) {
+        throw const PaymentCheckoutException(
+          message:
+              'Не удалось включить сохранение карты. Попробуйте ещё раз до оплаты.',
+        );
+      }
+
+      if (normalizedSavedMethodId.isNotEmpty &&
+          session.savedPaymentMethodId != normalizedSavedMethodId) {
+        throw const PaymentCheckoutException(
+          message:
+              'Сервер не подтвердил выбранную сохранённую карту. Попробуйте ещё раз.',
+        );
+      }
+
+      return session;
     } on PaymentCheckoutException {
       rethrow;
     } on DioException catch (error) {
@@ -195,6 +217,9 @@ class PaymentOrderState {
     required this.paymentRecordStatus,
     required this.fundsSecured,
     required this.captured,
+    required this.cardSaveRequested,
+    this.cardSaveStatus,
+    this.savedPaymentMethodId,
     this.provider,
     this.providerPaymentId,
     this.checkoutUrl,
@@ -209,6 +234,9 @@ class PaymentOrderState {
   final String? checkoutUrl;
   final bool fundsSecured;
   final bool captured;
+  final bool cardSaveRequested;
+  final String? cardSaveStatus;
+  final String? savedPaymentMethodId;
 
   factory PaymentOrderState.fromJson(Map<String, dynamic> json) {
     final orderId = json['orderId']?.toString().trim() ?? '';
@@ -226,6 +254,9 @@ class PaymentOrderState {
       checkoutUrl: _nullableString(json['checkoutUrl']),
       fundsSecured: json['fundsSecured'] == true,
       captured: json['captured'] == true,
+      cardSaveRequested: json['cardSaveRequested'] == true,
+      cardSaveStatus: _nullableString(json['cardSaveStatus']),
+      savedPaymentMethodId: _nullableString(json['savedPaymentMethodId']),
     );
   }
 
@@ -238,6 +269,15 @@ class PaymentOrderState {
         fundsSecured &&
         (status == 'AUTHORIZED' || status == 'PAID');
   }
+
+  bool get isCardSavePending =>
+      cardSaveRequested && cardSaveStatus?.toUpperCase() == 'PENDING';
+
+  bool get isCardSaved =>
+      cardSaveRequested && cardSaveStatus?.toUpperCase() == 'SAVED';
+
+  bool get isCardSaveFailed =>
+      cardSaveRequested && cardSaveStatus?.toUpperCase() == 'FAILED';
 
   Uri? get secureCheckoutUri {
     final raw = checkoutUrl?.trim() ?? '';
