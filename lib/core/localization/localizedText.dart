@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 
 /// Drop-in text widget that applies the centralized RU/KK catalogue to
@@ -56,14 +57,42 @@ class LocalizedText extends StatelessWidget {
   final TextHeightBehavior? textHeightBehavior;
   final Color? selectionColor;
 
+  static const Map<String, String> _kkCompatibilityCatalogue = {
+    // Compatibility entries for the fixed-city delivery-address flow. Keep
+    // this tiny: the main source of translations remains AppStrings. These
+    // entries can be removed once the generated/central catalogue contains
+    // the same keys.
+    'Город': 'Қала',
+    'Укажите улицу и дом': 'Көше мен үй нөмірін көрсетіңіз',
+    'Адрес слишком длинный': 'Мекенжай тым ұзын',
+    'Доставка пока доступна только в Щучинске':
+        'Жеткізу әзірге тек Щучинск қаласында қолжетімді',
+  };
+
+  String _translate(
+    String source,
+    String Function(String) catalogueTranslate,
+    AppLanguage language,
+  ) {
+    final translated = catalogueTranslate(source);
+    if (language != AppLanguage.kk || translated != source) {
+      return translated;
+    }
+
+    return _kkCompatibilityCatalogue[source] ?? source;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizationScope.of(context).strings;
+    final scope = AppLocalizationScope.of(context);
+    final strings = scope.strings;
     final source = data;
+    String translate(String value) =>
+        _translate(value, strings.localize, scope.language);
 
     if (source != null) {
       return Text(
-        strings.localize(source),
+        translate(source),
         style: style,
         strutStyle: strutStyle,
         textAlign: textAlign,
@@ -74,7 +103,7 @@ class LocalizedText extends StatelessWidget {
         textScaler: textScaler,
         maxLines: maxLines,
         semanticsLabel:
-            semanticsLabel == null ? null : strings.localize(semanticsLabel!),
+            semanticsLabel == null ? null : translate(semanticsLabel!),
         textWidthBasis: textWidthBasis,
         textHeightBehavior: textHeightBehavior,
         selectionColor: selectionColor,
@@ -82,7 +111,7 @@ class LocalizedText extends StatelessWidget {
     }
 
     return Text.rich(
-      _localizeSpan(textSpan!, strings.localize),
+      _localizeSpan(textSpan!, translate),
       style: style,
       strutStyle: strutStyle,
       textAlign: textAlign,
@@ -93,7 +122,7 @@ class LocalizedText extends StatelessWidget {
       textScaler: textScaler,
       maxLines: maxLines,
       semanticsLabel:
-          semanticsLabel == null ? null : strings.localize(semanticsLabel!),
+          semanticsLabel == null ? null : translate(semanticsLabel!),
       textWidthBasis: textWidthBasis,
       textHeightBehavior: textHeightBehavior,
       selectionColor: selectionColor,
