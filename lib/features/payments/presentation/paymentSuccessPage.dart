@@ -7,9 +7,11 @@ class PaymentSuccessPage extends StatelessWidget {
   const PaymentSuccessPage({
     super.key,
     required this.orderId,
+    this.cardSaveStatus,
   });
 
   final String orderId;
+  final String? cardSaveStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +22,16 @@ class PaymentSuccessPage extends StatelessWidget {
         : 'Посмотреть статус заказа можно в разделе «Мои заказы».';
     final ordersLabel = isKk ? 'Менің тапсырыстарым' : 'Мои заказы';
     final homeLabel = isKk ? 'Басты бетке' : 'На главную';
+    final normalizedCardSaveStatus = (cardSaveStatus ?? '').toUpperCase();
+    final cardSaveHint = switch (normalizedCardSaveStatus) {
+      'FAILED' => isKk
+          ? 'Төлем өтті, бірақ картаны сақтау мүмкін болмады.'
+          : 'Оплата прошла, но карту сохранить не удалось.',
+      'REQUESTED' => isKk
+          ? 'Төлем өтті. Картаны сақтау әлі аяқталып жатыр.'
+          : 'Оплата прошла. Сохранение карты ещё завершается.',
+      _ => null,
+    };
 
     return PopScope(
       canPop: false,
@@ -66,6 +78,19 @@ class PaymentSuccessPage extends StatelessWidget {
                     color: Color(0xFF657063),
                   ),
                 ),
+                if (cardSaveHint != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    cardSaveHint,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF7A5A00),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 SizedBox(
                   width: double.infinity,
