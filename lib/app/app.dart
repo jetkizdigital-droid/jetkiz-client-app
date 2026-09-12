@@ -359,19 +359,35 @@ class MainNavigationPage extends StatefulWidget {
 }
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
-  late int _currentIndex;
+  static const int _tabCount = 4;
 
-  late final List<Widget> _pages = [
-    const HomePage(),
-    const FavoritesPage(),
-    const CartPage(),
-    const ProfileEntryPage(),
-  ];
+  late int _currentIndex;
+  late final List<Widget?> _pages = List<Widget?>.filled(_tabCount, null);
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    _currentIndex = widget.initialIndex.clamp(0, _tabCount - 1);
+    _pages[_currentIndex] = _createPage(_currentIndex);
+  }
+
+  Widget _createPage(int index) {
+    switch (index) {
+      case 0:
+        return const HomePage();
+      case 1:
+        return const FavoritesPage();
+      case 2:
+        return const CartPage();
+      case 3:
+        return const ProfileEntryPage();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  void _ensurePageMounted(int index) {
+    _pages[index] ??= _createPage(index);
   }
 
   @override
@@ -379,7 +395,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.initialIndex != widget.initialIndex) {
-      _currentIndex = widget.initialIndex;
+      final nextIndex = widget.initialIndex.clamp(0, _tabCount - 1);
+      _ensurePageMounted(nextIndex);
+      _currentIndex = nextIndex;
     }
   }
 
@@ -387,6 +405,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     if (_currentIndex == index) return;
 
     setState(() {
+      _ensurePageMounted(index);
       _currentIndex = index;
     });
 
@@ -406,7 +425,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: List<Widget>.generate(
+          _tabCount,
+          (index) => _pages[index] ?? const SizedBox.shrink(),
+          growable: false,
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
