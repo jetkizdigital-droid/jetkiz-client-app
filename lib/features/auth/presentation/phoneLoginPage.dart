@@ -161,8 +161,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
           builder: (_) => SmsCodePage(
             phone: normalizedPhone,
             resendAvailableAt: response.resendAvailableAt,
-            initialDeliveryChannel:
-                response.deliveryChannel ?? deliveryChannel,
+            initialDeliveryChannel: response.deliveryChannel ?? deliveryChannel,
             onAuthorized: widget.onAuthorized,
           ),
         ),
