@@ -238,8 +238,7 @@ class _SmsCodePageState extends State<SmsCodePage> with WidgetsBindingObserver {
 
       _codeController.clear();
       setState(() {
-        _deliveryChannel =
-            response.deliveryChannel ?? requestedChannel;
+        _deliveryChannel = response.deliveryChannel ?? requestedChannel;
       });
       _startResendTimer(resendAvailableAt: response.resendAvailableAt);
       _focusCodeInput();
