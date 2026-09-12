@@ -288,6 +288,31 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     return result;
   }
 
+  List<_MenuRenderRow> _buildMenuRows(
+    List<RestaurantMenuGroup> groups,
+  ) {
+    final rows = <_MenuRenderRow>[];
+    final showTitles = _selectedTabId == 'all';
+
+    for (final group in groups) {
+      if (showTitles) {
+        rows.add(_MenuRenderRow.header(group.category.title));
+      }
+
+      for (var index = 0; index < group.items.length; index += 2) {
+        rows.add(
+          _MenuRenderRow.products(
+            first: group.items[index],
+            second:
+                index + 1 < group.items.length ? group.items[index + 1] : null,
+          ),
+        );
+      }
+    }
+
+    return rows;
+  }
+
   int _getQuantity(String productId) {
     return CartRepository.instance.quantityOf(productId);
   }
@@ -564,6 +589,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   Widget build(BuildContext context) {
     final menuData = _menuData;
     final groups = _visibleGroups;
+    final menuRows = _buildMenuRows(groups);
     final hasBasket = _basketItemsCount > 0;
 
     return Scaffold(
@@ -796,15 +822,33 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                   hasBasket ? 190 : 32,
                                 ),
                                 sliver: SliverList.separated(
-                                  itemCount: groups.length,
-                                  itemBuilder: (context, groupIndex) {
-                                    final group = groups[groupIndex];
+                                  itemCount: menuRows.length,
+                                  itemBuilder: (context, index) {
+                                    final row = menuRows[index];
 
-                                    return _MenuCategorySection(
-                                      title: group.category.title,
-                                      showTitle: _selectedTabId == 'all',
-                                      items: group.items,
-                                      favoriteProductIds: _favorites.productIds,
+                                    if (row.isHeader) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          bottom: 2,
+                                        ),
+                                        child: LocalizedText(
+                                          row.title!,
+                                          style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.black,
+                                            height: 1.0,
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return _MenuProductRow(
+                                      first: row.first!,
+                                      second: row.second,
+                                      favoriteProductIds:
+                                          _favorites.productIds,
                                       favoritePendingProductIds:
                                           _favorites.busyProductIds,
                                       restaurantCanOrder:
@@ -813,28 +857,13 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                       getQuantity: _getQuantity,
                                       onProductTap: _openProductDetails,
                                       onFavoriteTap: _toggleProductFavorite,
-                                      onAddFirst: (productId) {
-                                        final item = group.items.firstWhere(
-                                          (x) => x.id == productId,
-                                        );
-                                        _addFirst(item);
-                                      },
-                                      onAdd: (productId) {
-                                        final item = group.items.firstWhere(
-                                          (x) => x.id == productId,
-                                        );
-                                        _increment(item);
-                                      },
-                                      onRemove: (productId) {
-                                        final item = group.items.firstWhere(
-                                          (x) => x.id == productId,
-                                        );
-                                        _decrement(item);
-                                      },
+                                      onAddFirst: _addFirst,
+                                      onAdd: _increment,
+                                      onRemove: _decrement,
                                     );
                                   },
                                   separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 18),
+                                      const SizedBox(height: 14),
                                 ),
                               ),
                           ],
@@ -946,10 +975,19 @@ class _HeroImageLayer extends StatelessWidget {
       return const _RestaurantHeroPlaceholder();
     }
 
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = (MediaQuery.sizeOf(context).width * pixelRatio)
+        .round()
+        .clamp(1, 2048)
+        .toInt();
+    final cacheHeight = (180 * pixelRatio).round().clamp(1, 1024).toInt();
+
     return Image.network(
       normalized,
       fit: BoxFit.cover,
-      filterQuality: FilterQuality.medium,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
+      filterQuality: FilterQuality.low,
       gaplessPlayback: true,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         if (wasSynchronouslyLoaded) {
@@ -1372,11 +1410,27 @@ class _MenuCategoryChip extends StatelessWidget {
   }
 }
 
-class _MenuCategorySection extends StatelessWidget {
-  const _MenuCategorySection({
-    required this.title,
-    required this.showTitle,
-    required this.items,
+class _MenuRenderRow {
+  const _MenuRenderRow.header(this.title)
+      : first = null,
+        second = null;
+
+  const _MenuRenderRow.products({
+    required this.first,
+    required this.second,
+  }) : title = null;
+
+  final String? title;
+  final RestaurantMenuItem? first;
+  final RestaurantMenuItem? second;
+
+  bool get isHeader => title != null;
+}
+
+class _MenuProductRow extends StatelessWidget {
+  const _MenuProductRow({
+    required this.first,
+    required this.second,
     required this.favoriteProductIds,
     required this.favoritePendingProductIds,
     required this.restaurantCanOrder,
@@ -1388,67 +1442,46 @@ class _MenuCategorySection extends StatelessWidget {
     required this.onRemove,
   });
 
-  final String title;
-  final bool showTitle;
-  final List<RestaurantMenuItem> items;
+  final RestaurantMenuItem first;
+  final RestaurantMenuItem? second;
   final Set<String> favoriteProductIds;
   final Set<String> favoritePendingProductIds;
   final bool restaurantCanOrder;
   final int Function(String productId) getQuantity;
   final void Function(RestaurantMenuItem item) onProductTap;
   final Future<void> Function(String productId) onFavoriteTap;
-  final void Function(String productId) onAddFirst;
-  final void Function(String productId) onAdd;
-  final void Function(String productId) onRemove;
+  final Future<void> Function(RestaurantMenuItem item) onAddFirst;
+  final Future<void> Function(RestaurantMenuItem item) onAdd;
+  final void Function(RestaurantMenuItem item) onRemove;
+
+  Widget _buildCard(RestaurantMenuItem item) {
+    final productId = item.id;
+
+    return _MenuProductCard(
+      item: item,
+      quantity: getQuantity(productId),
+      isFavorite: favoriteProductIds.contains(productId),
+      isFavoriteBusy: favoritePendingProductIds.contains(productId),
+      restaurantCanOrder: restaurantCanOrder,
+      onTap: () => onProductTap(item),
+      onFavoriteTap: () => onFavoriteTap(productId),
+      onAddFirst: () => onAddFirst(item),
+      onAdd: () => onAdd(item),
+      onRemove: () => onRemove(item),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final visibleItems = items;
-
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (showTitle) ...[
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 12),
-            child: LocalizedText(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: Colors.black,
-                height: 1.0,
-              ),
-            ),
-          ),
-        ],
-        GridView.builder(
-          itemCount: visibleItems.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            childAspectRatio: 0.72,
-          ),
-          itemBuilder: (context, index) {
-            final item = visibleItems[index];
-            final productId = item.id;
-
-            return _MenuProductCard(
-              item: item,
-              quantity: getQuantity(productId),
-              isFavorite: favoriteProductIds.contains(productId),
-              isFavoriteBusy: favoritePendingProductIds.contains(productId),
-              restaurantCanOrder: restaurantCanOrder,
-              onTap: () => onProductTap(item),
-              onFavoriteTap: () => onFavoriteTap(productId),
-              onAddFirst: () => onAddFirst(productId),
-              onAdd: () => onAdd(productId),
-              onRemove: () => onRemove(productId),
-            );
-          },
+        Expanded(child: _buildCard(first)),
+        const SizedBox(width: 14),
+        Expanded(
+          child: second == null
+              ? const SizedBox.shrink()
+              : _buildCard(second!),
         ),
       ],
     );
@@ -1850,7 +1883,17 @@ class _SmoothScrollBehavior extends ScrollBehavior {
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+    final platform = getPlatform(context);
+
+    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
+      return const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      );
+    }
+
+    return const ClampingScrollPhysics(
+      parent: AlwaysScrollableScrollPhysics(),
+    );
   }
 
   @override
