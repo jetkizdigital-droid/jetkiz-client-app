@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:jetkiz_mobile/core/config/appBuildInfo.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/firebase_options.dart';
@@ -96,6 +97,23 @@ class PushNotificationService {
     }
   }
 
+  Future<String?> _getTokenWithRetry({
+    int attempts = 3,
+    Duration delay = const Duration(milliseconds: 700),
+  }) async {
+    for (var attempt = 1; attempt <= attempts; attempt++) {
+      final token = await getToken();
+      if (token != null) return token;
+
+      if (attempt < attempts) {
+        _log('FCM token unavailable; retry $attempt/$attempts');
+        await Future<void>.delayed(delay);
+      }
+    }
+
+    return null;
+  }
+
   /// Restores a token for an authenticated user. If registration succeeds,
   /// backend pushEnabled is synchronized to true so legacy server state cannot
   /// silently suppress a device that is enabled in the app.
@@ -123,9 +141,9 @@ class PushNotificationService {
       return false;
     }
 
-    final token = await getToken();
+    final token = await _getTokenWithRetry();
     if (token == null) {
-      _log('registration failed because FCM token is empty');
+      _log('registration failed because FCM token is empty after retries');
       return false;
     }
 
@@ -158,9 +176,9 @@ class PushNotificationService {
       return false;
     }
 
-    final token = await getToken();
+    final token = await _getTokenWithRetry();
     if (token == null) {
-      _log('enable failed because FCM token is empty');
+      _log('enable failed because FCM token is empty after retries');
       return false;
     }
 
@@ -338,7 +356,7 @@ class PushNotificationService {
           'token': normalized,
           'platform': _backendPlatformName(),
           'deviceId': deviceId,
-          'appVersion': '1.0.0',
+          'appVersion': AppBuildInfo.fullVersion,
         },
       );
 
@@ -347,6 +365,7 @@ class PushNotificationService {
           payload['success'] == true || payload['deviceToken'] is Map;
       if (success) {
         _log('FCM token registered ${_maskToken(normalized)}');
+        await _syncLegacyClientDevice(normalized);
       } else {
         _log('FCM registration response did not confirm success');
       }
@@ -360,6 +379,26 @@ class PushNotificationService {
     } catch (error) {
       _log('FCM register failed: ${_safeError(error)}');
       return false;
+    }
+  }
+
+  Future<void> _syncLegacyClientDevice(String token) async {
+    try {
+      final deviceId = await _apiClient.getDeviceId();
+      await _apiClient.dio.post(
+        '/client-sessions/devices',
+        data: {
+          'deviceId': deviceId,
+          'platform': _backendPlatformName(),
+          'appVersion': AppBuildInfo.fullVersion,
+          'pushToken': token,
+        },
+      );
+      _log('legacy client device push token synchronized');
+    } catch (error) {
+      // PushDeviceToken is authoritative. This compatibility write is best-effort
+      // and must never turn a successful scoped registration into a failure.
+      _log('legacy client device sync failed: ${_safeError(error)}');
     }
   }
 

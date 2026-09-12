@@ -25,6 +25,25 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Verify client build info
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          pubspec = Path('pubspec.yaml').read_text(encoding='utf-8')
+          match = re.search(r'^version:\s*([^+\s]+)\+(\d+)\s*$', pubspec, re.M)
+          assert match, 'pubspec version must use versionName+buildNumber'
+          version_name, build_number = match.groups()
+
+          build_info = Path('lib/core/config/appBuildInfo.dart').read_text(encoding='utf-8')
+          assert f"versionName = '{version_name}'" in build_info, 'AppBuildInfo.versionName mismatch'
+          assert f"buildNumber = '{build_number}'" in build_info, 'AppBuildInfo.buildNumber mismatch'
+          print(f'Client build info verified: {version_name}+{build_number}')
+          PY
+
       - name: Verify production Firebase client configuration
         shell: bash
         run: |
@@ -54,6 +73,12 @@ jobs:
           grep -F 'jetkiz_default_channel' android/app/src/main/AndroidManifest.xml
           grep -F "'app': 'client'" lib/core/push/pushNotificationService.dart
           grep -F "'/notification-devices/register'" lib/core/push/pushNotificationService.dart
+          grep -F "'/client-sessions/devices'" lib/core/push/pushNotificationService.dart
+          grep -F "AppBuildInfo.fullVersion" lib/core/push/pushNotificationService.dart
+          if grep -F "'appVersion': '1.0.0'" lib/core/push/pushNotificationService.dart; then
+            echo 'Legacy hardcoded client appVersion detected'
+            exit 1
+          fi
           grep -F "'/client-settings/me'" lib/core/push/pushNotificationService.dart
           grep -F "productionBaseUrl = 'https://api.jetkiz.asia'" lib/core/config/appConfig.dart
           echo 'Production push sources verified'

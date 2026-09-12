@@ -1,15 +1,65 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
+import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/orders/presentation/ordersHistoryPage.dart';
+import 'package:jetkiz_mobile/features/payments/data/paymentCheckoutApi.dart';
 
-class PaymentSuccessPage extends StatelessWidget {
+class PaymentSuccessPage extends StatefulWidget {
   const PaymentSuccessPage({
     super.key,
     required this.orderId,
   });
 
   final String orderId;
+
+  @override
+  State<PaymentSuccessPage> createState() => _PaymentSuccessPageState();
+}
+
+class _PaymentSuccessPageState extends State<PaymentSuccessPage> {
+  late final PaymentCheckoutApi _payments;
+  PaymentOrderState? _state;
+  Timer? _retryTimer;
+  int _remainingCardSaveChecks = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _payments = PaymentCheckoutApi(ApiClient());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshPaymentState());
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshPaymentState() async {
+    final orderId = widget.orderId.trim();
+    if (orderId.isEmpty) return;
+
+    try {
+      final next = await _payments.getOrderPaymentState(orderId);
+      if (!mounted) return;
+      setState(() => _state = next);
+
+      if (next.isCardSavePending && _remainingCardSaveChecks > 0) {
+        _remainingCardSaveChecks -= 1;
+        _retryTimer?.cancel();
+        _retryTimer = Timer(
+          const Duration(seconds: 2),
+          _refreshPaymentState,
+        );
+      }
+    } catch (_) {
+      // Payment success is already server-confirmed before this page opens.
+      // A temporary status-refresh failure must not replace the paid screen.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +70,7 @@ class PaymentSuccessPage extends StatelessWidget {
         : 'Посмотреть статус заказа можно в разделе «Мои заказы».';
     final ordersLabel = isKk ? 'Менің тапсырыстарым' : 'Мои заказы';
     final homeLabel = isKk ? 'Басты бетке' : 'На главную';
+    final cardSaveMessage = _cardSaveMessage(isKk);
 
     return PopScope(
       canPop: false,
@@ -66,6 +117,32 @@ class PaymentSuccessPage extends StatelessWidget {
                     color: Color(0xFF657063),
                   ),
                 ),
+                if (cardSaveMessage != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _state?.isCardSaveFailed == true
+                          ? const Color(0xFFFFF4E5)
+                          : const Color(0xFFF0F7ED),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      cardSaveMessage,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4E594C),
+                      ),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 SizedBox(
                   width: double.infinity,
@@ -74,8 +151,9 @@ class PaymentSuccessPage extends StatelessWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => OrdersHistoryPage(
-                            initialOrderId:
-                                orderId.trim().isEmpty ? null : orderId.trim(),
+                            initialOrderId: widget.orderId.trim().isEmpty
+                                ? null
+                                : widget.orderId.trim(),
                           ),
                         ),
                       );
@@ -128,5 +206,25 @@ class PaymentSuccessPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String? _cardSaveMessage(bool isKk) {
+    final state = _state;
+    if (state == null || !state.cardSaveRequested) return null;
+
+    if (state.isCardSaved) {
+      return isKk
+          ? 'Карта келесі төлемдер үшін сақталды.'
+          : 'Карта сохранена для следующих оплат.';
+    }
+    if (state.isCardSaveFailed) {
+      return isKk
+          ? 'Төлем өтті, бірақ картаны сақтау мүмкін болмады. Тапсырыс сәтті рәсімделді.'
+          : 'Оплата прошла, но сохранить карту не удалось. Заказ успешно оформлен.';
+    }
+
+    return isKk
+        ? 'Төлем өтті. Картаны сақтау әлі расталып жатыр.'
+        : 'Оплата прошла. Сохранение карты ещё подтверждается.';
   }
 }
