@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/features/payments/data/paymentMethodsRepository.dart';
 import 'package:jetkiz_mobile/features/payments/domain/savedPaymentCard.dart';
@@ -11,7 +13,7 @@ class PaymentMethodsPage extends StatefulWidget {
   State<PaymentMethodsPage> createState() => _PaymentMethodsPageState();
 }
 
-class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
+class _PaymentMethodsPageState extends State<PaymentMethodsPage> with WidgetsBindingObserver {
   static const Color _green = Color(0xFF489F2A);
   static const Color _background = Color(0xFFF7FAF5);
 
@@ -22,15 +24,32 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
   String? _errorMessage;
   String? _deletingCardId;
   List<SavedPaymentCard> _cards = const [];
+  Timer? _emptyRefreshTimer;
+  int _emptyRefreshAttempts = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadCards();
   }
 
-  Future<void> _loadCards() async {
-    if (mounted) {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _emptyRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_loadCards(showLoading: false));
+    }
+  }
+
+  Future<void> _loadCards({bool showLoading = true}) async {
+    if (mounted && showLoading) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -43,7 +62,14 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
       setState(() {
         _cards = cards;
         _isLoading = false;
+        _errorMessage = null;
       });
+      if (cards.isEmpty) {
+        _scheduleEmptyRefresh();
+      } else {
+        _emptyRefreshTimer?.cancel();
+        _emptyRefreshAttempts = 0;
+      }
     } on PaymentMethodsException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -51,6 +77,15 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _scheduleEmptyRefresh() {
+    if (!mounted || _cards.isNotEmpty || _emptyRefreshAttempts >= 15) return;
+    _emptyRefreshTimer?.cancel();
+    _emptyRefreshAttempts += 1;
+    _emptyRefreshTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) unawaited(_loadCards(showLoading: false));
+    });
   }
 
   Future<void> _openCard(SavedPaymentCard card) async {
@@ -93,9 +128,12 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     try {
       await _repository.deleteCard(card.id);
       if (!mounted) return;
+      setState(() {
+        _cards = _cards.where((item) => item.id != card.id).toList();
+      });
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(strings.cardDeleted)));
-      await _loadCards();
+      await _loadCards(showLoading: false);
     } on PaymentMethodsException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -296,19 +334,27 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
           ? const Center(child: CircularProgressIndicator(color: _green))
           : _errorMessage != null
               ? _buildError(strings)
-              : _cards.isEmpty
-                  ? _buildEmptyState(strings)
-                  : RefreshIndicator(
-                      onRefresh: _loadCards,
-                      color: _green,
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
-                        children: _cards
-                            .map((card) => _buildCard(card, strings))
-                            .toList(),
-                      ),
-                    ),
+              : RefreshIndicator(
+                  onRefresh: () => _loadCards(showLoading: false),
+                  color: _green,
+                  child: _cards.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.sizeOf(context).height * 0.68,
+                              child: _buildEmptyState(strings),
+                            ),
+                          ],
+                        )
+                      : ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+                          children: _cards
+                              .map((card) => _buildCard(card, strings))
+                              .toList(),
+                        ),
+                ),
     );
   }
 }
