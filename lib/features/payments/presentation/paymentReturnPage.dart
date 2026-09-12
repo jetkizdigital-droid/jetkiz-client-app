@@ -187,8 +187,9 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
           MaterialPageRoute(
             builder: (_) => PaymentSuccessPage(
               orderId: widget.orderId,
-              cardSaveStatus:
-                  state.cardSaveRequested ? state.normalizedCardSaveStatus : null,
+              cardSaveStatus: state.cardSaveRequested
+                  ? state.normalizedCardSaveStatus
+                  : null,
             ),
           ),
           (route) => false,
