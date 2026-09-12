@@ -1,6 +1,38 @@
 import 'package:dio/dio.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 
+enum OtpDeliveryChannel {
+  auto,
+  whatsapp,
+  sms,
+}
+
+extension OtpDeliveryChannelWire on OtpDeliveryChannel {
+  String get wireName {
+    switch (this) {
+      case OtpDeliveryChannel.auto:
+        return 'AUTO';
+      case OtpDeliveryChannel.whatsapp:
+        return 'WHATSAPP';
+      case OtpDeliveryChannel.sms:
+        return 'SMS';
+    }
+  }
+
+  static OtpDeliveryChannel? tryParse(dynamic value) {
+    switch (value?.toString().trim().toUpperCase()) {
+      case 'AUTO':
+        return OtpDeliveryChannel.auto;
+      case 'WHATSAPP':
+        return OtpDeliveryChannel.whatsapp;
+      case 'SMS':
+        return OtpDeliveryChannel.sms;
+      default:
+        return null;
+    }
+  }
+}
+
 class AuthApi {
   final ApiClient _apiClient;
 
@@ -8,12 +40,14 @@ class AuthApi {
 
   Future<RequestSmsCodeResponse> requestSmsCode({
     required String phone,
+    OtpDeliveryChannel deliveryChannel = OtpDeliveryChannel.auto,
   }) async {
     try {
       final response = await _apiClient.dio.post(
         '/auth/request-code',
         data: {
           'phone': phone,
+          'deliveryChannel': deliveryChannel.wireName,
         },
       );
 
@@ -79,6 +113,8 @@ class RequestSmsCodeResponse {
   final int? ttlSeconds;
   final int? resendCooldownSeconds;
   final int? maxAttempts;
+  final OtpDeliveryChannel? deliveryChannel;
+  final String? deliveryProvider;
 
   const RequestSmsCodeResponse({
     required this.success,
@@ -88,6 +124,8 @@ class RequestSmsCodeResponse {
     required this.ttlSeconds,
     required this.resendCooldownSeconds,
     required this.maxAttempts,
+    required this.deliveryChannel,
+    required this.deliveryProvider,
   });
 
   factory RequestSmsCodeResponse.fromJson(Map<String, dynamic> json) {
@@ -109,6 +147,12 @@ class RequestSmsCodeResponse {
       maxAttempts: _tryParseInt(
         json['maxAttempts'] ?? json['max_attempts'],
       ),
+      deliveryChannel: OtpDeliveryChannelWire.tryParse(
+        json['deliveryChannel'] ?? json['delivery_channel'],
+      ),
+      deliveryProvider: _nullableString(
+        json['deliveryProvider'] ?? json['delivery_provider'],
+      ),
     );
   }
 }
@@ -122,6 +166,11 @@ int? _tryParseInt(dynamic value) {
   if (value == null) return null;
   if (value is int) return value;
   return int.tryParse(value.toString());
+}
+
+String? _nullableString(dynamic value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty || text.toLowerCase() == 'null' ? null : text;
 }
 
 class VerifySmsCodeResponse {
