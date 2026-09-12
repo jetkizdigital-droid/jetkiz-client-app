@@ -213,6 +213,60 @@ class PushNotificationService {
     return true;
   }
 
+  /// Reconciles the real device state instead of trusting only the UI toggle.
+  /// If OS permission already exists, this also repairs a missing/stale backend
+  /// token registration for the current device.
+  Future<bool> ensureCurrentDeviceReady({
+    bool requestPermissionIfNeeded = false,
+  }) async {
+    if (!await isEnabled()) return false;
+
+    final accessToken = await _apiClient.getAccessToken();
+    if (accessToken == null || accessToken.trim().isEmpty) return false;
+
+    final permissionGranted = await _ensurePermission(
+      requestIfNeeded: requestPermissionIfNeeded,
+    );
+    if (!permissionGranted) return false;
+
+    final token = await _getTokenWithRetry();
+    if (token == null) return false;
+
+    if (!await _sendTokenToBackend(token)) return false;
+    if (!await _setBackendPushEnabled(true)) return false;
+
+    return _isCurrentDeviceRegistered();
+  }
+
+  Future<bool> _isCurrentDeviceRegistered() async {
+    try {
+      final deviceId = await _apiClient.getDeviceId();
+      final response = await _apiClient.dio.get('/notification-devices');
+      final root = _asMap(response.data);
+      final rawItems = root['items'];
+      if (rawItems is! List) return false;
+
+      for (final raw in rawItems) {
+        final item = _asMap(raw);
+        final registeredDeviceId = item['deviceId']?.toString().trim() ?? '';
+        final app = item['app']?.toString().trim().toLowerCase() ?? '';
+        final isActive = item['isActive'] == true;
+        final revokedAt = item['revokedAt'];
+
+        if (registeredDeviceId == deviceId &&
+            (app == 'client' || app.isEmpty) &&
+            isActive &&
+            revokedAt == null) {
+          return true;
+        }
+      }
+    } catch (error) {
+      _log('device registration verification failed: ${_safeError(error)}');
+    }
+
+    return false;
+  }
+
   Future<bool?> getBackendPushEnabled() async {
     final accessToken = await _apiClient.getAccessToken();
     if (accessToken == null || accessToken.trim().isEmpty) return null;
