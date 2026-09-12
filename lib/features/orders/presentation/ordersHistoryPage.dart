@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -27,7 +29,8 @@ class OrdersHistoryPage extends StatefulWidget {
   State<OrdersHistoryPage> createState() => _OrdersHistoryPageState();
 }
 
-class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
+class _OrdersHistoryPageState extends State<OrdersHistoryPage>
+    with WidgetsBindingObserver {
   static const int _pageSize = 20;
   static const Color _green = Color(0xFF489F2A);
   static const Color _bg = Color(0xFFF8F8F8);
@@ -54,6 +57,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _apiClient = ApiClient();
     _ordersApi = OrdersApi(_apiClient);
@@ -65,10 +69,18 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_loading && !_refreshing) {
+      unawaited(_refresh());
+    }
   }
 
   Future<void> _trackScreenViewOnce() async {

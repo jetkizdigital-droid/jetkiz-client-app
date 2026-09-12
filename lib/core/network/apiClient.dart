@@ -22,6 +22,11 @@ class SessionRefreshTemporarilyUnavailable {
 }
 
 class ApiClient {
+  static const bool _networkDebug = bool.fromEnvironment(
+    'JETKIZ_NETWORK_DEBUG',
+    defaultValue: false,
+  );
+
   ApiClient._internal() {
     _dio = Dio(
       BaseOptions(
@@ -54,21 +59,21 @@ class ApiClient {
             }
           }
 
-          if (kDebugMode) {
+          if (kDebugMode && _networkDebug) {
             _logRequest(options);
           }
 
           handler.next(options);
         },
         onResponse: (response, handler) {
-          if (kDebugMode) {
+          if (kDebugMode && _networkDebug) {
             _logResponse(response);
           }
 
           handler.next(response);
         },
         onError: (error, handler) async {
-          if (kDebugMode) {
+          if (kDebugMode && _networkDebug) {
             _logError(error);
           }
 
