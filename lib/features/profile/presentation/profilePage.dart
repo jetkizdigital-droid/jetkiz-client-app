@@ -311,7 +311,7 @@ class _ProfilePageState extends State<ProfilePage> {
         icon: Icons.description_outlined,
         label: strings.profilePublicOffer,
         iconColor: const Color(0xFF6366F1),
-        onTap: () => _openWebPage('https://jetkiz.asia/privacy'),
+        onTap: () => _openWebPage('https://jetkiz.asia/offer'),
       ),
     ];
 
