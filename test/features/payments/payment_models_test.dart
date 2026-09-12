@@ -114,6 +114,45 @@ void main() {
       expect(voided.isTerminalWithoutSuccess, isTrue);
       expect(refunded.isTerminalWithoutSuccess, isTrue);
     });
+
+    test('exposes server-confirmed saved-card persistence state', () {
+      final saved = PaymentOrderState.fromJson({
+        'orderId': 'order-save-1',
+        'paymentMethod': 'CARD',
+        'paymentStatus': 'PAID',
+        'paymentRecordStatus': 'PAID',
+        'fundsSecured': true,
+        'captured': true,
+        'cardSaveRequested': true,
+        'cardSaveStatus': 'SAVED',
+        'savedPaymentMethodId': 'method-1',
+      });
+      final pending = PaymentOrderState.fromJson({
+        'orderId': 'order-save-2',
+        'paymentMethod': 'CARD',
+        'paymentStatus': 'PAID',
+        'paymentRecordStatus': 'PAID',
+        'fundsSecured': true,
+        'captured': true,
+        'cardSaveRequested': true,
+        'cardSaveStatus': 'PENDING',
+      });
+      final failed = PaymentOrderState.fromJson({
+        'orderId': 'order-save-3',
+        'paymentMethod': 'CARD',
+        'paymentStatus': 'PAID',
+        'paymentRecordStatus': 'PAID',
+        'fundsSecured': true,
+        'captured': true,
+        'cardSaveRequested': true,
+        'cardSaveStatus': 'FAILED',
+      });
+
+      expect(saved.isCardSaved, isTrue);
+      expect(saved.savedPaymentMethodId, 'method-1');
+      expect(pending.isCardSavePending, isTrue);
+      expect(failed.isCardSaveFailed, isTrue);
+    });
   });
 
   group('SavedPaymentCard', () {
