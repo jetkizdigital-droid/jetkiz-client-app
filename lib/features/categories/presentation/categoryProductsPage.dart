@@ -423,8 +423,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                           first: row.first!,
                           second: row.second,
                           favoriteProductIds: _favorites.productIds,
-                          favoritePendingProductIds:
-                              _favorites.busyProductIds,
+                          favoritePendingProductIds: _favorites.busyProductIds,
                           favoritesLoading: _favorites.isInitializing,
                           getQuantity: _getQuantity,
                           onProductTap: _openProductDetails,
@@ -628,9 +627,7 @@ class _CategoryProductRow extends StatelessWidget {
         Expanded(child: _buildCard(first)),
         const SizedBox(width: 14),
         Expanded(
-          child: second == null
-              ? const SizedBox.shrink()
-              : _buildCard(second!),
+          child: second == null ? const SizedBox.shrink() : _buildCard(second!),
         ),
       ],
     );
