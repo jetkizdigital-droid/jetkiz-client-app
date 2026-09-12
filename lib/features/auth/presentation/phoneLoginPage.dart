@@ -131,7 +131,9 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
     return _isAgreementAccepted && digits.length == 10 && !_isSubmitting;
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({
+    OtpDeliveryChannel deliveryChannel = OtpDeliveryChannel.auto,
+  }) async {
     if (!_canSubmit) return;
 
     final localDigits = kazakhstanLocalPhoneDigits(_phoneController.text);
@@ -144,6 +146,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
     try {
       final response = await _authApi.requestSmsCode(
         phone: normalizedPhone,
+        deliveryChannel: deliveryChannel,
       );
 
       if (!mounted) return;
@@ -158,6 +161,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
           builder: (_) => SmsCodePage(
             phone: normalizedPhone,
             resendAvailableAt: response.resendAvailableAt,
+            initialDeliveryChannel: response.deliveryChannel ?? deliveryChannel,
             onAuthorized: widget.onAuthorized,
           ),
         ),
@@ -389,7 +393,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
             SizedBox(
               height: 54,
               child: ElevatedButton(
-                onPressed: _canSubmit ? _submit : null,
+                onPressed: _canSubmit ? () => _submit() : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       _canSubmit ? primaryGreen : const Color(0xFFE5E5E5),
@@ -415,6 +419,22 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                           fontWeight: FontWeight.w800,
                         ),
                       ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: _canSubmit
+                  ? () => _submit(
+                        deliveryChannel: OtpDeliveryChannel.sms,
+                      )
+                  : null,
+              child: LocalizedText(
+                strings.loginSendSmsCode,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1565C0),
+                ),
               ),
             ),
           ],

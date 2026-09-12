@@ -505,6 +505,34 @@ class AppStrings {
       : ' келісетінімді және дербес деректерімді жинауға әрі өңдеуге келісім беретінімді растаймын.';
   String get loginContinue => _ru ? 'Продолжить' : 'Жалғастыру';
   String get loginSendCode => _ru ? 'Отправить код' : 'Кодты жіберу';
+  String get loginSendSmsCode {
+    if (_ru) {
+      return 'Получить код по SMS';
+    }
+    return 'Кодты SMS арқылы алу';
+  }
+
+  String get otpSentViaSms {
+    if (_ru) {
+      return 'Код отправлен по SMS';
+    }
+    return 'Код SMS арқылы жіберілді';
+  }
+
+  String get otpSentViaWhatsApp {
+    if (_ru) {
+      return 'Код отправлен в WhatsApp';
+    }
+    return 'Код WhatsApp арқылы жіберілді';
+  }
+
+  String get otpSendViaSms {
+    if (_ru) {
+      return 'Отправить по SMS';
+    }
+    return 'SMS арқылы жіберу';
+  }
+
   String get loginCodeSendFailed => _ru
       ? 'Не удалось отправить код. Попробуйте позже.'
       : 'Кодты жіберу мүмкін болмады. Кейінірек қайталап көріңіз.';
