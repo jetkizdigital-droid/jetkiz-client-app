@@ -41,10 +41,13 @@ void main() {
     expect(value.text, '(700) 123-45-67');
   });
 
-  test('keeps the cursor near the edited digit instead of forcing it to end', () {
-    final value = edit('(700) 123-45-67', cursor: 9);
+  test(
+    'keeps the cursor near the edited digit instead of forcing it to end',
+    () {
+      final value = edit('(700) 123-45-67', cursor: 9);
 
-    expect(value.text, '(700) 123-45-67');
-    expect(value.selection.extentOffset, lessThan(value.text.length));
-  });
+      expect(value.text, '(700) 123-45-67');
+      expect(value.selection.extentOffset, lessThan(value.text.length));
+    },
+  );
 }
