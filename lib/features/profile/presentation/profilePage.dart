@@ -14,7 +14,7 @@ import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
-import 'package:jetkiz_mobile/features/orders/presentation/ordersPage.dart';
+import 'package:jetkiz_mobile/features/orders/presentation/ordersHistoryPage.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentMethodsPage.dart';
 import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
 import 'package:jetkiz_mobile/features/profile/domain/profileData.dart';
@@ -296,7 +296,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const OrdersPage(),
+              builder: (_) => const OrdersHistoryPage(),
             ),
           );
         },
