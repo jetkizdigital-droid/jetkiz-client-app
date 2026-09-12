@@ -132,6 +132,9 @@ class PaymentCheckoutSession {
     this.currency,
     this.tokenizationRequested = false,
     this.savedPaymentMethodId,
+    this.cardSaveStatus,
+    this.cardSaveFailureCode,
+    this.cardSavedAt,
   });
 
   final String paymentId;
@@ -144,6 +147,9 @@ class PaymentCheckoutSession {
   final String? currency;
   final bool tokenizationRequested;
   final String? savedPaymentMethodId;
+  final String? cardSaveStatus;
+  final String? cardSaveFailureCode;
+  final DateTime? cardSavedAt;
 
   factory PaymentCheckoutSession.fromJson(Map<String, dynamic> json) {
     final paymentId = json['paymentId']?.toString().trim() ?? '';
@@ -166,6 +172,9 @@ class PaymentCheckoutSession {
       currency: _nullableString(json['currency']),
       tokenizationRequested: json['tokenizationRequested'] == true,
       savedPaymentMethodId: _nullableString(json['savedPaymentMethodId']),
+      cardSaveStatus: _nullableString(json['cardSaveStatus']),
+      cardSaveFailureCode: _nullableString(json['cardSaveFailureCode']),
+      cardSavedAt: _nullableDateTime(json['cardSavedAt']),
     );
   }
 
@@ -198,6 +207,11 @@ class PaymentOrderState {
     this.provider,
     this.providerPaymentId,
     this.checkoutUrl,
+    this.cardSaveRequested = false,
+    this.cardSaveStatus,
+    this.savedPaymentMethodId,
+    this.cardSaveFailureCode,
+    this.cardSavedAt,
   });
 
   final String orderId;
@@ -209,6 +223,11 @@ class PaymentOrderState {
   final String? checkoutUrl;
   final bool fundsSecured;
   final bool captured;
+  final bool cardSaveRequested;
+  final String? cardSaveStatus;
+  final String? savedPaymentMethodId;
+  final String? cardSaveFailureCode;
+  final DateTime? cardSavedAt;
 
   factory PaymentOrderState.fromJson(Map<String, dynamic> json) {
     final orderId = json['orderId']?.toString().trim() ?? '';
@@ -226,6 +245,11 @@ class PaymentOrderState {
       checkoutUrl: _nullableString(json['checkoutUrl']),
       fundsSecured: json['fundsSecured'] == true,
       captured: json['captured'] == true,
+      cardSaveRequested: json['cardSaveRequested'] == true,
+      cardSaveStatus: _nullableString(json['cardSaveStatus']),
+      savedPaymentMethodId: _nullableString(json['savedPaymentMethodId']),
+      cardSaveFailureCode: _nullableString(json['cardSaveFailureCode']),
+      cardSavedAt: _nullableDateTime(json['cardSavedAt']),
     );
   }
 
@@ -252,6 +276,22 @@ class PaymentOrderState {
     return parsed;
   }
 
+  String get normalizedCardSaveStatus =>
+      (cardSaveStatus ?? '').trim().toUpperCase();
+
+  bool get isCardSaved =>
+      cardSaveRequested &&
+      normalizedCardSaveStatus == 'SAVED' &&
+      (savedPaymentMethodId?.trim().isNotEmpty ?? false);
+
+  bool get isCardSavePending =>
+      cardSaveRequested &&
+      (normalizedCardSaveStatus.isEmpty ||
+          normalizedCardSaveStatus == 'REQUESTED');
+
+  bool get isCardSaveFailed =>
+      cardSaveRequested && normalizedCardSaveStatus == 'FAILED';
+
   bool get isFailed {
     final status = paymentStatus.toUpperCase();
     final record = paymentRecordStatus?.toUpperCase();
@@ -266,6 +306,12 @@ class PaymentOrderState {
         record == 'VOIDED' ||
         record == 'REFUNDED';
   }
+}
+
+DateTime? _nullableDateTime(dynamic value) {
+  final raw = value?.toString().trim() ?? '';
+  if (raw.isEmpty || raw.toLowerCase() == 'null') return null;
+  return DateTime.tryParse(raw);
 }
 
 String? _nullableString(dynamic value) {
