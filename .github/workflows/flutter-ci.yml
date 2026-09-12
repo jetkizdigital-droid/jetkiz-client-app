@@ -131,6 +131,8 @@ jobs:
           grep -F "versionCode='2'" /tmp/client-badging.txt
           grep -F "versionName='1.0.1'" /tmp/client-badging.txt
           grep -F "application-label:'JETKIZ'" /tmp/client-badging.txt
+          grep -F "targetSdkVersion:'36'" /tmp/client-badging.txt
+          grep -F "compileSdkVersion='36'" /tmp/client-badging.txt
           grep -F 'android.permission.POST_NOTIFICATIONS' /tmp/client-permissions.txt
           grep -F 'com.google.firebase.MESSAGING_EVENT' /tmp/client-manifest.txt
           grep -F 'com.google.android.c2dm.intent.RECEIVE' /tmp/client-manifest.txt
