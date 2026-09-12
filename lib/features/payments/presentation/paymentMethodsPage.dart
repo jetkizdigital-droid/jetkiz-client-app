@@ -13,7 +13,8 @@ class PaymentMethodsPage extends StatefulWidget {
   State<PaymentMethodsPage> createState() => _PaymentMethodsPageState();
 }
 
-class _PaymentMethodsPageState extends State<PaymentMethodsPage> with WidgetsBindingObserver {
+class _PaymentMethodsPageState extends State<PaymentMethodsPage>
+    with WidgetsBindingObserver {
   static const Color _green = Color(0xFF489F2A);
   static const Color _background = Color(0xFFF7FAF5);
 
@@ -205,7 +206,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> with WidgetsBin
             ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
-              onPressed: _loadCards,
+              onPressed: () => _loadCards(),
               icon: const Icon(Icons.refresh_rounded),
               label: Text(strings.retry),
             ),
