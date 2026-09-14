@@ -509,8 +509,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
 
     if (reviewRatings.isEmpty) return '—';
 
-    final average =
-        reviewRatings.reduce((sum, rating) => sum + rating) / reviewRatings.length;
+    final average = reviewRatings.reduce((sum, rating) => sum + rating) /
+        reviewRatings.length;
     return average.toStringAsFixed(1);
   }
 
