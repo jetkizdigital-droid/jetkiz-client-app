@@ -1,3 +1,4 @@
+import 'package:jetkiz_mobile/core/config/appBuildInfo.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 
 class AppStrings {
@@ -486,7 +487,9 @@ class AppStrings {
       _ru ? 'Данные профиля сохранены' : 'Профиль деректері сақталды';
   String get pageOpenFailed =>
       _ru ? 'Не удалось открыть страницу' : 'Бетті ашу мүмкін болмады';
-  String get appVersion => _ru ? 'Версия 1.0.0' : 'Нұсқа 1.0.0';
+  String get appVersion => _ru
+      ? 'Версия ${AppBuildInfo.versionName}'
+      : 'Нұсқа ${AppBuildInfo.versionName}';
   String get loggedOutMessage =>
       _ru ? 'Вы вышли из аккаунта' : 'Сіз аккаунттан шықтыңыз';
   String get languageRussian => _ru ? 'Русский' : 'Орысша';
