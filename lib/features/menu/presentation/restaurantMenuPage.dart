@@ -467,8 +467,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     final dynamic restaurant = _menuData?.restaurant;
 
     final raw = _firstNonEmpty([
-      widget.restaurantImageUrl,
       _readDynamicString(restaurant, 'coverImageUrl'),
+      widget.restaurantImageUrl,
       _readDynamicString(restaurant, 'fullCoverImageUrl'),
       _readDynamicString(restaurant, 'imageUrl'),
       _readDynamicString(restaurant, 'fullImageUrl'),
@@ -496,9 +496,22 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   }
 
   String get _restaurantRatingText {
-    final rating = _menuData?.restaurant.ratingAvg;
-    if (rating == null || rating <= 0) return '—';
-    return rating.toStringAsFixed(1);
+    final menuRating = _menuData?.restaurant.ratingAvg;
+    if (menuRating != null && menuRating > 0) {
+      return menuRating.toStringAsFixed(1);
+    }
+
+    final reviewRatings = _reviewsData?.items
+            .map((review) => review.rating)
+            .where((rating) => rating > 0)
+            .toList() ??
+        const <int>[];
+
+    if (reviewRatings.isEmpty) return '—';
+
+    final average =
+        reviewRatings.reduce((sum, rating) => sum + rating) / reviewRatings.length;
+    return average.toStringAsFixed(1);
   }
 
   String get _restaurantDeliveryText {
@@ -974,28 +987,21 @@ class _HeroImageLayer extends StatelessWidget {
       return const _RestaurantHeroPlaceholder();
     }
 
-    return Image.network(
-      normalized,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.medium,
-      gaplessPlayback: true,
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (wasSynchronouslyLoaded) {
-          return child;
-        }
-
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          child: frame != null ? child : const _RestaurantHeroPlaceholder(),
-        );
-      },
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return const _RestaurantHeroPlaceholder();
-      },
-      errorBuilder: (_, __, ___) {
-        return const _RestaurantHeroPlaceholder();
-      },
+    return SizedBox.expand(
+      child: Image.network(
+        normalized,
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const _RestaurantHeroPlaceholder();
+        },
+        errorBuilder: (_, __, ___) {
+          return const _RestaurantHeroPlaceholder();
+        },
+      ),
     );
   }
 }
