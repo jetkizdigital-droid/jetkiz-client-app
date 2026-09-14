@@ -689,8 +689,8 @@ class _PinnedRestaurantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ratingText = restaurant.ratingAvg == 0
-        ? '0,0'
+    final ratingText = restaurant.ratingAvg <= 0
+        ? '—'
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
     final isOpen = restaurant.isOpenForOrders;
     final imageUrl = restaurant.fullCoverImageUrl?.trim();
@@ -767,12 +767,18 @@ class _PinnedRestaurantCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 19,
+                      color: Color(0xFF489F2A),
+                    ),
+                    const SizedBox(width: 4),
                     LocalizedText(
                       ratingText,
                       style: const TextStyle(
                         color: Colors.black,
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(width: 6),
