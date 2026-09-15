@@ -43,6 +43,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       PaymentMethodsRepository.instance;
   final PaymentPendingStore _paymentPendingStore = PaymentPendingStore();
 
+  late final Future<void> _initialPaymentCleanup;
+
   String? _selectedCardId;
   List<SavedPaymentCard> _savedCards = const [];
   bool _useNewCard = true;
@@ -77,7 +79,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _addressRepository.addListener(_handleExternalStateChanged);
     _loadDeliveryFee();
     _loadSavedCards();
-    unawaited(_discardAbandonedPaymentReference());
+    _initialPaymentCleanup = _discardAbandonedPaymentReference();
   }
 
   @override
@@ -181,6 +183,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final cartState = _cartRepository.state;
 
     if (_isSubmitting || _orderPlaced) return;
+
+    await _initialPaymentCleanup;
+    if (!mounted || _isSubmitting || _orderPlaced) return;
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
