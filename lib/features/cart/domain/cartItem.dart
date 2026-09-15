@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
+import 'package:jetkiz_mobile/core/network/networkAssetUrl.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 enum CartItemSyncState {
@@ -159,7 +160,7 @@ class CartItem {
       titleKk: _readString(json['titleKk']),
       price: _readInt(json['price']),
       quantity: _readInt(json['quantity'], fallback: 1),
-      imageUrl: _readNullableString(json['imageUrl']),
+      imageUrl: normalizeNetworkAssetUrl(json['imageUrl']),
       description: _readNullableString(json['description']),
       weight: _readNullableString(json['weight']),
       syncState: _readSyncState(json['syncState']),
