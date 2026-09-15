@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/core/network/networkAssetUrl.dart';
 
 abstract class ProductSyncClient {
   Future<List<ProductSyncItem>> syncProducts(List<String> productIds);
@@ -136,7 +137,9 @@ class ProductSyncItem {
       restaurantId: _readNullableString(json['restaurantId']),
       titleRu: _readNullableString(json['titleRu']),
       titleKk: _readNullableString(json['titleKk']),
-      effectiveImageUrl: _readNullableString(json['effectiveImageUrl']),
+      effectiveImageUrl: normalizeNetworkAssetUrl(
+        json['effectiveImageUrl'] ?? json['imageUrl'],
+      ),
       restaurant: json['restaurant'] is Map
           ? ProductSyncRestaurant.fromJson(
               Map<String, dynamic>.from(json['restaurant'] as Map),
