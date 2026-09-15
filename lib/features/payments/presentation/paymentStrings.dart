@@ -14,7 +14,7 @@ class PaymentStrings {
   }
 
   String get paymentMethods => _kk ? 'Төлем тәсілдері' : 'Способы оплаты';
-  String get addCard => _kk ? 'Басқа картамен төлеу' : 'Оплатить другой картой';
+  String get addCard => _kk ? 'Жаңа карта қосу' : 'Добавить новую карту';
   String get card => _kk ? 'Карта' : 'Карта';
   String get noSavedCards =>
       _kk ? 'Сақталған карталар әзірге жоқ' : 'У вас пока нет сохранённых карт';
@@ -42,8 +42,8 @@ class PaymentStrings {
   String get cardholderName => _kk ? 'Картадағы аты-жөні' : 'Имя на карте';
   String get saveCard => _kk ? 'Картаны сақтау' : 'Сохранить карту';
   String get saveCardForFuture => _kk
-      ? 'Келесі төлемдер үшін картаны сақтау'
-      : 'Сохранить карту для следующих оплат';
+      ? 'Болашақ төлемдер үшін картаны сақтау'
+      : 'Сохранить карту для будущих платежей';
   String get paymentCheck => _kk ? 'Төлем' : 'Оплата';
   String get paymentCheckHint => _kk
       ? 'Төлем нәтижесін тексеріп жатырмыз.'
@@ -61,7 +61,7 @@ class PaymentStrings {
       _kk ? 'Бірнеше секунд күтіңіз.' : 'Подождите несколько секунд.';
   String get checkAgain => _kk ? 'Қайта тексеру' : 'Проверить снова';
   String get backToOrder => _kk ? 'Артқа' : 'Назад';
-  String get openPayLink => _kk ? 'Төлемді жалғастыру' : 'Продолжить оплату';
+  String get openPayLink => _kk ? 'Төлемді ашу' : 'Открыть оплату';
   String get understood => _kk ? 'Түсінікті' : 'Понятно';
   String get bankCard => _kk ? 'Банк картасы' : 'Банковская карта';
   String get issuerBank => _kk ? 'Банк' : 'Банк';
@@ -79,7 +79,7 @@ class PaymentStrings {
   String get unfinishedPaymentHint => _kk
       ? 'Қайта төлем жасамас бұрын оның мәртебесін тексереміз.'
       : 'Сначала проверим её статус, чтобы исключить повторное списание.';
-  String get resumePayment => _kk ? 'Төлемді жалғастыру' : 'Продолжить оплату';
+  String get resumePayment => _kk ? 'Төлемді ашу' : 'Открыть оплату';
   String get verifyPreviousPayment =>
       _kk ? 'Төлемді тексеру' : 'Проверить оплату';
   String get previousPaymentConfirmed => _kk
