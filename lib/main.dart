@@ -28,7 +28,7 @@ import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnBridge.dart';
-import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnRecoveryPage.dart';
+import 'package:jetkiz_mobile/features/orders/presentation/ordersHistoryPage.dart';
 import 'package:jetkiz_mobile/firebase_options.dart';
 
 Future<void> main() async {
@@ -108,12 +108,13 @@ Future<void> _handlePaymentReturn(Uri uri) async {
   }
   if (navigator == null) return;
 
-  final providerResult = uri.queryParameters['result']?.trim();
+  // New checkout flow deliberately keeps no resumable local payment attempt.
+  // If Android recreated the app while the provider was open, there is no
+  // stale amount/session to resume. Send the user to orders, where a payment
+  // confirmed by the backend/webhook will appear normally.
   await navigator.push(
     MaterialPageRoute(
-      builder: (_) => PaymentReturnRecoveryPage(
-        providerResult: providerResult?.isEmpty == true ? null : providerResult,
-      ),
+      builder: (_) => const OrdersHistoryPage(),
     ),
   );
 }
