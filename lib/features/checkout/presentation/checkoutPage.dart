@@ -556,7 +556,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       _AddNewCardTile(
                         isSelected: true,
                         label: paymentStrings.bankCard,
-                        onTap: () {},
+                        onTap: null,
                       )
                     else ...[
                       ..._savedCards.map(
@@ -1055,7 +1055,7 @@ class _AddNewCardTile extends StatelessWidget {
 
   final bool isSelected;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
