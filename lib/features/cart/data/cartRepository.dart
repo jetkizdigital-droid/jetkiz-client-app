@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/core/network/networkAssetUrl.dart';
 
 import 'cartPersistence.dart';
 import 'productSyncApi.dart';
@@ -194,7 +195,7 @@ class CartRepository extends ChangeNotifier {
         titleKk:
             normalizedTitleKk.isEmpty ? existing.titleKk : normalizedTitleKk,
         quantity: existing.quantity + quantity,
-        imageUrl: _normalizeOptional(imageUrl) ?? existing.imageUrl,
+        imageUrl: normalizeNetworkAssetUrl(imageUrl) ?? existing.imageUrl,
         description: _normalizeOptional(description) ?? existing.description,
         weight: _normalizeOptional(weight) ?? existing.weight,
       );
@@ -215,7 +216,7 @@ class CartRepository extends ChangeNotifier {
         titleKk: normalizedTitleKk,
         price: price,
         quantity: quantity,
-        imageUrl: _normalizeOptional(imageUrl),
+        imageUrl: normalizeNetworkAssetUrl(imageUrl),
         description: _normalizeOptional(description),
         weight: _normalizeOptional(weight),
       ),
@@ -419,7 +420,9 @@ class CartRepository extends ChangeNotifier {
         responseRestaurantId.isEmpty ? item.restaurantId : responseRestaurantId;
     final titleRu = _firstNonEmpty([synced.titleRu, item.titleRu, item.title]);
     final titleKk = _firstNonEmpty([synced.titleKk, item.titleKk]);
-    final imageUrl = _firstNonEmpty([synced.effectiveImageUrl, item.imageUrl]);
+    final imageUrl = normalizeNetworkAssetUrl(
+      _firstNonEmpty([synced.effectiveImageUrl, item.imageUrl]),
+    );
     final price = synced.price ?? item.price;
 
     final hasConfirmedRestaurant = restaurant != null &&
