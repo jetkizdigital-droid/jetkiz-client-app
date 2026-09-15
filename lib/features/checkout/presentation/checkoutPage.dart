@@ -43,11 +43,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       PaymentMethodsRepository.instance;
   final PaymentPendingStore _paymentPendingStore = PaymentPendingStore();
 
-  PendingPaymentReference? _recoverablePayment;
-  String? _recoverableCheckoutUrl;
-  String? _paymentRecoveryError;
-  bool _isPaymentRecoveryLoading = true;
-
   String? _selectedCardId;
   List<SavedPaymentCard> _savedCards = const [];
   bool _useNewCard = true;
@@ -82,11 +77,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _addressRepository.addListener(_handleExternalStateChanged);
     _loadDeliveryFee();
     _loadSavedCards();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _recoverPendingPayment();
-      }
-    });
+    unawaited(_discardAbandonedPaymentReference());
   }
 
   @override
@@ -161,202 +152,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  Future<void> _recoverPendingPayment({bool showResolvedNotice = true}) async {
-    if (mounted) {
-      setState(() {
-        _isPaymentRecoveryLoading = true;
-        _paymentRecoveryError = null;
-      });
-    }
-
-    final strings = PaymentStrings.of(context);
-
+  Future<void> _discardAbandonedPaymentReference() async {
     try {
-      final pending = await _paymentPendingStore.read();
-      if (!mounted) return;
-
-      if (pending == null) {
-        setState(() {
-          _recoverablePayment = null;
-          _recoverableCheckoutUrl = null;
-          _paymentRecoveryError = null;
-          _isPaymentRecoveryLoading = false;
-        });
-        return;
-      }
-
-      try {
-        final state = await _paymentCheckoutApi.getOrderPaymentState(
-          pending.orderId,
-        );
-        if (!mounted) return;
-
-        if (state.isSecuredCardPayment) {
-          await _paymentPendingStore.clear();
-          if (!mounted) return;
-          _cartRepository.clear();
-          setState(() {
-            _recoverablePayment = null;
-            _recoverableCheckoutUrl = null;
-            _paymentRecoveryError = null;
-            _isPaymentRecoveryLoading = false;
-            _createdOrder = _CreatedOrderView(
-              id: pending.orderId,
-              pickupCode: null,
-            );
-            _orderPlaced = true;
-          });
-          if (showResolvedNotice) {
-            _showPaymentNotice(strings.previousPaymentConfirmed);
-          }
-          return;
-        }
-
-        if (state.isFailed || state.isTerminalWithoutSuccess) {
-          await _paymentPendingStore.clear();
-          if (!mounted) return;
-          setState(() {
-            _recoverablePayment = null;
-            _recoverableCheckoutUrl = null;
-            _paymentRecoveryError = null;
-            _isPaymentRecoveryLoading = false;
-          });
-          if (showResolvedNotice) {
-            _showPaymentNotice(strings.previousPaymentFailed);
-          }
-          return;
-        }
-
-        final checkoutUri = state.secureCheckoutUri;
-        setState(() {
-          _recoverablePayment = pending;
-          _recoverableCheckoutUrl = checkoutUri?.toString();
-          _paymentRecoveryError =
-              checkoutUri == null ? strings.recoveryCheckError : null;
-          _isPaymentRecoveryLoading = false;
-        });
-      } on PaymentCheckoutException {
-        if (!mounted) return;
-        setState(() {
-          _recoverablePayment = pending;
-          _recoverableCheckoutUrl = null;
-          _paymentRecoveryError = strings.recoveryCheckError;
-          _isPaymentRecoveryLoading = false;
-        });
-      }
+      await _paymentPendingStore.clear();
     } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _recoverablePayment = null;
-        _recoverableCheckoutUrl = null;
-        _paymentRecoveryError = strings.recoveryCheckError;
-        _isPaymentRecoveryLoading = false;
-      });
-    }
-  }
-
-  void _showPaymentNotice(String message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-    });
-  }
-
-  Future<void> _resumePendingPayment() async {
-    if (_isSubmitting || _isPaymentRecoveryLoading) return;
-
-    final pending = _recoverablePayment;
-    if (pending == null) {
-      await _recoverPendingPayment();
-      return;
-    }
-
-    final strings = PaymentStrings.of(context);
-    setState(() => _isSubmitting = true);
-
-    try {
-      final state = await _paymentCheckoutApi.getOrderPaymentState(
-        pending.orderId,
-      );
-      if (!mounted) return;
-
-      if (state.isSecuredCardPayment) {
-        await _paymentPendingStore.clear();
-        if (!mounted) return;
-        _cartRepository.clear();
-        setState(() {
-          _recoverablePayment = null;
-          _recoverableCheckoutUrl = null;
-          _paymentRecoveryError = null;
-          _createdOrder = _CreatedOrderView(
-            id: pending.orderId,
-            pickupCode: null,
-          );
-          _orderPlaced = true;
-        });
-        return;
-      }
-
-      if (state.isFailed || state.isTerminalWithoutSuccess) {
-        await _paymentPendingStore.clear();
-        if (!mounted) return;
-        setState(() {
-          _recoverablePayment = null;
-          _recoverableCheckoutUrl = null;
-          _paymentRecoveryError = null;
-        });
-        _showPaymentNotice(strings.previousPaymentFailed);
-        return;
-      }
-
-      final checkoutUri = state.secureCheckoutUri;
-      if (checkoutUri == null) {
-        setState(() {
-          _recoverableCheckoutUrl = null;
-          _paymentRecoveryError = strings.recoveryCheckError;
-        });
-        return;
-      }
-
-      setState(() {
-        _recoverableCheckoutUrl = checkoutUri.toString();
-        _paymentRecoveryError = null;
-      });
-
-      final result = await Navigator.of(context).push<PaymentReturnResult>(
-        MaterialPageRoute(
-          builder: (_) => PaymentReturnPage(
-            orderId: pending.orderId,
-            checkoutUrl: checkoutUri.toString(),
-          ),
-        ),
-      );
-      if (!mounted) return;
-
-      if (result == PaymentReturnResult.secured) {
-        _cartRepository.clear();
-        setState(() {
-          _recoverablePayment = null;
-          _recoverableCheckoutUrl = null;
-          _paymentRecoveryError = null;
-          _createdOrder = _CreatedOrderView(
-            id: pending.orderId,
-            pickupCode: null,
-          );
-          _orderPlaced = true;
-        });
-        return;
-      }
-
-      await _recoverPendingPayment(showResolvedNotice: false);
-    } on PaymentCheckoutException {
-      if (!mounted) return;
-      setState(() {
-        _paymentRecoveryError = strings.recoveryCheckError;
-      });
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      // Local recovery state is best-effort only. It must never block a new
+      // checkout after the user has left the hosted payment flow.
     }
   }
 
@@ -379,12 +180,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final address = _addressRepository.selectedAddress;
     final cartState = _cartRepository.state;
 
-    if (_isSubmitting || _orderPlaced || _isPaymentRecoveryLoading) return;
-
-    if (_recoverablePayment != null || _paymentRecoveryError != null) {
-      await _resumePendingPayment();
-      return;
-    }
+    if (_isSubmitting || _orderPlaced) return;
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -537,7 +333,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
 
       if (paymentResult != PaymentReturnResult.secured) {
-        await _recoverPendingPayment(showResolvedNotice: false);
+        await _discardAbandonedPaymentReference();
+        _pendingOrderKey = null;
+        _pendingOrderFingerprint = null;
         return;
       }
 
@@ -628,10 +426,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final deliveryFee = _effectiveDeliveryFee;
     final total = subtotal + deliveryFee;
     final paymentStrings = PaymentStrings.of(context);
-    final hasPaymentRecoveryAction =
-        _recoverablePayment != null || _paymentRecoveryError != null;
-    final canResumeHostedCheckout =
-        _recoverablePayment != null && _recoverableCheckoutUrl != null;
 
     final normalCheckoutDisabled = cartState.isEmpty ||
         (!_isPickup && address == null) ||
@@ -639,14 +433,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _isCardsLoading ||
         (!_useNewCard && _selectedCardId == null) ||
         _isDeliveryLoading;
-    final isConfirmDisabled = _isPaymentRecoveryLoading ||
-        _isSubmitting ||
-        (!hasPaymentRecoveryAction && normalCheckoutDisabled);
-    final primaryActionLabel = hasPaymentRecoveryAction
-        ? (canResumeHostedCheckout
-            ? paymentStrings.resumePayment
-            : paymentStrings.verifyPreviousPayment)
-        : null;
+    final isConfirmDisabled = _isSubmitting || normalCheckoutDisabled;
 
     return Scaffold(
       backgroundColor: _bg,
@@ -697,20 +484,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
                 children: [
-                  if (hasPaymentRecoveryAction) ...[
-                    _PendingPaymentBanner(
-                      hasCheckoutUrl: canResumeHostedCheckout,
-                      errorMessage: _paymentRecoveryError,
-                      isBusy: _isSubmitting || _isPaymentRecoveryLoading,
-                      onAction: _resumePendingPayment,
-                    ),
-                    const SizedBox(height: 18),
-                  ],
                   const _CheckoutSectionTitle(title: 'Способ получения'),
                   const SizedBox(height: 10),
                   _FulfillmentSelector(
                     value: _fulfillmentType,
-                    enabled: !_isSubmitting && !hasPaymentRecoveryAction,
+                    enabled: !_isSubmitting,
                     onChanged: (value) {
                       setState(() => _fulfillmentType = value);
                     },
@@ -723,58 +501,64 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     const SizedBox(height: 10),
                     _CheckoutAddressCard(
                       address: address,
-                      onTap: hasPaymentRecoveryAction ? () {} : _changeAddress,
+                      onTap: _changeAddress,
                     ),
                   ],
                   const SizedBox(height: 18),
                   const _CheckoutSectionTitle(title: 'Ваш заказ'),
                   const SizedBox(height: 10),
                   _CheckoutItemsCard(items: items),
-                  if (!hasPaymentRecoveryAction) ...[
-                    const SizedBox(height: 18),
-                    const _CheckoutSectionTitle(title: 'Способ оплаты'),
-                    const SizedBox(height: 10),
-                    if (_isCardsLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        child: Center(
-                          child: CircularProgressIndicator(color: _green),
+                  const SizedBox(height: 18),
+                  const _CheckoutSectionTitle(title: 'Способ оплаты'),
+                  const SizedBox(height: 10),
+                  if (_isCardsLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: Center(
+                        child: CircularProgressIndicator(color: _green),
+                      ),
+                    )
+                  else ...[
+                    if (_cardsError != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF6E8),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFF0D9AD)),
                         ),
-                      )
-                    else ...[
-                      if (_cardsError != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF6E8),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFF0D9AD)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.info_outline_rounded,
-                                color: Color(0xFF9A6A18),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  paymentStrings.cardsLoadError,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF6B4A12),
-                                  ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: Color(0xFF9A6A18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                paymentStrings.cardsLoadError,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B4A12),
                                 ),
                               ),
-                              TextButton(
-                                onPressed: _loadSavedCards,
-                                child: Text(paymentStrings.retry),
-                              ),
-                            ],
-                          ),
+                            ),
+                            TextButton(
+                              onPressed: _loadSavedCards,
+                              child: Text(paymentStrings.retry),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                      ],
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (_savedCards.isEmpty)
+                      _AddNewCardTile(
+                        isSelected: true,
+                        label: paymentStrings.bankCard,
+                        onTap: () {},
+                      )
+                    else ...[
                       ..._savedCards.map(
                         (card) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
@@ -795,6 +579,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                       _AddNewCardTile(
                         isSelected: _useNewCard,
+                        label: paymentStrings.addCard,
                         onTap: () {
                           if (_isSubmitting) return;
                           setState(() {
@@ -803,17 +588,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           });
                         },
                       ),
-                      if (_useNewCard) ...[
-                        const SizedBox(height: 8),
-                        _SaveCardOption(
-                          value: _saveNewCard,
-                          enabled: !_isSubmitting,
-                          label: paymentStrings.saveCardForFuture,
-                          onChanged: (value) {
-                            setState(() => _saveNewCard = value);
-                          },
-                        ),
-                      ],
+                    ],
+                    if (_useNewCard) ...[
+                      const SizedBox(height: 8),
+                      _SaveCardOption(
+                        value: _saveNewCard,
+                        enabled: !_isSubmitting,
+                        label: paymentStrings.saveCardForFuture,
+                        onChanged: (value) {
+                          setState(() => _saveNewCard = value);
+                        },
+                      ),
                     ],
                   ],
                   const SizedBox(height: 18),
@@ -839,13 +624,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           _CheckoutBottomBar(
             total: total,
-            actionLabel: primaryActionLabel,
-            showTotal: !hasPaymentRecoveryAction,
-            isLoading: _isSubmitting || _isPaymentRecoveryLoading,
+            actionLabel: null,
+            showTotal: true,
+            isLoading: _isSubmitting,
             isDisabled: isConfirmDisabled,
-            onConfirm: hasPaymentRecoveryAction
-                ? _resumePendingPayment
-                : _handleConfirmOrder,
+            onConfirm: _handleConfirmOrder,
           ),
         ],
       ),
@@ -857,107 +640,6 @@ class _CheckoutBlockedException implements Exception {
   const _CheckoutBlockedException(this.message);
 
   final String message;
-}
-
-class _PendingPaymentBanner extends StatelessWidget {
-  const _PendingPaymentBanner({
-    required this.hasCheckoutUrl,
-    required this.errorMessage,
-    required this.isBusy,
-    required this.onAction,
-  });
-
-  final bool hasCheckoutUrl;
-  final String? errorMessage;
-  final bool isBusy;
-  final VoidCallback onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = PaymentStrings.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF9ED),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF1D9A6)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.shield_outlined, color: Color(0xFF956313)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      strings.unfinishedPaymentTitle,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF5D4317),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      strings.unfinishedPaymentHint,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: Color(0xFF765A2A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (errorMessage != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              errorMessage!,
-              style: const TextStyle(
-                fontSize: 12,
-                height: 1.35,
-                color: Color(0xFF9B3A2D),
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: isBusy ? null : onAction,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF956313),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-              ),
-              icon: Icon(
-                hasCheckoutUrl
-                    ? Icons.open_in_browser_rounded
-                    : Icons.refresh_rounded,
-              ),
-              label: Text(
-                hasCheckoutUrl
-                    ? strings.resumePayment
-                    : strings.verifyPreviousPayment,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _CheckoutSectionTitle extends StatelessWidget {
@@ -1365,9 +1047,14 @@ class _CheckoutCardTile extends StatelessWidget {
 }
 
 class _AddNewCardTile extends StatelessWidget {
-  const _AddNewCardTile({required this.isSelected, required this.onTap});
+  const _AddNewCardTile({
+    required this.isSelected,
+    required this.label,
+    required this.onTap,
+  });
 
   final bool isSelected;
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -1389,14 +1076,17 @@ class _AddNewCardTile extends StatelessWidget {
               width: isSelected ? 1.5 : 1,
             ),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.credit_card_outlined, color: Color(0xFF6B7280)),
-              SizedBox(width: 8),
-              LocalizedText(
-                'Оплатить другой картой',
-                style: TextStyle(
+              const Icon(
+                Icons.credit_card_outlined,
+                color: Color(0xFF6B7280),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF6B7280),
