@@ -22,7 +22,9 @@ void main() {
   test('new-card UX skips the other-card tile when no saved cards exist', () {
     expect(
       source,
-      contains('if (_savedCards.isNotEmpty)\n                        _AddNewCardTile('),
+      contains(
+        'if (_savedCards.isNotEmpty)\n                        _AddNewCardTile(',
+      ),
     );
     expect(
       source,
