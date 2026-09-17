@@ -76,7 +76,8 @@ Future<_ClientAuthSmokeResult> _runClientAuthSmoke({
       return const _ClientAuthSmokeResult(success: false, message: message);
     }
 
-    const message = 'Production client OTP login and session verification passed';
+    const message =
+        'Production client OTP login and session verification passed';
     debugPrint('JETKIZ_CLIENT_E2E_AUTH_OK');
     return const _ClientAuthSmokeResult(success: true, message: message);
   } catch (error, stackTrace) {
