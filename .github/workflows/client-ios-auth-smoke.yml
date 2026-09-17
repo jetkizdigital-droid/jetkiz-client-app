@@ -38,27 +38,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Validate E2E credentials
+      - name: Check E2E credentials
+        id: credentials
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "$E2E_CLIENT_PHONE" ]; then
-            echo '::error::Missing repository secret E2E_CLIENT_PHONE'
+
+          if [ -n "$E2E_CLIENT_PHONE" ] && [ -n "$E2E_CLIENT_OTP" ]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+            echo 'Client E2E credentials are configured'
+            exit 0
+          fi
+
+          echo 'configured=false' >> "$GITHUB_OUTPUT"
+
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            echo '::error::Manual production auth smoke requires repository secrets E2E_CLIENT_PHONE and E2E_CLIENT_OTP'
             exit 1
           fi
-          if [ -z "$E2E_CLIENT_OTP" ]; then
-            echo '::error::Missing repository secret E2E_CLIENT_OTP'
-            exit 1
-          fi
-          echo 'Client E2E credentials are configured'
+
+          echo '::notice::Skipping production Client auth smoke because repository E2E credentials are not configured yet.'
+          {
+            echo '### Client iOS Auth Smoke'
+            echo ''
+            echo 'Skipped on automatic CI because `E2E_CLIENT_PHONE` / `E2E_CLIENT_OTP` are not configured.'
+            echo 'A manual `workflow_dispatch` remains strict and will fail until both secrets are present.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Setup Flutter
+        if: steps.credentials.outputs.configured == 'true'
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
       - name: Environment
+        if: steps.credentials.outputs.configured == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -67,12 +82,15 @@ jobs:
           xcrun simctl list runtimes
 
       - name: Install dependencies
+        if: steps.credentials.outputs.configured == 'true'
         run: flutter pub get
 
       - name: Analyze auth smoke target
+        if: steps.credentials.outputs.configured == 'true'
         run: flutter analyze lib/core/testing/client_auth_smoke_main.dart lib/features/auth/data/authApi.dart lib/core/network/apiClient.dart --no-fatal-infos
 
       - name: Boot clean iPhone Simulator
+        if: steps.credentials.outputs.configured == 'true'
         id: simulator
         shell: bash
         run: |
@@ -86,6 +104,7 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
 
       - name: Build and launch production Client auth smoke
+        if: steps.credentials.outputs.configured == 'true'
         shell: bash
         env:
           UDID: ${{ steps.simulator.outputs.udid }}
@@ -129,7 +148,7 @@ jobs:
           test -s build/ios-auth-smoke/client-auth.png
 
       - name: Upload auth evidence
-        if: always()
+        if: always() && steps.credentials.outputs.configured == 'true'
         uses: actions/upload-artifact@v6
         with:
           name: client-ios-auth-smoke-evidence
@@ -141,7 +160,7 @@ jobs:
           retention-days: 14
 
       - name: Shutdown simulator
-        if: always() && steps.simulator.outputs.udid != ''
+        if: always() && steps.credentials.outputs.configured == 'true' && steps.simulator.outputs.udid != ''
         shell: bash
         env:
           UDID: ${{ steps.simulator.outputs.udid }}
