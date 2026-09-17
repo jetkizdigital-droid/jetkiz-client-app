@@ -1,0 +1,169 @@
+name: Client iOS Auth Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ios/client-initial-release
+    paths:
+      - 'lib/core/testing/client_auth_smoke_main.dart'
+      - 'lib/features/auth/**'
+      - 'lib/core/network/**'
+      - '.github/workflows/client-ios-auth-smoke.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lib/core/testing/client_auth_smoke_main.dart'
+      - 'lib/features/auth/**'
+      - 'lib/core/network/**'
+      - '.github/workflows/client-ios-auth-smoke.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-ios-auth-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-auth-smoke:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      E2E_CLIENT_PHONE: ${{ secrets.E2E_CLIENT_PHONE }}
+      E2E_CLIENT_OTP: ${{ secrets.E2E_CLIENT_OTP }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check E2E credentials
+        id: credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "$E2E_CLIENT_PHONE" ] && [ -n "$E2E_CLIENT_OTP" ]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+            echo 'Client E2E credentials are configured'
+            exit 0
+          fi
+
+          echo 'configured=false' >> "$GITHUB_OUTPUT"
+
+          if [ "$GITHUB_EVENT_NAME" = 'workflow_dispatch' ]; then
+            echo '::error::Manual production auth smoke requires repository secrets E2E_CLIENT_PHONE and E2E_CLIENT_OTP'
+            exit 1
+          fi
+
+          echo '::notice::Skipping production Client auth smoke because repository E2E credentials are not configured yet.'
+          {
+            echo '### Client iOS Auth Smoke'
+            echo ''
+            echo 'Skipped on automatic CI because `E2E_CLIENT_PHONE` / `E2E_CLIENT_OTP` are not configured.'
+            echo 'A manual `workflow_dispatch` remains strict and will fail until both secrets are present.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup Flutter
+        if: steps.credentials.outputs.configured == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Environment
+        if: steps.credentials.outputs.configured == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter --version
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Install dependencies
+        if: steps.credentials.outputs.configured == 'true'
+        run: flutter pub get
+
+      - name: Analyze auth smoke target
+        if: steps.credentials.outputs.configured == 'true'
+        run: flutter analyze lib/core/testing/client_auth_smoke_main.dart lib/features/auth/data/authApi.dart lib/core/network/apiClient.dart --no-fatal-infos
+
+      - name: Boot clean iPhone Simulator
+        if: steps.credentials.outputs.configured == 'true'
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/ios-auth-smoke
+          RUNTIME=$(xcrun simctl list runtimes -j | python3 -c 'import json,sys; d=json.load(sys.stdin); a=[r for r in d["runtimes"] if r.get("isAvailable") and "iOS" in r.get("name","")]; a.sort(key=lambda r: tuple(int(x) for x in r.get("version","0").split("."))); print(a[-1]["identifier"])')
+          DEVICE_TYPE=$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; a=[d for d in json.load(sys.stdin)["devicetypes"] if d.get("name","").startswith("iPhone")]; pref=["iPhone 17 Pro","iPhone 17","iPhone 16 Pro","iPhone 16"]; by={d["name"]:d for d in a}; pick=next((by[n] for n in pref if n in by),a[-1]); print(pick["identifier"])')
+          UDID=$(xcrun simctl create "JETKIZ Client Auth CI" "$DEVICE_TYPE" "$RUNTIME")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Build and launch production Client auth smoke
+        if: steps.credentials.outputs.configured == 'true'
+        shell: bash
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          set -euo pipefail
+          flutter build ios --simulator --debug \
+            --target=lib/core/testing/client_auth_smoke_main.dart \
+            --dart-define=JETKIZ_API_BASE_URL=https://api.jetkiz.asia \
+            --dart-define=E2E_CLIENT_PHONE="$E2E_CLIENT_PHONE" \
+            --dart-define=E2E_CLIENT_OTP="$E2E_CLIENT_OTP"
+
+          APP=build/ios/iphonesimulator/Runner.app
+          xcrun simctl install "$UDID" "$APP"
+
+          LOG=build/ios-auth-smoke/runner.log
+          : > "$LOG"
+          xcrun simctl spawn "$UDID" log stream --style compact --predicate 'process == "Runner"' > "$LOG" 2>&1 &
+          LOG_PID=$!
+          trap 'kill "$LOG_PID" 2>/dev/null || true' EXIT
+
+          xcrun simctl launch "$UDID" asia.jetkiz.client | tee build/ios-auth-smoke/launch.txt
+
+          for attempt in $(seq 1 120); do
+            if grep -Fq 'JETKIZ_CLIENT_E2E_AUTH_OK' "$LOG"; then
+              echo 'Production Client OTP login smoke passed'
+              break
+            fi
+            if grep -Fq 'JETKIZ_CLIENT_E2E_AUTH_FAILED' "$LOG"; then
+              grep -F 'JETKIZ_CLIENT_E2E_AUTH_FAILED' "$LOG" || true
+              exit 1
+            fi
+            if [ "$attempt" -eq 120 ]; then
+              echo '::error::Timed out waiting for Client auth smoke result'
+              tail -n 200 "$LOG" || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          xcrun simctl io "$UDID" screenshot build/ios-auth-smoke/client-auth.png
+          test -s build/ios-auth-smoke/client-auth.png
+
+      - name: Upload auth evidence
+        if: always() && steps.credentials.outputs.configured == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: client-ios-auth-smoke-evidence
+          path: |
+            build/ios-auth-smoke/client-auth.png
+            build/ios-auth-smoke/launch.txt
+            build/ios-auth-smoke/runner.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Shutdown simulator
+        if: always() && steps.credentials.outputs.configured == 'true' && steps.simulator.outputs.udid != ''
+        shell: bash
+        env:
+          UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          xcrun simctl shutdown "$UDID" || true
+          xcrun simctl delete "$UDID" || true
