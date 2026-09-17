@@ -86,17 +86,47 @@ jobs:
 
           echo 'Client iOS project configuration verified'
 
-      - name: Inspect Firebase client configuration
+      - name: Verify production Firebase client configuration
         shell: bash
         run: |
           set -euo pipefail
-          if [ -s ios/Runner/GoogleService-Info.plist ]; then
-            /usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' ios/Runner/GoogleService-Info.plist | grep -Fx 'asia.jetkiz.client'
-            /usr/libexec/PlistBuddy -c 'Print :PROJECT_ID' ios/Runner/GoogleService-Info.plist | grep -Fx 'jetkiz-mobile'
-            echo 'Client Firebase plist is configured'
-          else
-            echo '::warning::Client GoogleService-Info.plist is not configured yet; simulator build will still validate Flutter startup and expose Firebase bootstrap errors.'
-          fi
+
+          PLIST=ios/Runner/GoogleService-Info.plist
+          test -s "$PLIST"
+          /usr/libexec/PlistBuddy -c 'Print :BUNDLE_ID' "$PLIST" | grep -Fx 'asia.jetkiz.client'
+          /usr/libexec/PlistBuddy -c 'Print :PROJECT_ID' "$PLIST" | grep -Fx 'jetkiz-mobile'
+          /usr/libexec/PlistBuddy -c 'Print :GCM_SENDER_ID' "$PLIST" | grep -Fx '97147344656'
+          /usr/libexec/PlistBuddy -c 'Print :GOOGLE_APP_ID' "$PLIST" | grep -Fx '1:97147344656:ios:2e897fbdf28266895f7795'
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          text = Path('lib/firebase_options.dart').read_text()
+          match = re.search(
+              r'static const FirebaseOptions ios = FirebaseOptions\((.*?)\n  \);',
+              text,
+              re.S,
+          )
+          if not match:
+              raise SystemExit('iOS FirebaseOptions block not found')
+
+          block = match.group(1)
+          required = [
+              "apiKey: 'AIzaSyCzMILm99MIxSGAkmFv4R2U2HPsFwitZZM'",
+              "appId: '1:97147344656:ios:2e897fbdf28266895f7795'",
+              "messagingSenderId: '97147344656'",
+              "projectId: 'jetkiz-mobile'",
+              "iosBundleId: 'asia.jetkiz.client'",
+          ]
+          missing = [value for value in required if value not in block]
+          if missing:
+              raise SystemExit(f'Invalid iOS FirebaseOptions: missing {missing}')
+          if 'com.example.jetkizMobile' in block:
+              raise SystemExit('Legacy iOS Firebase bundle id is still configured')
+          PY
+
+          echo 'Production Client Firebase iOS configuration verified'
 
       - name: Build iPhone Simulator
         run: flutter build ios --simulator --debug
