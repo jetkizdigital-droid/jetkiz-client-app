@@ -63,7 +63,16 @@ jobs:
           KEY_PATH="$KEY_DIR/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
           mkdir -p "$KEY_DIR"
           chmod 700 "$KEY_DIR"
-          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY_B64" | base64 --decode > "$KEY_PATH"
+          python3 - "$KEY_PATH" <<'PY'
+          import base64
+          import os
+          import pathlib
+          import sys
+
+          key_path = pathlib.Path(sys.argv[1])
+          encoded = os.environ["APP_STORE_CONNECT_PRIVATE_KEY_B64"].strip()
+          key_path.write_bytes(base64.b64decode(encoded, validate=True))
+          PY
           chmod 600 "$KEY_PATH"
           grep -Fq 'BEGIN PRIVATE KEY' "$KEY_PATH"
           echo "path=$KEY_PATH" >> "$GITHUB_OUTPUT"
@@ -97,6 +106,41 @@ jobs:
           set -euo pipefail
           cd ios
           pod install
+
+      - name: Generate branded iOS app icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRAND_SRC=assets/branding/jetkiz_app_icon.svg
+          SRC="$RUNNER_TEMP/jetkiz-ios-app-icon.png"
+          DIR=ios/Runner/Assets.xcassets/AppIcon.appiconset
+          test -s "$BRAND_SRC"
+          swift tool/prepare_ios_app_icon.swift "$BRAND_SRC" "$SRC"
+          sips -g pixelWidth "$SRC" | grep -F 'pixelWidth: 1024'
+          sips -g pixelHeight "$SRC" | grep -F 'pixelHeight: 1024'
+          sips -g hasAlpha "$SRC" | grep -F 'hasAlpha: no'
+
+          while IFS=: read -r file size; do
+            sips -z "$size" "$size" "$SRC" --out "$DIR/$file" >/dev/null
+          done <<'EOF'
+          Icon-App-20x20@1x.png:20
+          Icon-App-20x20@2x.png:40
+          Icon-App-20x20@3x.png:60
+          Icon-App-29x29@1x.png:29
+          Icon-App-29x29@2x.png:58
+          Icon-App-29x29@3x.png:87
+          Icon-App-40x40@1x.png:40
+          Icon-App-40x40@2x.png:80
+          Icon-App-40x40@3x.png:120
+          Icon-App-60x60@2x.png:120
+          Icon-App-60x60@3x.png:180
+          Icon-App-76x76@1x.png:76
+          Icon-App-76x76@2x.png:152
+          Icon-App-83.5x83.5@2x.png:167
+          Icon-App-1024x1024@1x.png:1024
+          EOF
+
+          test -s "$DIR/Icon-App-1024x1024@1x.png"
 
       - name: Validate production configuration
         shell: bash
