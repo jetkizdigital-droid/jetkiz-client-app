@@ -2,22 +2,6 @@ name: Client iOS Auth Smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ios/client-initial-release
-    paths:
-      - 'lib/core/testing/client_auth_smoke_main.dart'
-      - 'lib/features/auth/**'
-      - 'lib/core/network/**'
-      - '.github/workflows/client-ios-auth-smoke.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'lib/core/testing/client_auth_smoke_main.dart'
-      - 'lib/features/auth/**'
-      - 'lib/core/network/**'
-      - '.github/workflows/client-ios-auth-smoke.yml'
 
 permissions:
   contents: read
