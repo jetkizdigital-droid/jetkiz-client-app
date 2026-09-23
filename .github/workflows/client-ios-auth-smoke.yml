@@ -71,7 +71,7 @@ jobs:
 
       - name: Analyze auth smoke target
         if: steps.credentials.outputs.configured == 'true'
-        run: flutter analyze lib/core/testing/client_auth_smoke_main.dart lib/features/auth/data/authApi.dart lib/core/network/apiClient.dart --no-fatal-infos
+        run: flutter analyze lib/core/testing/client_auth_smoke_main.dart lib/features/auth/data/authApi.dart lib/core/network/apiClient.dart
 
       - name: Boot clean iPhone Simulator
         if: steps.credentials.outputs.configured == 'true'
