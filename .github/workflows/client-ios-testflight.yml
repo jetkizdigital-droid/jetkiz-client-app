@@ -11,7 +11,7 @@ on:
       build_number:
         description: Unique App Store build number
         required: true
-        default: '1'
+        default: '3'
         type: string
       upload_to_testflight:
         description: Upload the signed archive to App Store Connect
@@ -85,6 +85,12 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Preflight analyze
+        run: flutter analyze
+
+      - name: Preflight tests
+        run: flutter test
+
       - name: Install CocoaPods dependencies
         shell: bash
         run: |
@@ -144,6 +150,7 @@ jobs:
           test -d "$APP"
           test -s "$APP/GoogleService-Info.plist"
           test -s "$APP/embedded.mobileprovision"
+          test -n "$(find "$APP" -name PrivacyInfo.xcprivacy -type f -print -quit)"
 
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -Fx "$BUNDLE_ID"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist" | grep -Fx 'JETKIZ'
@@ -223,6 +230,7 @@ jobs:
 
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -Fx "$BUNDLE_ID"
           test -s "$APP/GoogleService-Info.plist"
+          test -n "$(find "$APP" -name PrivacyInfo.xcprivacy -type f -print -quit)"
           codesign --verify --deep --strict --verbose=2 "$APP"
           echo 'Exported Client IPA verified'
 
