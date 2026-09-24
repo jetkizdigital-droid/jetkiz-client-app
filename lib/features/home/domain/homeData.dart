@@ -44,7 +44,8 @@ class HomePromo {
       titleKk: _readString(json['titleKk']),
       imageUrl: _readNullableString(json['imageUrl']),
       sortOrder: _readInt(json['sortOrder']),
-      isActive: json.containsKey('isActive') ? _readBool(json['isActive']) : true,
+      isActive:
+          json.containsKey('isActive') ? _readBool(json['isActive']) : true,
     );
   }
 
