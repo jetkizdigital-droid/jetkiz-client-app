@@ -117,7 +117,8 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     _isBackgroundRefreshing = true;
 
     try {
-      final items = await _restaurantsApi.getAllPublicRestaurants(random: false);
+      final items =
+          await _restaurantsApi.getAllPublicRestaurants(random: false);
       if (!mounted) return;
 
       setState(() {
@@ -146,7 +147,8 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     });
 
     try {
-      final items = await _restaurantsApi.getAllPublicRestaurants(random: false);
+      final items =
+          await _restaurantsApi.getAllPublicRestaurants(random: false);
 
       if (!mounted) return;
 
