@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -33,6 +34,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
   final AddressRepository _addressRepository = AddressRepository.instance;
 
   late final ApiClient _apiClient;
+  late final AnalyticsService _analyticsService;
   late final FinanceConfigApi _financeConfigApi;
   late final RestaurantsApi _restaurantsApi;
 
@@ -54,6 +56,7 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     _apiClient = ApiClient();
+    _analyticsService = AnalyticsService(_apiClient);
     _financeConfigApi = FinanceConfigApi(_apiClient);
     _restaurantsApi = RestaurantsApi(_apiClient);
 
@@ -76,8 +79,9 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
       _isAuthorized = authorized;
       _isCheckingAuth = false;
     });
+    unawaited(_trackCartView());
     if (!authorized) return;
-    await Future.wait([_loadDeliveryFee(), _syncCart(), _trackCartView()]);
+    await Future.wait([_loadDeliveryFee(), _syncCart()]);
     await _loadRestaurantAvailability();
   }
 
@@ -247,22 +251,17 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _trackCartView() async {
-    try {
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'screen_view',
-          'metadata': {
-            'source': 'cart_page',
-            'screen': 'cart',
-            'restaurantId': _cart.restaurantId,
-            'itemsCount': _cart.totalQuantity,
-            'subtotal': _cart.subtotal,
-          },
-        },
-      );
-    } catch (_) {}
+  Future<void> _trackCartView() {
+    return _analyticsService.trackScreenView(
+      screen: 'cart',
+      title: 'Корзина',
+      source: 'cart_page',
+      metadata: {
+        'restaurantId': _cart.restaurantId,
+        'itemsCount': _cart.totalQuantity,
+        'subtotal': _cart.subtotal,
+      },
+    );
   }
 
   Future<void> _trackCheckoutStart({
@@ -270,24 +269,20 @@ class _CartPageState extends State<CartPage> with WidgetsBindingObserver {
     required int subtotal,
     required int deliveryFee,
     required int total,
-  }) async {
-    try {
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'checkout_start',
-          'metadata': {
-            'source': 'cart_page',
-            'restaurantId': _cart.restaurantId,
-            if (address != null) 'addressId': address.id,
-            'itemsCount': _cart.totalQuantity,
-            'subtotal': subtotal,
-            'deliveryFee': deliveryFee,
-            'total': total,
-          },
-        },
-      );
-    } catch (_) {}
+  }) {
+    return _analyticsService.trackEvent(
+      eventName: 'checkout_start',
+      entityType: 'restaurant',
+      entityId: _cart.restaurantId,
+      source: 'cart_page',
+      metadata: {
+        if (address != null) 'addressId': address.id,
+        'itemsCount': _cart.totalQuantity,
+        'subtotal': subtotal,
+        'deliveryFee': deliveryFee,
+        'total': total,
+      },
+    );
   }
 
   Future<void> _openAddressPicker() async {
