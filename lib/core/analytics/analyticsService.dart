@@ -9,6 +9,22 @@ class AnalyticsService {
 
   final ApiClient _apiClient;
 
+  Future<void> trackEvent({
+    required String eventName,
+    String? entityType,
+    String? entityId,
+    String? source,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await _sendEvent(
+      eventName: eventName,
+      entityType: entityType,
+      entityId: entityId,
+      source: source,
+      metadata: metadata,
+    );
+  }
+
   Future<void> trackScreenView({
     required String screen,
     String? title,
