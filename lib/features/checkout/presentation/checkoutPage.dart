@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/addresses/data/addressRepository.dart';
@@ -35,6 +36,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   final CartRepository _cartRepository = CartRepository.instance;
   final AddressRepository _addressRepository = AddressRepository.instance;
 
+  late final AnalyticsService _analyticsService;
   late final FinanceConfigApi _financeConfigApi;
   late final ProfileApi _profileApi;
   late final OrderApi _orderApi;
@@ -70,6 +72,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     super.initState();
 
     final apiClient = ApiClient();
+    _analyticsService = AnalyticsService(apiClient);
     _financeConfigApi = FinanceConfigApi(apiClient);
     _profileApi = ProfileApi(apiClient);
     _orderApi = OrderApi(apiClient);
@@ -80,6 +83,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _loadDeliveryFee();
     _loadSavedCards();
     _initialPaymentCleanup = _discardAbandonedPaymentReference();
+    unawaited(
+      _analyticsService.trackScreenView(
+        screen: 'checkout',
+        title: 'Оформление заказа',
+        source: 'checkout_page',
+      ),
+    );
   }
 
   @override
@@ -294,6 +304,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _pendingOrderKey = 'client-order-$timestamp-$random';
       }
 
+      unawaited(
+        _analyticsService.trackEvent(
+          eventName: 'order_create_attempt',
+          entityType: 'restaurant',
+          entityId: restaurantId,
+          source: 'checkout_page',
+          metadata: {
+            'fulfillmentType': _fulfillmentType.name,
+            'itemsCount': _cartRepository.totalQuantity,
+          },
+        ),
+      );
+
       // The backend keeps this row as an internal checkout attempt until funds
       // are server-confirmed. It is intentionally hidden from client history and
       // emits no "order created" notification before authorization.
@@ -308,6 +331,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
           'Не удалось начать оплату. Попробуйте снова.',
         );
       }
+      unawaited(
+        _analyticsService.trackEvent(
+          eventName: 'payment_attempt',
+          entityType: 'order',
+          entityId: orderId,
+          source: 'checkout_page',
+          metadata: {
+            'savedCard': !_useNewCard,
+            'saveNewCard': _useNewCard && _saveNewCard,
+          },
+        ),
+      );
+
       final checkout = await _paymentCheckoutApi.createCheckout(
         orderId: orderId,
         savedPaymentMethodId: _useNewCard ? null : _selectedCardId,
@@ -338,11 +374,41 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
 
       if (paymentResult != PaymentReturnResult.secured) {
+        unawaited(
+          _analyticsService.trackEvent(
+            eventName: 'payment_failed',
+            entityType: 'order',
+            entityId: orderId,
+            source: 'checkout_return',
+            metadata: {'result': paymentResult?.name ?? 'closed'},
+          ),
+        );
         await _discardAbandonedPaymentReference();
         _pendingOrderKey = null;
         _pendingOrderFingerprint = null;
         return;
       }
+
+      unawaited(
+        _analyticsService.trackEvent(
+          eventName: 'payment_success',
+          entityType: 'order',
+          entityId: orderId,
+          source: 'checkout_return',
+        ),
+      );
+      unawaited(
+        _analyticsService.trackEvent(
+          eventName: 'order_create_success',
+          entityType: 'order',
+          entityId: orderId,
+          source: 'checkout_return',
+          metadata: {
+            'restaurantId': restaurantId,
+            'fulfillmentType': _fulfillmentType.name,
+          },
+        ),
+      );
 
       _cartRepository.clear();
       if (!mounted) return;
@@ -356,10 +422,26 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: LocalizedText(error.message)));
     } on PaymentCheckoutException catch (error) {
+      unawaited(
+        _analyticsService.trackEvent(
+          eventName: 'payment_failed',
+          source: 'checkout_page',
+          metadata: {'stage': 'checkout_create'},
+        ),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: LocalizedText(error.message)));
     } on CreateOrderException catch (error) {
+      unawaited(
+        _analyticsService.trackEvent(
+          eventName: 'order_create_attempt',
+          entityType: 'restaurant',
+          entityId: restaurantId,
+          source: 'checkout_error',
+          metadata: {'result': 'failed'},
+        ),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: LocalizedText(error.message)));
