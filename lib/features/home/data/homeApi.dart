@@ -53,7 +53,8 @@ class HomeApi {
     return HomeData(
       promos: promos,
       supportWhatsAppNumber:
-          homeJson['supportWhatsAppNumber']?.toString().trim().isNotEmpty == true
+          homeJson['supportWhatsAppNumber']?.toString().trim().isNotEmpty ==
+                  true
               ? homeJson['supportWhatsAppNumber'].toString().trim()
               : null,
       categories: rawCategories
