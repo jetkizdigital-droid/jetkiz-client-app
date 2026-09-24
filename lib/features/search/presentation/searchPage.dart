@@ -326,24 +326,6 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  String _clientPlatformName() {
-    if (kIsWeb) return 'web';
-
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'android';
-      case TargetPlatform.iOS:
-        return 'ios';
-      case TargetPlatform.macOS:
-        return 'macos';
-      case TargetPlatform.windows:
-        return 'windows';
-      case TargetPlatform.linux:
-        return 'linux';
-      case TargetPlatform.fuchsia:
-        return 'fuchsia';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
