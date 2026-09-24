@@ -533,7 +533,7 @@ class _PromoCarouselState extends State<_PromoCarousel> {
       return;
     }
 
-    _index = _index.clamp(0, widget.promos.length - 1);
+    _index = _index.clamp(0, widget.promos.length - 1).toInt();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_controller.hasClients) return;
       _controller.jumpToPage(_index);
