@@ -1119,8 +1119,8 @@ class _RestaurantInfoCard extends StatelessWidget {
                 color: Color(0xFF808080),
               ),
               const SizedBox(width: 4),
-              Flexible(
-                flex: 0,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
                 child: LocalizedText(
                   deliveryText,
                   maxLines: 1,
