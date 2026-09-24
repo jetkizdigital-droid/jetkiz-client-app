@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
+import 'package:jetkiz_mobile/core/time/apiDateTime.dart';
 
 class OrderHistoryItem {
   const OrderHistoryItem({
@@ -84,7 +85,7 @@ class OrderHistoryItem {
     return OrderHistoryItem(
       id: (json['id'] ?? '').toString(),
       number: _parseInt(json['number']),
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
+      createdAt: parseApiDateTime(json['createdAt']) ?? DateTime.now(),
       status: (json['status'] ?? '').toString(),
       fulfillmentType: (json['fulfillmentType'] ?? 'DELIVERY').toString(),
       total: _parseInt(json['total']),
@@ -98,8 +99,8 @@ class OrderHistoryItem {
           .map((e) => OrderPreviewItem.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       pickupCode: _nullableString(json['pickupCode']),
-      pickupCodeExpiresAt: _parseDateTime(json['pickupCodeExpiresAt']),
-      pickupCodeVerifiedAt: _parseDateTime(json['pickupCodeVerifiedAt']),
+      pickupCodeExpiresAt: parseApiDateTime(json['pickupCodeExpiresAt']),
+      pickupCodeVerifiedAt: parseApiDateTime(json['pickupCodeVerifiedAt']),
     );
   }
 
@@ -108,12 +109,6 @@ class OrderHistoryItem {
     if (value is double) return value.round();
     if (value is String) return int.tryParse(value) ?? 0;
     return 0;
-  }
-
-  static DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    return DateTime.tryParse(value.toString());
   }
 
   static String? _nullableString(dynamic value) {
