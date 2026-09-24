@@ -120,6 +120,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  void _trackPromoShown(HomePromo promo) {
+    unawaited(
+      _analyticsService.trackBannerShown(
+        bannerId: promo.id,
+        title: promo.title,
+        source: 'home_promo_carousel',
+      ),
+    );
+  }
+
   Future<void> _openAddresses() async {
     unawaited(
       _analyticsService.trackScreenView(
@@ -269,9 +279,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 onTap: _openAddresses,
                               ),
                               const SizedBox(height: 20),
-                              if (data?.promo != null &&
-                                  data!.promo!.isActive) ...[
-                                _PromoBanner(promo: data.promo!),
+                              if (data?.promos.isNotEmpty ?? false) ...[
+                                _PromoCarousel(
+                                  promos: data!.promos,
+                                  onShown: _trackPromoShown,
+                                ),
                                 const SizedBox(height: 20),
                               ],
                               if ((data?.categories.isNotEmpty ?? false)) ...[
@@ -474,6 +486,153 @@ class _AddressCard extends StatelessWidget {
   }
 }
 
+class _PromoCarousel extends StatefulWidget {
+  const _PromoCarousel({
+    required this.promos,
+    required this.onShown,
+  });
+
+  final List<HomePromo> promos;
+  final ValueChanged<HomePromo> onShown;
+
+  @override
+  State<_PromoCarousel> createState() => _PromoCarouselState();
+}
+
+class _PromoCarouselState extends State<_PromoCarousel> {
+  final PageController _controller = PageController();
+
+  Timer? _autoTimer;
+  Timer? _resumeTimer;
+  int _index = 0;
+  bool _pointerDown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAuto();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.promos.isEmpty) return;
+      widget.onShown(widget.promos.first);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _PromoCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldIds = oldWidget.promos.map((item) => item.id).join('|');
+    final newIds = widget.promos.map((item) => item.id).join('|');
+
+    if (oldIds == newIds) return;
+
+    _autoTimer?.cancel();
+    _resumeTimer?.cancel();
+
+    if (widget.promos.isEmpty) {
+      _index = 0;
+      return;
+    }
+
+    _index = _index.clamp(0, widget.promos.length - 1);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.hasClients) return;
+      _controller.jumpToPage(_index);
+      widget.onShown(widget.promos[_index]);
+    });
+    _startAuto();
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _resumeTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _startAuto() {
+    _autoTimer?.cancel();
+    if (widget.promos.length <= 1 || _pointerDown) return;
+
+    _autoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted || !_controller.hasClients || _pointerDown) return;
+      final next = (_index + 1) % widget.promos.length;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  void _pause() {
+    _pointerDown = true;
+    _autoTimer?.cancel();
+    _resumeTimer?.cancel();
+  }
+
+  void _resumeAfterReading() {
+    _pointerDown = false;
+    _resumeTimer?.cancel();
+    if (widget.promos.length <= 1) return;
+
+    // Manual interaction means the user may be reading the current offer.
+    // Give them extra time before the 3-second rotation resumes.
+    _resumeTimer = Timer(const Duration(seconds: 6), _startAuto);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.promos.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        Listener(
+          onPointerDown: (_) => _pause(),
+          onPointerUp: (_) => _resumeAfterReading(),
+          onPointerCancel: (_) => _resumeAfterReading(),
+          child: SizedBox(
+            height: 170,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: widget.promos.length,
+              onPageChanged: (index) {
+                if (!mounted) return;
+                setState(() => _index = index);
+                widget.onShown(widget.promos[index]);
+              },
+              itemBuilder: (context, index) {
+                return _PromoBanner(promo: widget.promos[index]);
+              },
+            ),
+          ),
+        ),
+        if (widget.promos.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.promos.length, (index) {
+              final selected = index == _index;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: selected ? 18 : 7,
+                height: 7,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF489F2A)
+                      : const Color(0xFFD3D7DC),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _PromoBanner extends StatelessWidget {
   const _PromoBanner({required this.promo});
 
@@ -482,50 +641,58 @@ class _PromoBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = promo.fullImageUrl?.trim();
-    final cacheWidth = _imageCacheWidth(
-      context,
-      MediaQuery.sizeOf(context).width - 32,
-    );
-    final cacheHeight = _imageCacheWidth(context, 170);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: SizedBox(
-        height: 170,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (imageUrl != null && imageUrl.isNotEmpty)
-              Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                cacheWidth: cacheWidth,
-                cacheHeight: cacheHeight,
-                filterQuality: FilterQuality.low,
-                gaplessPlayback: true,
-                errorBuilder: (_, __, ___) =>
-                    const ColoredBox(color: Color(0xFF1F2328)),
-              )
-            else
-              const ColoredBox(color: Color(0xFF1F2328)),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: LocalizedText(
-                  promo.title.isNotEmpty ? promo.title : 'Акция дня',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.05,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: SizedBox(
+          height: 170,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                  gaplessPlayback: true,
+                  errorBuilder: (_, __, ___) =>
+                      const ColoredBox(color: Color(0xFF1F2328)),
+                )
+              else
+                const ColoredBox(color: Color(0xFF1F2328)),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x33000000),
+                      Color(0x99000000),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: LocalizedText(
+                    promo.title.isNotEmpty ? promo.title : 'Акция дня',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1.05,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -616,7 +783,7 @@ class _CategoryCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         cacheWidth: cacheWidth,
                         cacheHeight: cacheHeight,
-                        filterQuality: FilterQuality.low,
+                        filterQuality: FilterQuality.medium,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) =>
                             const _CategoryImagePlaceholder(),
