@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
@@ -36,6 +37,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
   static const Color _bg = Color(0xFFF8F8F8);
 
   late final ApiClient _apiClient;
+  late final AnalyticsService _analyticsService;
   late final OrdersApi _ordersApi;
   late final ScrollController _scrollController;
 
@@ -60,6 +62,7 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
     WidgetsBinding.instance.addObserver(this);
 
     _apiClient = ApiClient();
+    _analyticsService = AnalyticsService(_apiClient);
     _ordersApi = OrdersApi(_apiClient);
     _scrollController = ScrollController()..addListener(_onScroll);
 
@@ -87,20 +90,15 @@ class _OrdersHistoryPageState extends State<OrdersHistoryPage>
     if (_screenViewTracked) return;
     _screenViewTracked = true;
 
-    try {
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'screen_view',
-          'metadata': {
-            'source': 'orders_history_page',
-            'screen': 'orders_history',
-            'initialOrderId': widget.initialOrderId,
-            'initialOrderNumber': widget.initialOrderNumber,
-          },
-        },
-      );
-    } catch (_) {}
+    await _analyticsService.trackScreenView(
+      screen: 'orders_history',
+      title: 'История заказов',
+      source: 'orders_history_page',
+      metadata: {
+        'initialOrderId': widget.initialOrderId,
+        'initialOrderNumber': widget.initialOrderNumber,
+      },
+    );
   }
 
   Future<void> _loadInitial() async {
