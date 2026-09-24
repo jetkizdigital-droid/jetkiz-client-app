@@ -1,4 +1,5 @@
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/time/apiDateTime.dart';
 import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 
 class OrderDetailsData {
@@ -88,14 +89,14 @@ class OrderDetailsData {
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
       paymentStatus: (json['paymentStatus'] ?? '').toString(),
       ratingGiven: json['ratingGiven'] == true,
-      createdAt: _parseDateTime(json['createdAt']) ?? DateTime.now(),
-      updatedAt: _parseDateTime(json['updatedAt']) ?? DateTime.now(),
-      deliveredAt: _parseDateTime(json['deliveredAt']),
-      promisedAt: _parseDateTime(json['promisedAt']),
+      createdAt: parseApiDateTime(json['createdAt']) ?? DateTime.now(),
+      updatedAt: parseApiDateTime(json['updatedAt']) ?? DateTime.now(),
+      deliveredAt: parseApiDateTime(json['deliveredAt']),
+      promisedAt: parseApiDateTime(json['promisedAt']),
       fulfillmentType: (json['fulfillmentType'] ?? 'DELIVERY').toString(),
       pickupCode: _nullableString(json['pickupCode']),
-      pickupCodeExpiresAt: _parseDateTime(json['pickupCodeExpiresAt']),
-      pickupCodeVerifiedAt: _parseDateTime(json['pickupCodeVerifiedAt']),
+      pickupCodeExpiresAt: parseApiDateTime(json['pickupCodeExpiresAt']),
+      pickupCodeVerifiedAt: parseApiDateTime(json['pickupCodeVerifiedAt']),
       restaurant: _readMap(json['restaurant']) == null
           ? null
           : OrderDetailsRestaurant.fromJson(
@@ -123,12 +124,6 @@ class OrderDetailsData {
   static String? _nullableString(dynamic value) {
     final raw = (value ?? '').toString().trim();
     return raw.isEmpty ? null : raw;
-  }
-
-  static DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    return DateTime.tryParse(value.toString());
   }
 
   static Map<String, dynamic>? _readMap(dynamic value) {
