@@ -12,6 +12,7 @@ class SupportLauncher {
       RegExp(r'[^0-9]'),
       '',
     );
+    if (!context.mounted) return;
 
     if (number.isEmpty) {
       _showMessage(context, 'Номер WhatsApp поддержки скоро будет добавлен');
