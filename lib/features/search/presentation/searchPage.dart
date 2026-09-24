@@ -326,7 +326,6 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final query = _controller.text.trim();
