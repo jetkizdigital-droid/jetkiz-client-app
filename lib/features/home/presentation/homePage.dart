@@ -694,11 +694,6 @@ class _PinnedRestaurantCard extends StatelessWidget {
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
     final isOpen = restaurant.isOpenForOrders;
     final imageUrl = restaurant.fullCoverImageUrl?.trim();
-    final cacheWidth = _imageCacheWidth(
-      context,
-      MediaQuery.sizeOf(context).width - 32,
-    );
-    final cacheHeight = _imageCacheWidth(context, 113);
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -720,9 +715,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                       ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          cacheWidth: cacheWidth,
-                          cacheHeight: cacheHeight,
-                          filterQuality: FilterQuality.low,
+                          filterQuality: FilterQuality.high,
                           gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => const ColoredBox(
                             color: Color(0xFF7DC963),
