@@ -1,0 +1,82 @@
+name: Temporary Backend Load Generator
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'load-tests/**'
+      - '.github/workflows/temporary-backend-load.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-backend-load-generator
+  cancel-in-progress: false
+
+jobs:
+  load-test:
+    name: Production readonly 20 to 500 VUs
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Production preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 8 https://api.jetkiz.asia/ >/dev/null
+          curl -fsSL --max-time 8 'https://api.jetkiz.asia/restaurants/public/all?random=0' >/dev/null
+          echo "Readonly production endpoints reachable"
+
+      - name: Run graduated k6 test
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -e BASE_URL=https://api.jetkiz.asia \
+            -v "$PWD:/work" \
+            -w /work \
+            grafana/k6:latest \
+            run --summary-export=/work/load-summary.json load-tests/production-readonly.js
+
+      - name: Print compact result
+        if: always()
+        shell: bash
+        run: |
+          if [ -f load-summary.json ]; then
+            node - <<'NODE'
+          const fs = require('fs');
+          const d = JSON.parse(fs.readFileSync('load-summary.json', 'utf8'));
+          const m = d.metrics || {};
+          const get = (name, key) => m[name]?.values?.[key];
+          const out = {
+            iterations: get('iterations', 'count'),
+            requests: get('http_reqs', 'count'),
+            request_rate_rps: get('http_reqs', 'rate'),
+            failed_rate: get('http_req_failed', 'rate'),
+            checks_rate: get('checks', 'rate'),
+            p50_ms: get('http_req_duration', 'med'),
+            p90_ms: get('http_req_duration', 'p(90)'),
+            p95_ms: get('http_req_duration', 'p(95)'),
+            p99_ms: get('http_req_duration', 'p(99)'),
+            max_ms: get('http_req_duration', 'max'),
+            server_error_rate: get('server_errors', 'rate'),
+            vus_max: get('vus_max', 'max'),
+          };
+          console.log('LOAD_RESULT_JSON=' + JSON.stringify(out));
+          NODE
+          fi
+
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jetkiz-production-load-summary
+          path: load-summary.json
+          if-no-files-found: ignore
+          retention-days: 3
