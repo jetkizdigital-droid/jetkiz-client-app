@@ -1,11 +1,29 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:jetkiz_mobile/core/config/appBuildInfo.dart';
+import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 
 class AnalyticsService {
   AnalyticsService(this._apiClient);
 
   final ApiClient _apiClient;
+
+  Future<void> trackEvent({
+    required String eventName,
+    String? entityType,
+    String? entityId,
+    String? source,
+    Map<String, dynamic>? metadata,
+  }) async {
+    await _sendEvent(
+      eventName: eventName,
+      entityType: entityType,
+      entityId: entityId,
+      source: source,
+      metadata: metadata,
+    );
+  }
 
   Future<void> trackScreenView({
     required String screen,
@@ -130,25 +148,18 @@ class AnalyticsService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      final accessToken = await _apiClient.getAccessToken();
-
-      if (accessToken == null || accessToken.trim().isEmpty) {
-        if (kDebugMode) {
-          debugPrint(
-              'AnalyticsService: skip $eventName, user is not authorized');
-        }
-        return;
-      }
-
       final deviceId = await _apiClient.getDeviceId();
+      final locale = LocalizedValue.language.name;
 
       await _apiClient.dio.post(
         '/client-events',
         data: {
           'eventName': eventName,
+          'eventTime': DateTime.now().toUtc().toIso8601String(),
+          'schemaVersion': '2',
           'deviceId': deviceId,
           'platform': _backendPlatformName(),
-          'appVersion': '1.0.0',
+          'appVersion': AppBuildInfo.fullVersion,
           if (entityType != null) 'entityType': entityType,
           if (entityId != null) 'entityId': entityId,
           if (source != null) 'source': source,
@@ -156,8 +167,8 @@ class AnalyticsService {
             'deviceId': deviceId,
             'platform': _clientPlatformName(),
             'app': 'client',
-            'appVersion': '1.0.0',
-            'locale': 'ru',
+            'appVersion': AppBuildInfo.fullVersion,
+            'locale': locale,
             'timezone': 'Asia/Almaty',
             if (metadata != null) ...metadata,
           },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
@@ -38,6 +39,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
   late final ApiClient _apiClient;
   late final RestaurantMenuApi _menuApi;
   late final FinanceConfigApi _financeConfigApi;
+  late final AnalyticsService _analyticsService;
   final FavoritesController _favorites = FavoritesController.instance;
 
   final FocusNode _searchFocusNode = FocusNode();
@@ -63,6 +65,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     _apiClient = ApiClient();
     _menuApi = RestaurantMenuApi(_apiClient);
     _financeConfigApi = FinanceConfigApi(_apiClient);
+    _analyticsService = AnalyticsService(_apiClient);
     _favorites.addListener(_handleFavoritesChanged);
     _favorites.initialize();
 
@@ -143,62 +146,36 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
     }
   }
 
-  Future<void> _safeTrackRestaurantView(RestaurantMenuData data) async {
-    try {
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'restaurant_view',
-          'metadata': {
-            'restaurantId': widget.restaurantId,
-            'restaurantName': data.restaurant.displayName,
-            'source': 'restaurant_menu',
-            'itemsCount': data.items.length,
-            'categoriesCount': data.categories.length,
-          },
-        },
-      );
-    } catch (_) {}
+  Future<void> _safeTrackRestaurantView(RestaurantMenuData data) {
+    return _analyticsService.trackRestaurantView(
+      restaurantId: widget.restaurantId,
+      restaurantName: data.restaurant.displayName,
+      source: 'restaurant_menu',
+    );
   }
 
-  Future<void> _safeTrackProductView(RestaurantMenuItem item) async {
-    try {
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'product_view',
-          'metadata': {
-            'restaurantId': widget.restaurantId,
-            'productId': item.id,
-            'productName': item.title,
-            'price': item.price,
-            'categoryId': item.categoryId,
-            'categoryName': item.categoryTitle,
-            'isAvailable': item.isAvailable,
-            'source': 'restaurant_menu',
-          },
-        },
-      );
-    } catch (_) {}
+  Future<void> _safeTrackProductView(RestaurantMenuItem item) {
+    return _analyticsService.trackProductView(
+      productId: item.id,
+      productName: item.title,
+      restaurantId: widget.restaurantId,
+      source: 'restaurant_menu',
+    );
   }
 
-  Future<void> _safeTrackAddToCart(RestaurantMenuItem item) async {
-    try {
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'add_to_cart',
-          'metadata': {
-            'restaurantId': widget.restaurantId,
-            'productId': item.id,
-            'productName': item.title,
-            'price': item.price,
-            'quantity': 1,
-            'source': 'restaurant_menu',
-          },
-        },
-      );
-    } catch (_) {}
+  Future<void> _safeTrackAddToCart(RestaurantMenuItem item) {
+    return _analyticsService.trackEvent(
+      eventName: 'add_to_cart',
+      entityType: 'product',
+      entityId: item.id,
+      source: 'restaurant_menu',
+      metadata: {
+        'restaurantId': widget.restaurantId,
+        'productName': item.title,
+        'price': item.price,
+        'quantity': 1,
+      },
+    );
   }
 
   String _allTabTitle() {

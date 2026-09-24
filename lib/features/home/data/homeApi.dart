@@ -35,12 +35,28 @@ class HomeApi {
         restaurantsResponse.data ?? const <String, dynamic>{};
 
     final promoJson = homeJson['promo'];
+    final rawPromos = (homeJson['promos'] as List?) ?? const [];
     final rawCategories = (homeJson['categories'] as List?) ?? const [];
 
+    final promos = rawPromos
+        .whereType<Map>()
+        .map((item) => HomePromo.fromJson(Map<String, dynamic>.from(item)))
+        .where((item) => item.isActive)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+    if (promos.isEmpty && promoJson is Map) {
+      final legacy = HomePromo.fromJson(Map<String, dynamic>.from(promoJson));
+      if (legacy.isActive) promos.add(legacy);
+    }
+
     return HomeData(
-      promo: promoJson is Map<String, dynamic>
-          ? HomePromo.fromJson(promoJson)
-          : null,
+      promos: promos,
+      supportWhatsAppNumber:
+          homeJson['supportWhatsAppNumber']?.toString().trim().isNotEmpty ==
+                  true
+              ? homeJson['supportWhatsAppNumber'].toString().trim()
+              : null,
       categories: rawCategories
           .whereType<Map<String, dynamic>>()
           .map(HomeCategoryData.fromJson)

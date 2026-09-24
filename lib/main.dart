@@ -24,6 +24,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/app/app.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/core/push/pushNotificationService.dart';
@@ -40,6 +41,16 @@ Future<void> main() async {
 
   final apiClient = ApiClient();
   await apiClient.init();
+
+  // App-open is the first step of the product funnel and must include guests.
+  unawaited(
+    AnalyticsService(apiClient).trackEvent(
+      eventName: 'app_open',
+      entityType: 'app',
+      entityId: 'client',
+      source: 'app_start',
+    ),
+  );
 
   var firebaseAvailable = false;
   try {
