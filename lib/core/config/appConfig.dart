@@ -9,6 +9,10 @@
 
 class AppConfig {
   static const String appName = 'Jetkiz';
+  static const String appVersion = String.fromEnvironment(
+    'JETKIZ_APP_VERSION',
+    defaultValue: '1.0.3',
+  );
   static const String productionBaseUrl = 'https://api.jetkiz.asia';
   static const String _definedBaseUrl = String.fromEnvironment(
     'JETKIZ_API_BASE_URL',
