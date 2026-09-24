@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -22,6 +23,7 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _controller = TextEditingController();
 
   late final SearchApi _searchApi;
+  late final AnalyticsService _analyticsService;
 
   Timer? _debounce;
 
@@ -36,6 +38,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _searchApi = SearchApi(_apiClient);
+    _analyticsService = AnalyticsService(_apiClient);
 
     unawaited(
       _trackClientEvent(
@@ -297,50 +300,14 @@ class _SearchPageState extends State<SearchPage> {
     String? entityId,
     String? source,
     Map<String, dynamic>? metadata,
-  }) async {
-    try {
-      final accessToken = await _apiClient.getAccessToken();
-
-      if (accessToken == null || accessToken.trim().isEmpty) {
-        if (kDebugMode) {
-          debugPrint('SearchPage: skip $eventName, user is not authorized');
-        }
-        return;
-      }
-
-      final deviceId = await _apiClient.getDeviceId();
-
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': eventName,
-          'deviceId': deviceId,
-          'platform': _backendPlatformName(),
-          'appVersion': SearchApi.appVersion,
-          if (entityType != null) 'entityType': entityType,
-          if (entityId != null) 'entityId': entityId,
-          if (source != null) 'source': source,
-          'metadata': {
-            'deviceId': deviceId,
-            'platform': _clientPlatformName(),
-            'app': 'client',
-            'appVersion': SearchApi.appVersion,
-            'timezone': 'Asia/Almaty',
-            if (metadata != null) ...metadata,
-          },
-        },
-      );
-    } on DioException catch (error) {
-      if (kDebugMode) {
-        debugPrint(
-          'SearchPage: $eventName failed: ${error.response?.statusCode} ${error.response?.data}',
-        );
-      }
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint('SearchPage: $eventName failed: $error');
-      }
-    }
+  }) {
+    return _analyticsService.trackEvent(
+      eventName: eventName,
+      entityType: entityType,
+      entityId: entityId,
+      source: source,
+      metadata: metadata,
+    );
   }
 
   String _backendPlatformName() {
