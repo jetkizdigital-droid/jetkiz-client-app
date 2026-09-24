@@ -662,18 +662,6 @@ class _PromoBanner extends StatelessWidget {
                 )
               else
                 const ColoredBox(color: Color(0xFF1F2328)),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x33000000),
-                      Color(0x99000000),
-                    ],
-                  ),
-                ),
-              ),
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Align(
@@ -687,6 +675,13 @@ class _PromoBanner extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       height: 1.05,
+                      shadows: [
+                        Shadow(
+                          color: Color(0xB3000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                   ),
                 ),

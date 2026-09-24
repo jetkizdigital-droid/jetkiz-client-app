@@ -43,7 +43,6 @@ class _RestaurantsPageState extends State<RestaurantsPage>
 
   List<Restaurant> _restaurants = const [];
   String _query = '';
-  Timer? _availabilityTimer;
 
   @override
   void initState() {
@@ -52,18 +51,12 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     WidgetsBinding.instance.addObserver(this);
     _restaurantsApi = RestaurantsApi(ApiClient());
     _searchController.addListener(_handleSearchChanged);
-    _availabilityTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => unawaited(_refreshRestaurantsSilently()),
-    );
-
     _loadRestaurants();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _availabilityTimer?.cancel();
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
@@ -88,6 +81,31 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     });
   }
 
+  List<Restaurant> _preserveRestaurantOrder(List<Restaurant> incoming) {
+    if (_restaurants.isEmpty) return incoming;
+
+    final pendingById = <String, Restaurant>{
+      for (final restaurant in incoming) restaurant.id: restaurant,
+    };
+    final result = <Restaurant>[];
+
+    for (final current in _restaurants) {
+      final updated = pendingById.remove(current.id);
+      if (updated != null) {
+        result.add(updated);
+      }
+    }
+
+    for (final restaurant in incoming) {
+      final added = pendingById.remove(restaurant.id);
+      if (added != null) {
+        result.add(added);
+      }
+    }
+
+    return result;
+  }
+
   Future<void> _refreshRestaurantsSilently() async {
     if (!mounted ||
         _restaurants.isEmpty ||
@@ -99,11 +117,12 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     _isBackgroundRefreshing = true;
 
     try {
-      final items = await _restaurantsApi.getAllPublicRestaurants();
+      final items =
+          await _restaurantsApi.getAllPublicRestaurants(random: false);
       if (!mounted) return;
 
       setState(() {
-        _restaurants = items;
+        _restaurants = _preserveRestaurantOrder(items);
         _errorText = null;
       });
     } catch (_) {
@@ -128,7 +147,8 @@ class _RestaurantsPageState extends State<RestaurantsPage>
     });
 
     try {
-      final items = await _restaurantsApi.getAllPublicRestaurants();
+      final items =
+          await _restaurantsApi.getAllPublicRestaurants(random: false);
 
       if (!mounted) return;
 
@@ -251,6 +271,7 @@ class _RestaurantsPageState extends State<RestaurantsPage>
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: RestaurantCard(
+                    key: ValueKey(restaurant.id),
                     restaurant: restaurant,
                     onTap: () => _openRestaurant(restaurant),
                   ),
@@ -511,8 +532,6 @@ class _RestaurantImage extends StatelessWidget {
         .round()
         .clamp(1, 2048)
         .toInt();
-    final cacheHeight = (180 * pixelRatio).round().clamp(1, 2048).toInt();
-
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       child: Image.network(
@@ -521,7 +540,8 @@ class _RestaurantImage extends StatelessWidget {
         width: double.infinity,
         fit: BoxFit.cover,
         cacheWidth: cacheWidth,
-        cacheHeight: cacheHeight,
+        filterQuality: FilterQuality.high,
+        gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) {
           return const _RestaurantImagePlaceholder();
         },

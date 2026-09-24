@@ -631,19 +631,6 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                           imageUrl: _restaurantImageUrl,
                                         ),
                                       ),
-                                      Container(
-                                        decoration: const BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              Color(0x2E000000),
-                                              Color(0x0A000000),
-                                              Color(0x3D000000),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
                                       Positioned(
                                         top: top + 6,
                                         left: 14,
@@ -969,7 +956,7 @@ class _HeroImageLayer extends StatelessWidget {
         normalized,
         fit: BoxFit.cover,
         alignment: Alignment.center,
-        filterQuality: FilterQuality.medium,
+        filterQuality: FilterQuality.high,
         gaplessPlayback: true,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
@@ -1124,55 +1111,47 @@ class _RestaurantInfoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
-              _MiniMetaItem(
-                icon: Icons.access_time_rounded,
-                text: deliveryText,
-              ),
-              _MiniMetaItem(
-                icon: Icons.location_on_outlined,
-                text: addressText,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniMetaItem extends StatelessWidget {
-  const _MiniMetaItem({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.72,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: const Color(0xFF808080)),
-          const SizedBox(width: 4),
-          Flexible(
-            child: LocalizedText(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+              const Icon(
+                Icons.access_time_rounded,
+                size: 15,
                 color: Color(0xFF808080),
               ),
-            ),
+              const SizedBox(width: 4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: LocalizedText(
+                  deliveryText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF808080),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.location_on_outlined,
+                size: 15,
+                color: Color(0xFF808080),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: LocalizedText(
+                  addressText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF808080),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
