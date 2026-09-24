@@ -435,11 +435,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
     } on CreateOrderException catch (error) {
       unawaited(
         _analyticsService.trackEvent(
-          eventName: 'order_create_attempt',
+          eventName: 'checkout_step',
           entityType: 'restaurant',
           entityId: restaurantId,
           source: 'checkout_error',
-          metadata: {'result': 'failed'},
+          metadata: {
+            'step': 'order_create',
+            'result': 'failed',
+          },
         ),
       );
       if (!mounted) return;
