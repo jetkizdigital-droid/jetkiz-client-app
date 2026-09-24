@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:jetkiz_mobile/core/config/appConfig.dart';
+import 'package:jetkiz_mobile/core/config/appBuildInfo.dart';
 import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 
@@ -143,7 +143,7 @@ class AnalyticsService {
           'schemaVersion': '2',
           'deviceId': deviceId,
           'platform': _backendPlatformName(),
-          'appVersion': AppConfig.appVersion,
+          'appVersion': AppBuildInfo.fullVersion,
           if (entityType != null) 'entityType': entityType,
           if (entityId != null) 'entityId': entityId,
           if (source != null) 'source': source,
@@ -151,7 +151,7 @@ class AnalyticsService {
             'deviceId': deviceId,
             'platform': _clientPlatformName(),
             'app': 'client',
-            'appVersion': AppConfig.appVersion,
+            'appVersion': AppBuildInfo.fullVersion,
             'locale': locale,
             'timezone': 'Asia/Almaty',
             if (metadata != null) ...metadata,
