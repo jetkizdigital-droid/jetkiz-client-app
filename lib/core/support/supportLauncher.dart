@@ -52,8 +52,8 @@ class SupportLauncher {
   static Future<String> _resolveSupportWhatsAppNumber() async {
     try {
       final response = await ApiClient().dio.get<Map<String, dynamic>>(
-        '/home-cms/public',
-      );
+            '/home-cms/public',
+          );
       final value =
           response.data?['supportWhatsAppNumber']?.toString().trim() ?? '';
       final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
