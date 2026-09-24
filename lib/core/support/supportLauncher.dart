@@ -49,13 +49,13 @@ class SupportLauncher {
     }
   }
 
-
   static Future<String> _resolveSupportWhatsAppNumber() async {
     try {
       final response = await ApiClient().dio.get<Map<String, dynamic>>(
         '/home-cms/public',
       );
-      final value = response.data?['supportWhatsAppNumber']?.toString().trim() ?? '';
+      final value =
+          response.data?['supportWhatsAppNumber']?.toString().trim() ?? '';
       final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
       if (digits.length >= 8 && digits.length <= 15) {
         return digits;
