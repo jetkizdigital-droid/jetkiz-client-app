@@ -19,24 +19,32 @@ import 'package:jetkiz_mobile/core/localization/localizedValue.dart';
 import 'package:jetkiz_mobile/features/restaurants/domain/restaurantAvailability.dart';
 
 class HomePromo {
+  final String id;
   final String titleRu;
   final String titleKk;
   final String? imageUrl;
+  final int sortOrder;
   final bool isActive;
 
   const HomePromo({
+    required this.id,
     required this.titleRu,
     required this.titleKk,
     required this.imageUrl,
+    required this.sortOrder,
     required this.isActive,
   });
 
   factory HomePromo.fromJson(Map<String, dynamic> json) {
     return HomePromo(
+      id: _readString(json['id']).isNotEmpty
+          ? _readString(json['id'])
+          : 'legacy-main-promo',
       titleRu: _readString(json['titleRu']),
       titleKk: _readString(json['titleKk']),
       imageUrl: _readNullableString(json['imageUrl']),
-      isActive: _readBool(json['isActive']),
+      sortOrder: _readInt(json['sortOrder']),
+      isActive: json.containsKey('isActive') ? _readBool(json['isActive']) : true,
     );
   }
 
@@ -370,15 +378,20 @@ class HomeRestaurantData {
 }
 
 class HomeData {
-  final HomePromo? promo;
+  final List<HomePromo> promos;
+  final String? supportWhatsAppNumber;
   final List<HomeCategoryData> categories;
   final List<HomeRestaurantData> pinnedRestaurants;
 
   const HomeData({
-    required this.promo,
+    required this.promos,
+    required this.supportWhatsAppNumber,
     required this.categories,
     required this.pinnedRestaurants,
   });
+
+  /// Backwards-friendly convenience for code that only needs the first promo.
+  HomePromo? get promo => promos.isEmpty ? null : promos.first;
 }
 
 String _readString(dynamic value) {
