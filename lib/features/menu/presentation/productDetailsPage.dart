@@ -599,6 +599,8 @@ class _ProductMainGallery extends StatelessWidget {
                           return Image.network(
                             imageUrls[index],
                             fit: BoxFit.cover,
+                            filterQuality: FilterQuality.high,
+                            gaplessPlayback: true,
                             errorBuilder: (_, __, ___) {
                               return const _ImagePlaceholder();
                             },
@@ -679,6 +681,8 @@ class _ProductGalleryStrip extends StatelessWidget {
                 child: Image.network(
                   imageUrls[index],
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                  gaplessPlayback: true,
                   errorBuilder: (_, __, ___) {
                     return const _ImagePlaceholder();
                   },
