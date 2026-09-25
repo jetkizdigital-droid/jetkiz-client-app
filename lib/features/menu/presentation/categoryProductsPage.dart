@@ -740,6 +740,8 @@ class _ProductImage extends StatelessWidget {
                 imageUrl!,
                 fit: BoxFit.cover,
                 cacheWidth: cacheSize,
+                filterQuality: FilterQuality.high,
+                gaplessPlayback: true,
                 errorBuilder: (_, __, ___) {
                   return const _ProductImagePlaceholder();
                 },
