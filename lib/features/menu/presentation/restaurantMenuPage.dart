@@ -1621,7 +1621,7 @@ class _MenuProductImage extends StatelessWidget {
                 imageUrl,
                 fit: BoxFit.cover,
                 cacheWidth: cacheSize,
-                filterQuality: FilterQuality.medium,
+                filterQuality: FilterQuality.high,
                 gaplessPlayback: true,
                 errorBuilder: (_, __, ___) {
                   return const _MenuImagePlaceholder();
