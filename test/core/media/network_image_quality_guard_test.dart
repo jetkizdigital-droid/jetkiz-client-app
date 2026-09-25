@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('all network images use production rendering quality', () {
+    final violations = <String>[];
     final dartFiles = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
@@ -15,22 +16,25 @@ void main() {
 
       for (var index = 0; index < calls.length; index += 1) {
         final call = calls[index];
+        final label = '${file.path}: Image.network #${index + 1}';
 
-        expect(
-          call.contains('filterQuality: FilterQuality.high'),
-          isTrue,
-          reason:
-              '${file.path}: Image.network #${index + 1} must use FilterQuality.high',
-        );
+        if (!call.contains('filterQuality: FilterQuality.high')) {
+          violations.add('$label must use FilterQuality.high');
+        }
 
-        expect(
-          call.contains('cacheHeight:'),
-          isFalse,
-          reason:
-              '${file.path}: Image.network #${index + 1} must preserve source aspect ratio and not force cacheHeight',
-        );
+        if (call.contains('cacheHeight:')) {
+          violations.add(
+            '$label must preserve source aspect ratio and not force cacheHeight',
+          );
+        }
       }
     }
+
+    expect(
+      violations,
+      isEmpty,
+      reason: violations.join('\n'),
+    );
   });
 }
 
