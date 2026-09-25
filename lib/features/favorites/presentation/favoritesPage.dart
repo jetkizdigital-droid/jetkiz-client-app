@@ -377,8 +377,6 @@ class _RestaurantFavoriteCard extends StatelessWidget {
             .round()
             .clamp(1, 2048)
             .toInt();
-    final coverCacheHeight = (170 * pixelRatio).round().clamp(1, 1024).toInt();
-
     final subtitle = <String>[
       if ((restaurant.address ?? '').trim().isNotEmpty)
         restaurant.address!.trim(),
@@ -401,8 +399,7 @@ class _RestaurantFavoriteCard extends StatelessWidget {
                   restaurant.coverImageUrl!,
                   fit: BoxFit.cover,
                   cacheWidth: coverCacheWidth,
-                  cacheHeight: coverCacheHeight,
-                  filterQuality: FilterQuality.medium,
+                  filterQuality: FilterQuality.high,
                   gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => const _ImagePlaceholder(),
                 ),
@@ -528,7 +525,7 @@ class _ProductFavoriteCard extends StatelessWidget {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            filterQuality: FilterQuality.medium,
+                            filterQuality: FilterQuality.high,
                             gaplessPlayback: true,
                             errorBuilder: (_, __, ___) =>
                                 const _ImagePlaceholder(),
