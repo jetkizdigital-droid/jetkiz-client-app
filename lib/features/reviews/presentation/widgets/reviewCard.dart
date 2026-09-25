@@ -106,6 +106,8 @@ class _ReviewHeader extends StatelessWidget {
               ? Image.network(
                   avatarUrl,
                   fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                  gaplessPlayback: true,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.person_rounded,
                     color: Color(0xFF6B7280),

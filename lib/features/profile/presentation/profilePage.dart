@@ -446,6 +446,8 @@ class _ProfileHeaderCard extends StatelessWidget {
                             ? Image.network(
                                 avatarUrl,
                                 fit: BoxFit.cover,
+                                filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
                                 errorBuilder: (_, __, ___) {
                                   return const _AvatarPlaceholder();
                                 },

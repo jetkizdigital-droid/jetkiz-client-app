@@ -74,6 +74,8 @@ class _ReviewImageBlock extends StatelessWidget {
           child: Image.network(
             preview.isNotEmpty ? preview : original,
             fit: BoxFit.cover,
+            filterQuality: FilterQuality.high,
+            gaplessPlayback: true,
             errorBuilder: (_, __, ___) => Container(
               color: const Color(0xFFF3F4F6),
               alignment: Alignment.center,
@@ -154,6 +156,8 @@ class _ReviewVideoBlock extends StatelessWidget {
                     ? Image.network(
                         preview,
                         fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => Container(
                           color: const Color(0xFF111827),
                         ),
@@ -357,6 +361,8 @@ class _FullScreenImagePage extends StatelessWidget {
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      gaplessPlayback: true,
                       errorBuilder: (_, __, ___) => const Center(
                         child: Icon(
                           Icons.broken_image_outlined,

@@ -1267,6 +1267,8 @@ class _NetworkImageOrPlaceholder extends StatelessWidget {
         width: width,
         height: height,
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
+        gaplessPlayback: true,
         errorBuilder: (_, __, ___) => _placeholder(),
       ),
     );

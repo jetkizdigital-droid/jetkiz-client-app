@@ -578,6 +578,8 @@ class _RestaurantTile extends StatelessWidget {
                     ? Image.network(
                         item.coverImageUrl!,
                         fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const _ImagePlaceholder(
                           icon: Icons.restaurant_rounded,
                         ),
@@ -692,6 +694,8 @@ class _ProductTile extends StatelessWidget {
                     ? Image.network(
                         item.imageUrl!,
                         fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const _ImagePlaceholder(
                           icon: Icons.fastfood_rounded,
                         ),

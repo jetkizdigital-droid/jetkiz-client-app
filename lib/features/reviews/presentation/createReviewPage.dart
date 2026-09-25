@@ -424,6 +424,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                 Image.network(
                                   normalizedRestaurantImage,
                                   fit: BoxFit.cover,
+                                  filterQuality: FilterQuality.high,
+                                  gaplessPlayback: true,
                                   errorBuilder: (_, __, ___) {
                                     return _HeroPlaceholder(
                                       title: widget.restaurantName,
@@ -674,6 +676,8 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                                                 ) ??
                                                 '',
                                             fit: BoxFit.cover,
+                                            filterQuality: FilterQuality.high,
+                                            gaplessPlayback: true,
                                             errorBuilder: (_, __, ___) {
                                               return const _OrderImagePlaceholder();
                                             },
