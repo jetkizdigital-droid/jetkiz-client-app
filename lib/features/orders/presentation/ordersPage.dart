@@ -690,6 +690,8 @@ class _RestaurantThumb extends StatelessWidget {
         width: 42,
         height: 42,
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
+        gaplessPlayback: true,
         errorBuilder: (_, __, ___) => _placeholder(),
       ),
     );
