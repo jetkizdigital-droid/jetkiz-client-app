@@ -750,8 +750,6 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = category.fullImageUrl?.trim();
     final cacheWidth = _imageCacheWidth(context, 126);
-    final cacheHeight = _imageCacheWidth(context, 74);
-
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
@@ -777,8 +775,7 @@ class _CategoryCard extends StatelessWidget {
                         imageUrl,
                         fit: BoxFit.cover,
                         cacheWidth: cacheWidth,
-                        cacheHeight: cacheHeight,
-                        filterQuality: FilterQuality.medium,
+                        filterQuality: FilterQuality.high,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) =>
                             const _CategoryImagePlaceholder(),
