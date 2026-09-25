@@ -317,6 +317,8 @@ class _RestaurantImage extends StatelessWidget {
         width: 52,
         height: 52,
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
+        gaplessPlayback: true,
         errorBuilder: (_, __, ___) => _placeholder(),
       ),
     );
