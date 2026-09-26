@@ -56,18 +56,23 @@ void main() {
     );
   });
 
-  test('scrolling thumbnails decode close to their display width', () {
-    for (final path in [
-      'lib/features/search/presentation/searchPage.dart',
-      'lib/features/cart/presentation/cartPage.dart',
-      'lib/features/orders/presentation/ordersPage.dart',
-      'lib/features/favorites/presentation/favoritesPage.dart',
-    ]) {
-      final source = File(path).readAsStringSync();
+  test('scrolling thumbnails decode close to their display bounds', () {
+    final expectedHelperByPath = <String, String>{
+      'lib/features/search/presentation/searchPage.dart': 'imageDecodeWidth(',
+      'lib/features/cart/presentation/cartPage.dart':
+          'imageDecodeWidthForCover(',
+      'lib/features/orders/presentation/ordersPage.dart': 'imageDecodeWidth(',
+      'lib/features/favorites/presentation/favoritesPage.dart':
+          'imageDecodeWidth(',
+    };
+
+    for (final entry in expectedHelperByPath.entries) {
+      final source = File(entry.key).readAsStringSync();
       expect(
         source,
-        contains('imageDecodeWidth('),
-        reason: '$path should avoid full-resolution thumbnail decoding',
+        contains(entry.value),
+        reason:
+            '${entry.key} should avoid full-resolution thumbnail decoding',
       );
     }
   });
