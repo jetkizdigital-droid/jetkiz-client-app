@@ -763,7 +763,11 @@ class _CartItemCard extends StatelessWidget {
                   ? Image.network(
                       item.imageUrl!,
                       fit: BoxFit.cover,
-                      cacheWidth: imageDecodeWidth(context, 96),
+                      cacheWidth: imageDecodeWidthForCover(
+                        context,
+                        logicalWidth: 96,
+                        logicalHeight: 112,
+                      ),
                       filterQuality: FilterQuality.high,
                       gaplessPlayback: true,
                       errorBuilder: (_, __, ___) => _imageFallback(),
