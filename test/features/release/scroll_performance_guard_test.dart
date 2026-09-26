@@ -55,6 +55,20 @@ void main() {
     );
   });
 
+  test('home and restaurant menu keep scroll rendering lightweight', () {
+    for (final path in [
+      'lib/features/home/presentation/homePage.dart',
+      'lib/features/menu/presentation/restaurantMenuPage.dart',
+    ]) {
+      final source = File(path).readAsStringSync();
+
+      expect(source, isNot(contains('FilterQuality.high')));
+      expect(source, contains('FilterQuality.low'));
+      expect(source, contains('scrollCacheExtent:'));
+      expect(source, contains('RepaintBoundary'));
+    }
+  });
+
   test('scrolling thumbnails decode close to their display width', () {
     for (final path in [
       'lib/features/search/presentation/searchPage.dart',
