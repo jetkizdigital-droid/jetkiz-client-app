@@ -5,6 +5,7 @@ import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
+import 'package:jetkiz_mobile/core/ui/appScrollBehavior.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
@@ -596,10 +597,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                         message: 'Меню ресторана не найдено',
                         onRetry: _load,
                       )
-                    : CustomScrollView(
-                        keyboardDismissBehavior:
-                            ScrollViewKeyboardDismissBehavior.onDrag,
-                        slivers: [
+                    : ScrollConfiguration(
+                        behavior: const AppScrollBehavior(),
+                        child: CustomScrollView(
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          slivers: [
                             SliverAppBar(
                               pinned: true,
                               automaticallyImplyLeading: false,
@@ -845,6 +848,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                               ),
                           ],
                         ),
+                      ),
       ),
       bottomNavigationBar: hasBasket
           ? CartSummaryBar(
