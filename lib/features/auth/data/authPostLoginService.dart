@@ -77,6 +77,4 @@ class AuthPostLoginService {
         return 'WEB';
     }
   }
-
-
 }
