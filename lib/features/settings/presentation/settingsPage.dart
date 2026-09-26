@@ -21,8 +21,9 @@ import 'package:jetkiz_mobile/features/profile/data/profileApi.dart';
 /// - Это отдельный экран настроек из ProfilePage.
 /// - Язык меняется ГЛОБАЛЬНО на уровне всего приложения через
 ///   AppLocalizationScope.
-/// - Удаление аккаунта доступно здесь как отдельное явное действие и
-///   дополнительно остаётся доступным в ProfilePage.
+/// - Удаление аккаунта выполняется здесь как каноническое действие.
+/// - Backend сам удаляет push/session/device данные только после успешной
+///   проверки, что у клиента нет активного заказа.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -139,7 +140,11 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _isDeletingAccount = true);
 
     try {
-      await PushNotificationService(_apiClient).unregisterCurrentToken();
+      // Do not unregister the FCM token before deletion. Backend can reject
+      // account deletion while an order is active (409), and the client must
+      // keep receiving order notifications in that case. On successful
+      // deletion the backend removes push tokens, sessions and devices in the
+      // same deletion transaction.
       await _profileApi.deleteMyAccount();
       await _clearLocalSessionAndExit();
     } on ProfileApiException catch (error) {

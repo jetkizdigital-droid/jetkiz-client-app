@@ -19,7 +19,6 @@ class AuthPostLoginService {
       [
         _safeRegisterClientDevice(),
         _safeRegisterFcmToken(),
-        _safeSendAppOpenEvent(),
       ],
       eagerError: false,
     );
@@ -65,39 +64,6 @@ class AuthPostLoginService {
     }
   }
 
-  Future<void> _safeSendAppOpenEvent() async {
-    try {
-      final deviceId = await _apiClient.getDeviceId();
-
-      await _apiClient.dio.post(
-        '/client-events',
-        data: {
-          'eventName': 'app_open',
-          'deviceId': deviceId,
-          'platform': _backendPlatformName(),
-          'appVersion': AppBuildInfo.fullVersion,
-          'metadata': {
-            'source': 'after_login',
-            'deviceId': deviceId,
-            'platform': _clientPlatformName(),
-            'app': 'client',
-            'appVersion': AppBuildInfo.fullVersion,
-            'locale': 'ru',
-            'timezone': 'Asia/Almaty',
-          },
-        },
-      );
-
-      if (kDebugMode) {
-        debugPrint('AuthPostLoginService: app_open event sent');
-      }
-    } catch (error) {
-      if (kDebugMode) {
-        debugPrint('AuthPostLoginService: app_open event failed: $error');
-      }
-    }
-  }
-
   String _backendPlatformName() {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -109,23 +75,6 @@ class AuthPostLoginService {
       case TargetPlatform.linux:
       case TargetPlatform.fuchsia:
         return 'WEB';
-    }
-  }
-
-  String _clientPlatformName() {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'android';
-      case TargetPlatform.iOS:
-        return 'ios';
-      case TargetPlatform.macOS:
-        return 'macos';
-      case TargetPlatform.windows:
-        return 'windows';
-      case TargetPlatform.linux:
-        return 'linux';
-      case TargetPlatform.fuchsia:
-        return 'fuchsia';
     }
   }
 }

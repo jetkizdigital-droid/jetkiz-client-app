@@ -6,13 +6,39 @@ class SearchResult {
     required this.restaurants,
     required this.products,
     this.searchQueryLogId,
+    this.page = 1,
+    this.limit = 20,
+    this.hasMore = false,
   });
 
   final List<SearchRestaurantItem> restaurants;
   final List<SearchProductItem> products;
   final String? searchQueryLogId;
+  final int page;
+  final int limit;
+  final bool hasMore;
 
   bool get isEmpty => restaurants.isEmpty && products.isEmpty;
+
+  SearchResult append(SearchResult next) {
+    final restaurantsById = <String, SearchRestaurantItem>{
+      for (final item in restaurants) item.id: item,
+      for (final item in next.restaurants) item.id: item,
+    };
+    final productsById = <String, SearchProductItem>{
+      for (final item in products) item.id: item,
+      for (final item in next.products) item.id: item,
+    };
+
+    return SearchResult(
+      restaurants: restaurantsById.values.toList(growable: false),
+      products: productsById.values.toList(growable: false),
+      searchQueryLogId: searchQueryLogId ?? next.searchQueryLogId,
+      page: next.page,
+      limit: next.limit,
+      hasMore: next.hasMore,
+    );
+  }
 
   factory SearchResult.fromJson(Map<String, dynamic> json) {
     final restaurantsRaw = _extractList(json, const ['restaurants']) ??
@@ -49,6 +75,13 @@ class SearchResult {
         const ['meta', 'searchQueryLogId'],
         fallbackKeys: const ['searchQueryLogId'],
       ),
+      page: _readInt(json, const ['meta', 'page']) <= 0
+          ? 1
+          : _readInt(json, const ['meta', 'page']),
+      limit: _readInt(json, const ['meta', 'limit']) <= 0
+          ? 20
+          : _readInt(json, const ['meta', 'limit']),
+      hasMore: _readBool(json, const ['meta', 'hasMore']),
     );
   }
 

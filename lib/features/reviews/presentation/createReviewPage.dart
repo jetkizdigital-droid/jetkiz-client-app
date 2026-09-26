@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -385,6 +386,7 @@ class _CreateReviewPageState extends State<CreateReviewPage>
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizationScope.of(context).strings;
     final normalizedRestaurantImage = _normalizeUrl(widget.restaurantImageUrl);
 
     return Scaffold(
@@ -743,8 +745,9 @@ class _CreateReviewPageState extends State<CreateReviewPage>
                               maxLines: 10,
                               textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
-                                hintText:
-                                    'Поделитесь впечатлениями о заказе...\n\n• Что понравилось?\n• Как была доставка?\n• Какое блюдо было самым вкусным?',
+                                hintText: strings.localize(
+                                  'Поделитесь впечатлениями о заказе...\n\n• Что понравилось?\n• Как была доставка?\n• Какое блюдо было самым вкусным?',
+                                ),
                                 hintStyle: const TextStyle(
                                   fontSize: 15,
                                   height: 1.45,

@@ -332,23 +332,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   }
 
   static String _formatDateTime(DateTime value) {
-    const months = <int, String>{
-      1: 'января',
-      2: 'февраля',
-      3: 'марта',
-      4: 'апреля',
-      5: 'мая',
-      6: 'июня',
-      7: 'июля',
-      8: 'августа',
-      9: 'сентября',
-      10: 'октября',
-      11: 'ноября',
-      12: 'декабря',
-    };
-
     String two(int n) => n.toString().padLeft(2, '0');
-    return '${value.day} ${months[value.month] ?? ''} ${value.year} в ${two(value.hour)}:${two(value.minute)}';
+    return '${two(value.day)}.${two(value.month)}.${value.year}  ${two(value.hour)}:${two(value.minute)}';
   }
 
   static String _paymentStatusLabel(String raw) {
@@ -356,7 +341,13 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       case 'PAID':
         return 'Оплачено';
       case 'PENDING':
-        return 'Оплачено';
+        return 'Ожидает оплаты';
+      case 'AUTHORIZED':
+        return 'Оплата подтверждена';
+      case 'CAPTURE_PENDING':
+        return 'Подтверждение оплаты';
+      case 'VOIDED':
+        return 'Оплата отменена';
       case 'FAILED':
         return 'Ошибка оплаты';
       case 'REFUNDED':

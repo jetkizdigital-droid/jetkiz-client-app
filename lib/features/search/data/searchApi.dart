@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:jetkiz_mobile/core/config/appBuildInfo.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/search/domain/searchResult.dart';
 
@@ -9,11 +10,15 @@ class SearchApi {
   final ApiClient apiClient;
   final String _sessionId;
 
-  static const String appVersion = '1.0.1';
+  static String get appVersion => AppBuildInfo.fullVersion;
 
   String get sessionId => _sessionId;
 
-  Future<SearchResult> search(String query) async {
+  Future<SearchResult> search(
+    String query, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     final trimmed = query.trim();
 
     if (trimmed.isEmpty) {
@@ -29,6 +34,8 @@ class SearchApi {
       '/search',
       queryParameters: {
         'q': trimmed,
+        'page': page,
+        'limit': limit,
         'sessionId': _sessionId,
         'deviceId': deviceId,
         'source': 'search_page',
