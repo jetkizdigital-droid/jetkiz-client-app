@@ -229,27 +229,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     return groups;
   }
 
-  List<_CategoryRenderRow> _buildRenderRows(List<_RestaurantGroup> groups) {
-    final rows = <_CategoryRenderRow>[];
-
-    for (final group in groups) {
-      rows.add(_CategoryRenderRow.header(group.restaurant));
-
-      for (var index = 0; index < group.products.length; index += 2) {
-        rows.add(
-          _CategoryRenderRow.products(
-            first: group.products[index],
-            second: index + 1 < group.products.length
-                ? group.products[index + 1]
-                : null,
-          ),
-        );
-      }
-    }
-
-    return rows;
-  }
-
   Future<void> _openRestaurantPicker() async {
     final validProducts = _getValidProducts();
     final Map<String, HomeCategoryProductRestaurant> uniqueRestaurants =
@@ -263,78 +242,66 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
     final selectedId = await showModalBottomSheet<String?>(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return FractionallySizedBox(
-          heightFactor: 0.72,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const LocalizedText(
-                    'Выбрать ресторан',
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const LocalizedText(
+                  'Выбрать ресторан',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const LocalizedText(
+                    'Все рестораны',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                       color: Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: restaurants.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: const LocalizedText(
-                              'Все рестораны',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                            ),
-                            trailing: _selectedRestaurantId == null
-                                ? const Icon(
-                                    Icons.check_rounded,
-                                    color: Color(0xFF489F2A),
-                                  )
-                                : null,
-                            onTap: () => Navigator.of(context).pop(null),
-                          );
-                        }
-
-                        final restaurant = restaurants[index - 1];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: LocalizedText(
-                            restaurant.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
-                            ),
-                          ),
-                          trailing: _selectedRestaurantId == restaurant.id
-                              ? const Icon(
-                                  Icons.check_rounded,
-                                  color: Color(0xFF489F2A),
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(restaurant.id),
-                        );
-                      },
+                  trailing: _selectedRestaurantId == null
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: Color(0xFF489F2A),
+                        )
+                      : null,
+                  onTap: () => Navigator.of(context).pop(null),
+                ),
+                ...restaurants.map(
+                  (restaurant) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: LocalizedText(
+                      restaurant.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
                     ),
+                    trailing: _selectedRestaurantId == restaurant.id
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Color(0xFF489F2A),
+                          )
+                        : null,
+                    onTap: () => Navigator.of(context).pop(restaurant.id),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -361,7 +328,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   Widget build(BuildContext context) {
     final groups = _buildRestaurantGroups();
-    final rows = _buildRenderRows(groups);
     final hasBasket = _basketItemsCount > 0;
 
     return Scaffold(
@@ -387,42 +353,46 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                         15,
                         hasBasket ? 190 : 24,
                       ),
-                      itemCount: rows.length,
-                      separatorBuilder: (_, index) {
-                        final row = rows[index];
-                        return SizedBox(height: row.isHeader ? 10 : 14);
-                      },
+                      itemCount: groups.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 18),
                       itemBuilder: (context, index) {
-                        final row = rows[index];
+                        final group = groups[index];
 
-                        if (row.isHeader) {
-                          final restaurant = row.restaurant!;
-                          return _CategoryRestaurantHeader(
-                            restaurant: restaurant,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => RestaurantMenuPage(
-                                    restaurantId: restaurant.id,
-                                    restaurantName: restaurant.name,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        }
-
-                        return _CategoryProductRow(
-                          first: row.first!,
-                          second: row.second,
+                        return _RestaurantSection(
+                          group: group,
                           favoriteProductIds: _favorites.productIds,
                           favoriteBusyProductIds: _favorites.busyProductIds,
                           getQuantity: _getQuantity,
+                          onRestaurantTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => RestaurantMenuPage(
+                                  restaurantId: group.restaurant.id,
+                                  restaurantName: group.restaurant.name,
+                                ),
+                              ),
+                            );
+                          },
                           onProductTap: _openProductDetails,
                           onFavoriteTap: _toggleFavorite,
-                          onAddTap: _incrementProduct,
-                          onIncrementTap: _incrementProduct,
-                          onDecrementTap: _decrementProduct,
+                          onAddTap: (productId) {
+                            final product = group.products.firstWhere(
+                              (item) => item.id == productId,
+                            );
+                            _incrementProduct(product);
+                          },
+                          onIncrementTap: (productId) {
+                            final product = group.products.firstWhere(
+                              (item) => item.id == productId,
+                            );
+                            _incrementProduct(product);
+                          },
+                          onDecrementTap: (productId) {
+                            final product = group.products.firstWhere(
+                              (item) => item.id == productId,
+                            );
+                            _decrementProduct(product);
+                          },
                         );
                       },
                     ),
@@ -542,62 +512,13 @@ class _CategoryHeader extends StatelessWidget {
   }
 }
 
-class _CategoryRenderRow {
-  const _CategoryRenderRow.header(this.restaurant)
-      : first = null,
-        second = null;
-
-  const _CategoryRenderRow.products({
-    required this.first,
-    required this.second,
-  }) : restaurant = null;
-
-  final HomeCategoryProductRestaurant? restaurant;
-  final HomeCategoryProductData? first;
-  final HomeCategoryProductData? second;
-
-  bool get isHeader => restaurant != null;
-}
-
-class _CategoryRestaurantHeader extends StatelessWidget {
-  const _CategoryRestaurantHeader({
-    required this.restaurant,
-    required this.onTap,
-  });
-
-  final HomeCategoryProductRestaurant restaurant;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: LocalizedText(
-          restaurant.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            height: 1.0,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryProductRow extends StatelessWidget {
-  const _CategoryProductRow({
-    required this.first,
-    required this.second,
+class _RestaurantSection extends StatelessWidget {
+  const _RestaurantSection({
+    required this.group,
     required this.favoriteProductIds,
     required this.favoriteBusyProductIds,
     required this.getQuantity,
+    required this.onRestaurantTap,
     required this.onProductTap,
     required this.onFavoriteTap,
     required this.onAddTap,
@@ -605,43 +526,62 @@ class _CategoryProductRow extends StatelessWidget {
     required this.onDecrementTap,
   });
 
-  final HomeCategoryProductData first;
-  final HomeCategoryProductData? second;
+  final _RestaurantGroup group;
   final Set<String> favoriteProductIds;
   final Set<String> favoriteBusyProductIds;
   final int Function(String productId) getQuantity;
+  final VoidCallback onRestaurantTap;
   final void Function(HomeCategoryProductData product) onProductTap;
   final void Function(String productId) onFavoriteTap;
-  final Future<void> Function(HomeCategoryProductData product) onAddTap;
-  final Future<void> Function(HomeCategoryProductData product) onIncrementTap;
-  final void Function(HomeCategoryProductData product) onDecrementTap;
-
-  Widget _card(HomeCategoryProductData product) {
-    return AspectRatio(
-      aspectRatio: 0.72,
-      child: _CategoryProductCard(
-        product: product,
-        quantity: getQuantity(product.id),
-        isFavorite: favoriteProductIds.contains(product.id),
-        isFavoriteBusy: favoriteBusyProductIds.contains(product.id),
-        onProductTap: () => onProductTap(product),
-        onFavoriteTap: () => onFavoriteTap(product.id),
-        onAddTap: () => onAddTap(product),
-        onIncrementTap: () => onIncrementTap(product),
-        onDecrementTap: () => onDecrementTap(product),
-      ),
-    );
-  }
+  final void Function(String productId) onAddTap;
+  final void Function(String productId) onIncrementTap;
+  final void Function(String productId) onDecrementTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _card(first)),
-        const SizedBox(width: 14),
-        Expanded(
-          child: second == null ? const SizedBox.shrink() : _card(second!),
+        InkWell(
+          onTap: onRestaurantTap,
+          child: LocalizedText(
+            group.restaurant.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          itemCount: group.products.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 0.72,
+          ),
+          itemBuilder: (context, index) {
+            final product = group.products[index];
+
+            return _CategoryProductCard(
+              product: product,
+              quantity: getQuantity(product.id),
+              isFavorite: favoriteProductIds.contains(product.id),
+              isFavoriteBusy: favoriteBusyProductIds.contains(product.id),
+              onProductTap: () => onProductTap(product),
+              onFavoriteTap: () => onFavoriteTap(product.id),
+              onAddTap: () => onAddTap(product.id),
+              onIncrementTap: () => onIncrementTap(product.id),
+              onDecrementTap: () => onDecrementTap(product.id),
+            );
+          },
         ),
       ],
     );
