@@ -81,7 +81,7 @@ class SearchResult {
       limit: _readInt(json, const ['meta', 'limit']) <= 0
           ? 20
           : _readInt(json, const ['meta', 'limit']),
-      hasMore: _readBool(json, const ['meta', 'hasMore']) ?? false,
+      hasMore: _readBool(json, const ['meta', 'hasMore']),
     );
   }
 
