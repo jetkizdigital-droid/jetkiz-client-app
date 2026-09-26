@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - ios/client-release-current-20260926
+      - ios/client-appstore-final-20260926
     paths:
       - 'lib/**'
       - 'test/**'
