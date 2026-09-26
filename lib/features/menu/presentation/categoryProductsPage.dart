@@ -328,8 +328,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                                   color: Color(0xFF489F2A),
                                 )
                               : null,
-                          onTap: () =>
-                              Navigator.of(context).pop(restaurant.id),
+                          onTap: () => Navigator.of(context).pop(restaurant.id),
                         );
                       },
                     ),
@@ -642,9 +641,7 @@ class _CategoryProductRow extends StatelessWidget {
         Expanded(child: _card(first)),
         const SizedBox(width: 14),
         Expanded(
-          child: second == null
-              ? const SizedBox.shrink()
-              : _card(second!),
+          child: second == null ? const SizedBox.shrink() : _card(second!),
         ),
       ],
     );
