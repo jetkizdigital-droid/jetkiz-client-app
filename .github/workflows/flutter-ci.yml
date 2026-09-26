@@ -134,9 +134,12 @@ jobs:
           "$AAPT" dump badging "$APK" > /tmp/client-badging.txt
           "$AAPT" dump permissions "$APK" > /tmp/client-permissions.txt
           "$AAPT" dump xmltree "$APK" AndroidManifest.xml > /tmp/client-manifest.txt
+          VERSION_LINE="$(grep '^version:' pubspec.yaml | head -n 1 | awk '{print $2}')"
+          VERSION_NAME="${VERSION_LINE%%+*}"
+          VERSION_CODE="${VERSION_LINE##*+}"
           grep -F "package: name='kz.jetkiz.app'" /tmp/client-badging.txt
-          grep -F "versionCode='4'" /tmp/client-badging.txt
-          grep -F "versionName='1.0.3'" /tmp/client-badging.txt
+          grep -F "versionCode='${VERSION_CODE}'" /tmp/client-badging.txt
+          grep -F "versionName='${VERSION_NAME}'" /tmp/client-badging.txt
           grep -F "application-label:'JETKIZ'" /tmp/client-badging.txt
           grep -F 'android.permission.POST_NOTIFICATIONS' /tmp/client-permissions.txt
           grep -F 'com.google.firebase.MESSAGING_EVENT' /tmp/client-manifest.txt
