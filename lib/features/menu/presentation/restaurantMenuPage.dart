@@ -600,6 +600,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                     : ScrollConfiguration(
                         behavior: const AppScrollBehavior(),
                         child: CustomScrollView(
+                          scrollCacheExtent: 900,
                           keyboardDismissBehavior:
                               ScrollViewKeyboardDismissBehavior.onDrag,
                           slivers: [
@@ -825,21 +826,24 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                       );
                                     }
 
-                                    return _MenuProductRow(
-                                      first: row.first!,
-                                      second: row.second,
-                                      favoriteProductIds: _favorites.productIds,
-                                      favoritePendingProductIds:
-                                          _favorites.busyProductIds,
-                                      restaurantCanOrder:
-                                          _menuData?.restaurant.canOrder ??
-                                              false,
-                                      getQuantity: _getQuantity,
-                                      onProductTap: _openProductDetails,
-                                      onFavoriteTap: _toggleProductFavorite,
-                                      onAddFirst: _addFirst,
-                                      onAdd: _increment,
-                                      onRemove: _decrement,
+                                    return RepaintBoundary(
+                                      child: _MenuProductRow(
+                                        first: row.first!,
+                                        second: row.second,
+                                        favoriteProductIds:
+                                            _favorites.productIds,
+                                        favoritePendingProductIds:
+                                            _favorites.busyProductIds,
+                                        restaurantCanOrder:
+                                            _menuData?.restaurant.canOrder ??
+                                                false,
+                                        getQuantity: _getQuantity,
+                                        onProductTap: _openProductDetails,
+                                        onFavoriteTap: _toggleProductFavorite,
+                                        onAddFirst: _addFirst,
+                                        onAdd: _increment,
+                                        onRemove: _decrement,
+                                      ),
                                     );
                                   },
                                   separatorBuilder: (context, index) =>
@@ -961,7 +965,7 @@ class _HeroImageLayer extends StatelessWidget {
           fit: BoxFit.cover,
           alignment: Alignment.center,
           cacheWidth: cacheWidth,
-          filterQuality: FilterQuality.high,
+          filterQuality: FilterQuality.low,
           gaplessPlayback: true,
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
@@ -1627,7 +1631,7 @@ class _MenuProductImage extends StatelessWidget {
                 imageUrl,
                 fit: BoxFit.cover,
                 cacheWidth: cacheSize,
-                filterQuality: FilterQuality.high,
+                filterQuality: FilterQuality.low,
                 gaplessPlayback: true,
                 errorBuilder: (_, __, ___) {
                   return const _MenuImagePlaceholder();
