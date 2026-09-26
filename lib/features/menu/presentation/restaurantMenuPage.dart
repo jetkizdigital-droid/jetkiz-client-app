@@ -914,22 +914,22 @@ class _CategoriesStrip extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-            _MenuCategoryChip(
-              title: allTabTitle,
-              isSelected: selectedTabId == 'all',
-              onTap: () => onTabSelected('all'),
-            ),
-            const SizedBox(width: 8),
-            ...groups.expand((group) {
-              return [
-                _MenuCategoryChip(
-                  title: group.category.title,
-                  isSelected: selectedTabId == group.category.id,
-                  onTap: () => onTabSelected(group.category.id),
-                ),
-                const SizedBox(width: 8),
-              ];
-            }),
+          _MenuCategoryChip(
+            title: allTabTitle,
+            isSelected: selectedTabId == 'all',
+            onTap: () => onTabSelected('all'),
+          ),
+          const SizedBox(width: 8),
+          ...groups.expand((group) {
+            return [
+              _MenuCategoryChip(
+                title: group.category.title,
+                isSelected: selectedTabId == group.category.id,
+                onTap: () => onTabSelected(group.category.id),
+              ),
+              const SizedBox(width: 8),
+            ];
+          }),
         ],
       ),
     );
