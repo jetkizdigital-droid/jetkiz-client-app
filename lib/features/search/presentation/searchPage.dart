@@ -562,69 +562,91 @@ class _SearchBody extends StatelessWidget {
       );
     }
 
-    return ListView(
+    return CustomScrollView(
       controller: controller,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      children: [
+      cacheExtent: 600,
+      physics: const ClampingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [
         if (result.restaurants.isNotEmpty) ...[
-          const _SectionTitle(title: 'Рестораны'),
-          const SizedBox(height: 10),
-          ...result.restaurants.asMap().entries.map(
-            (entry) {
-              final index = entry.key;
-              final item = entry.value;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _RestaurantTile(
-                  item: item,
-                  onTap: () => onRestaurantTap(item, index + 1),
-                ),
-              );
-            },
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 10),
+            sliver: SliverToBoxAdapter(
+              child: _SectionTitle(title: 'Рестораны'),
+            ),
           ),
-          const SizedBox(height: 8),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList.builder(
+              itemCount: result.restaurants.length,
+              itemBuilder: (context, index) {
+                final item = result.restaurants[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: RepaintBoundary(
+                    child: _RestaurantTile(
+                      item: item,
+                      onTap: () => onRestaurantTap(item, index + 1),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 8)),
         ],
         if (result.products.isNotEmpty) ...[
-          const _SectionTitle(title: 'Блюда и напитки'),
-          const SizedBox(height: 10),
-          ...result.products.asMap().entries.map(
-            (entry) {
-              final index = entry.key;
-              final item = entry.value;
-              final position = result.restaurants.length + index + 1;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _ProductTile(
-                  item: item,
-                  onTap: () => onProductTap(item, position),
-                ),
-              );
-            },
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 10),
+            sliver: SliverToBoxAdapter(
+              child: _SectionTitle(title: 'Блюда и напитки'),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList.builder(
+              itemCount: result.products.length,
+              itemBuilder: (context, index) {
+                final item = result.products[index];
+                final position = result.restaurants.length + index + 1;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: RepaintBoundary(
+                    child: _ProductTile(
+                      item: item,
+                      onTap: () => onProductTap(item, position),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
-        if (isLoadingMore)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 18),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              ),
-            ),
-          )
-        else if (loadMoreFailed || result.hasMore)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 18),
-            child: Center(
-              child: TextButton(
-                onPressed: onLoadMore,
-                child: const LocalizedText('Загрузить ещё'),
-              ),
-            ),
-          ),
+        SliverToBoxAdapter(
+          child: isLoadingMore
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                  ),
+                )
+              : (loadMoreFailed || result.hasMore)
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 18),
+                      child: Center(
+                        child: TextButton(
+                          onPressed: onLoadMore,
+                          child: const LocalizedText('Загрузить ещё'),
+                        ),
+                      ),
+                    )
+                  : const SizedBox(height: 24),
+        ),
       ],
     );
   }
@@ -659,6 +681,11 @@ class _RestaurantTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cacheWidth =
+        (76 * MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(152, 512)
+            .toInt();
     final ratingText = item.ratingAvg == 0
         ? '0,0'
         : item.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
@@ -685,6 +712,7 @@ class _RestaurantTile extends StatelessWidget {
                     ? Image.network(
                         item.coverImageUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: cacheWidth,
                         filterQuality: FilterQuality.high,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const _ImagePlaceholder(
@@ -772,6 +800,11 @@ class _ProductTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cacheWidth =
+        (76 * MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(152, 512)
+            .toInt();
     final subtitleParts = <String>[
       if (item.restaurantName.trim().isNotEmpty) item.restaurantName.trim(),
       if (item.categoryTitle?.trim().isNotEmpty == true)
@@ -801,6 +834,7 @@ class _ProductTile extends StatelessWidget {
                     ? Image.network(
                         item.imageUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: cacheWidth,
                         filterQuality: FilterQuality.high,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const _ImagePlaceholder(
