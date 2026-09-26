@@ -1,0 +1,40 @@
+name: Client iOS Project Bootstrap
+
+on:
+  push:
+    branches:
+      - ios/client-release-current-20260926
+    paths:
+      - 'tool/configure_client_ios_project.py'
+      - '.github/workflows/client-ios-project-bootstrap.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ios/client-release-current-20260926
+          fetch-depth: 0
+
+      - name: Configure iOS Xcode project
+        run: python3 tool/configure_client_ios_project.py
+
+      - name: Commit generated Xcode project settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ios/Runner.xcodeproj/project.pbxproj; then
+            echo 'Xcode project already configured'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ios/Runner.xcodeproj/project.pbxproj
+          git commit -m 'feat(ios): configure client bundle id and capabilities'
+          git push origin HEAD:ios/client-release-current-20260926
