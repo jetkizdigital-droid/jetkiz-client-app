@@ -316,7 +316,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: LocalizedText(
-            'Не удалось определить restaurantId. Передай restaurantId при открытии ProductDetailsPage.',
+            'Не удалось определить ресторан',
           ),
         ),
       );
