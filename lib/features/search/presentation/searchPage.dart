@@ -8,6 +8,8 @@ import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
+import 'package:jetkiz_mobile/features/menu/presentation/productDetailsPage.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 import 'package:jetkiz_mobile/features/search/data/searchApi.dart';
 import 'package:jetkiz_mobile/features/search/domain/searchResult.dart';
@@ -292,9 +294,29 @@ class _SearchPageState extends State<SearchPage> {
       ),
     );
 
+    final previewProduct = RestaurantMenuItem(
+      id: item.id,
+      titleRu: item.titleRu,
+      titleKk: item.titleKk ?? '',
+      price: item.price,
+      imageUrl: item.imageUrl,
+      isAvailable: true,
+      categoryId: null,
+      categoryNameRu: item.categoryTitleRu,
+      categoryNameKk: item.categoryTitleKk,
+      categoryCode: null,
+      categorySortOrder: null,
+      weight: item.weight,
+      composition: null,
+      description: item.description,
+      isDrink: item.isDrink,
+      images: const <RestaurantMenuItemImage>[],
+    );
+
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => RestaurantMenuPage(
+        builder: (_) => ProductDetailsPage(
+          product: previewProduct,
           restaurantId: item.restaurantId,
           restaurantName: item.restaurantName.trim().isEmpty
               ? 'Ресторан'
