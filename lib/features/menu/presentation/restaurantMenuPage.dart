@@ -907,14 +907,9 @@ class _CategoriesStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 34,
-      child: ScrollConfiguration(
-        behavior: const _SmoothScrollBehavior(),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          children: [
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
             _MenuCategoryChip(
               title: allTabTitle,
               isSelected: selectedTabId == 'all',
@@ -931,8 +926,7 @@ class _CategoriesStrip extends StatelessWidget {
                 const SizedBox(width: 8),
               ];
             }),
-          ],
-        ),
+        ],
       ),
     );
   }
