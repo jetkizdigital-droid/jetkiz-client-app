@@ -14,33 +14,38 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Scan direct unlocalized RU text
+      - name: Scan static LocalizedText RU catalogue coverage
         shell: bash
         run: |
           python3 - <<'PY'
           import pathlib
           import re
 
-          roots = sorted(pathlib.Path('lib/features').glob('**/presentation/**/*.dart'))
-          cyr = r'[А-Яа-яЁё]'
+          catalogue = pathlib.Path('lib/core/localization/appStrings.dart').read_text(encoding='utf-8')
+          key_pattern = re.compile(r"^\s*'((?:\\.|[^'\\])*)'\s*:", re.MULTILINE)
+          keys = {m.group(1).replace('\\n', '\n').replace("\\'", "'") for m in key_pattern.finditer(catalogue)}
 
-          patterns = [
-              ('Text', re.compile(r'(?<!Localized)\bText\s*\(\s*([\'\"])(?P<value>(?:\\.|(?!\1).)*)\1', re.DOTALL)),
-              ('TextSpan', re.compile(r'\bTextSpan\s*\([^)]*?\btext\s*:\s*([\'\"])(?P<value>(?:\\.|(?!\1).)*)\1', re.DOTALL)),
-          ]
+          pattern = re.compile(
+              r'\bLocalizedText\s*\(\s*([\'\"])(?P<value>(?:\\.|(?!\1).)*)\1',
+              re.DOTALL,
+          )
+          cyr = re.compile(r'[А-Яа-яЁё]')
+          missing = []
 
-          hits = []
-          for path in roots:
+          for path in sorted(pathlib.Path('lib/features').glob('**/presentation/**/*.dart')):
               source = path.read_text(encoding='utf-8')
-              for kind, pattern in patterns:
-                  for match in pattern.finditer(source):
-                      value = match.group('value')
-                      if not re.search(cyr, value):
-                          continue
+              for match in pattern.finditer(source):
+                  raw = match.group('value')
+                  value = raw.replace('\\n', '\n').replace("\\'", "'").replace('\\\"', '"')
+                  if not cyr.search(value):
+                      continue
+                  if '$' in value:
+                      continue
+                  if value not in keys:
                       line = source.count('\n', 0, match.start()) + 1
-                      hits.append((str(path), line, kind, value.replace('\n', '\\n')))
+                      missing.append((str(path), line, value.replace('\n', '\\n')))
 
-          print(f'DIRECT_UNLOCALIZED_COUNT={len(hits)}')
-          for path, line, kind, value in hits:
-              print(f'{path}:{line}: {kind}: {value}')
+          print(f'STATIC_LOCALIZED_MISSING_COUNT={len(missing)}')
+          for path, line, value in missing:
+              print(f'{path}:{line}: {value}')
           PY
