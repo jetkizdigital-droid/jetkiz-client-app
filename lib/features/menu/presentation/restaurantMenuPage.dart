@@ -600,7 +600,7 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                     : ScrollConfiguration(
                         behavior: const AppScrollBehavior(),
                         child: CustomScrollView(
-                          scrollCacheExtent: 900,
+                          scrollCacheExtent: const ScrollCacheExtent.pixels(900),
                           keyboardDismissBehavior:
                               ScrollViewKeyboardDismissBehavior.onDrag,
                           slivers: [
