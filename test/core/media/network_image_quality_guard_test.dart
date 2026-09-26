@@ -3,22 +3,42 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('all network images use production rendering quality', () {
+  test('network images keep quality rules for static and scrolling surfaces',
+      () {
     final violations = <String>[];
+    final scrollOptimizedPaths = <String>{
+      'lib/features/home/presentation/homePage.dart',
+      'lib/features/menu/presentation/categoryProductsPage.dart',
+      'lib/features/menu/presentation/restaurantMenuPage.dart',
+    };
     final dartFiles = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
         .where((file) => file.path.endsWith('.dart'));
 
     for (final file in dartFiles) {
+      final normalizedPath = file.path.replaceAll(r'\', '/');
       final source = file.readAsStringSync();
       final calls = _extractImageNetworkCalls(source);
+      final isScrollOptimized = scrollOptimizedPaths.contains(normalizedPath);
 
       for (var index = 0; index < calls.length; index += 1) {
         final call = calls[index];
         final label = '${file.path}: Image.network #${index + 1}';
 
-        if (!call.contains('filterQuality: FilterQuality.high')) {
+        if (isScrollOptimized) {
+          if (!call.contains('filterQuality: FilterQuality.low')) {
+            violations.add(
+              '$label must use FilterQuality.low on scrolling surfaces',
+            );
+          }
+
+          if (!call.contains('cacheWidth:')) {
+            violations.add(
+              '$label must use bounded cacheWidth on scrolling surfaces',
+            );
+          }
+        } else if (!call.contains('filterQuality: FilterQuality.high')) {
           violations.add('$label must use FilterQuality.high');
         }
 

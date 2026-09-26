@@ -6,6 +6,7 @@ import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/navigation/appNavigator.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
+import 'package:jetkiz_mobile/core/ui/appScrollBehavior.dart';
 import 'package:jetkiz_mobile/features/auth/presentation/profileEntryPage.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartPage.dart';
@@ -310,6 +311,7 @@ class _JetkizAppState extends State<JetkizApp> with WidgetsBindingObserver {
           navigatorKey: AppNavigator.navigatorKey,
           title: AppConfig.appName,
           debugShowCheckedModeBanner: false,
+          scrollBehavior: const AppScrollBehavior(),
           locale: Locale(_language.name),
           supportedLocales: const [
             Locale('ru'),

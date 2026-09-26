@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
@@ -263,6 +264,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     onRefresh: _load,
                     child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
+                      scrollCacheExtent: const ScrollCacheExtent.pixels(720),
                       slivers: [
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -296,10 +298,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         const SizedBox(width: 12),
                                     itemBuilder: (context, index) {
                                       final category = data.categories[index];
-                                      return _CategoryCard(
-                                        category: category,
-                                        onTap: () =>
-                                            _openCategoryProducts(category),
+                                      return RepaintBoundary(
+                                        child: _CategoryCard(
+                                          category: category,
+                                          onTap: () =>
+                                              _openCategoryProducts(category),
+                                        ),
                                       );
                                     },
                                   ),
@@ -330,9 +334,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               itemCount: pinnedRestaurants.length,
                               itemBuilder: (context, index) {
                                 final restaurant = pinnedRestaurants[index];
-                                return _PinnedRestaurantCard(
-                                  restaurant: restaurant,
-                                  onTap: () => _openRestaurantMenu(restaurant),
+                                return RepaintBoundary(
+                                  child: _PinnedRestaurantCard(
+                                    restaurant: restaurant,
+                                    onTap: () =>
+                                        _openRestaurantMenu(restaurant),
+                                  ),
                                 );
                               },
                               separatorBuilder: (_, __) =>
@@ -602,7 +609,9 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                 widget.onShown(widget.promos[index]);
               },
               itemBuilder: (context, index) {
-                return _PromoBanner(promo: widget.promos[index]);
+                return RepaintBoundary(
+                  child: _PromoBanner(promo: widget.promos[index]),
+                );
               },
             ),
           ),
@@ -641,6 +650,10 @@ class _PromoBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = promo.fullImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(
+      context,
+      MediaQuery.sizeOf(context).width - 34,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
@@ -655,7 +668,8 @@ class _PromoBanner extends StatelessWidget {
                 Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
-                  filterQuality: FilterQuality.high,
+                  cacheWidth: cacheWidth,
+                  filterQuality: FilterQuality.low,
                   gaplessPlayback: true,
                   errorBuilder: (_, __, ___) =>
                       const ColoredBox(color: Color(0xFF1F2328)),
@@ -775,7 +789,7 @@ class _CategoryCard extends StatelessWidget {
                         imageUrl,
                         fit: BoxFit.cover,
                         cacheWidth: cacheWidth,
-                        filterQuality: FilterQuality.high,
+                        filterQuality: FilterQuality.low,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) =>
                             const _CategoryImagePlaceholder(),
@@ -853,6 +867,10 @@ class _PinnedRestaurantCard extends StatelessWidget {
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
     final isOpen = restaurant.isOpenForOrders;
     final imageUrl = restaurant.fullCoverImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(
+      context,
+      MediaQuery.sizeOf(context).width - 32,
+    );
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -874,7 +892,8 @@ class _PinnedRestaurantCard extends StatelessWidget {
                       ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          filterQuality: FilterQuality.high,
+                          cacheWidth: cacheWidth,
+                          filterQuality: FilterQuality.low,
                           gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => const ColoredBox(
                             color: Color(0xFF7DC963),
