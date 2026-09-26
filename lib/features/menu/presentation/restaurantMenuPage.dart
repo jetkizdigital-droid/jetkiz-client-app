@@ -598,10 +598,12 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                     : ScrollConfiguration(
                         behavior: const _SmoothScrollBehavior(),
                         child: CustomScrollView(
+                          cacheExtent: 600,
                           keyboardDismissBehavior:
                               ScrollViewKeyboardDismissBehavior.onDrag,
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
+                          physics:
+                              const _SmoothScrollBehavior().getScrollPhysics(
+                            context,
                           ),
                           slivers: [
                             SliverAppBar(
@@ -911,9 +913,7 @@ class _CategoriesStrip extends StatelessWidget {
         behavior: const _SmoothScrollBehavior(),
         child: ListView(
           scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
+          physics: const _SmoothScrollBehavior().getScrollPhysics(context),
           children: [
             _MenuCategoryChip(
               title: allTabTitle,
@@ -953,7 +953,8 @@ class _HeroImageLayer extends StatelessWidget {
 
     final logicalWidth = MediaQuery.sizeOf(context).width;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth = (logicalWidth * pixelRatio).round().clamp(720, 2048);
+    final cacheWidth =
+        (logicalWidth * pixelRatio).round().clamp(720, 2048).toInt();
 
     return RepaintBoundary(
       child: SizedBox.expand(
