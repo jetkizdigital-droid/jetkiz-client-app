@@ -229,6 +229,27 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     return groups;
   }
 
+  List<_CategoryRenderRow> _buildRenderRows(List<_RestaurantGroup> groups) {
+    final rows = <_CategoryRenderRow>[];
+
+    for (final group in groups) {
+      rows.add(_CategoryRenderRow.header(group.restaurant));
+
+      for (var index = 0; index < group.products.length; index += 2) {
+        rows.add(
+          _CategoryRenderRow.products(
+            first: group.products[index],
+            second: index + 1 < group.products.length
+                ? group.products[index + 1]
+                : null,
+          ),
+        );
+      }
+    }
+
+    return rows;
+  }
+
   Future<void> _openRestaurantPicker() async {
     final validProducts = _getValidProducts();
     final Map<String, HomeCategoryProductRestaurant> uniqueRestaurants =
@@ -328,6 +349,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   Widget build(BuildContext context) {
     final groups = _buildRestaurantGroups();
+    final rows = _buildRenderRows(groups);
     final hasBasket = _basketItemsCount > 0;
 
     return Scaffold(
@@ -353,46 +375,42 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                         15,
                         hasBasket ? 190 : 24,
                       ),
-                      itemCount: groups.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 18),
+                      itemCount: rows.length,
+                      separatorBuilder: (_, index) {
+                        final row = rows[index];
+                        return SizedBox(height: row.isHeader ? 10 : 14);
+                      },
                       itemBuilder: (context, index) {
-                        final group = groups[index];
+                        final row = rows[index];
 
-                        return _RestaurantSection(
-                          group: group,
+                        if (row.isHeader) {
+                          final restaurant = row.restaurant!;
+                          return _CategoryRestaurantHeader(
+                            restaurant: restaurant,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => RestaurantMenuPage(
+                                    restaurantId: restaurant.id,
+                                    restaurantName: restaurant.name,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }
+
+                        return _CategoryProductRow(
+                          first: row.first!,
+                          second: row.second,
                           favoriteProductIds: _favorites.productIds,
                           favoriteBusyProductIds: _favorites.busyProductIds,
                           getQuantity: _getQuantity,
-                          onRestaurantTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => RestaurantMenuPage(
-                                  restaurantId: group.restaurant.id,
-                                  restaurantName: group.restaurant.name,
-                                ),
-                              ),
-                            );
-                          },
                           onProductTap: _openProductDetails,
                           onFavoriteTap: _toggleFavorite,
-                          onAddTap: (productId) {
-                            final product = group.products.firstWhere(
-                              (item) => item.id == productId,
-                            );
-                            _incrementProduct(product);
-                          },
-                          onIncrementTap: (productId) {
-                            final product = group.products.firstWhere(
-                              (item) => item.id == productId,
-                            );
-                            _incrementProduct(product);
-                          },
-                          onDecrementTap: (productId) {
-                            final product = group.products.firstWhere(
-                              (item) => item.id == productId,
-                            );
-                            _decrementProduct(product);
-                          },
+                          onAddTap: _incrementProduct,
+                          onIncrementTap: _incrementProduct,
+                          onDecrementTap: _decrementProduct,
                         );
                       },
                     ),
@@ -512,13 +530,62 @@ class _CategoryHeader extends StatelessWidget {
   }
 }
 
-class _RestaurantSection extends StatelessWidget {
-  const _RestaurantSection({
-    required this.group,
+class _CategoryRenderRow {
+  const _CategoryRenderRow.header(this.restaurant)
+      : first = null,
+        second = null;
+
+  const _CategoryRenderRow.products({
+    required this.first,
+    required this.second,
+  }) : restaurant = null;
+
+  final HomeCategoryProductRestaurant? restaurant;
+  final HomeCategoryProductData? first;
+  final HomeCategoryProductData? second;
+
+  bool get isHeader => restaurant != null;
+}
+
+class _CategoryRestaurantHeader extends StatelessWidget {
+  const _CategoryRestaurantHeader({
+    required this.restaurant,
+    required this.onTap,
+  });
+
+  final HomeCategoryProductRestaurant restaurant;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: LocalizedText(
+          restaurant.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            height: 1.0,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryProductRow extends StatelessWidget {
+  const _CategoryProductRow({
+    required this.first,
+    required this.second,
     required this.favoriteProductIds,
     required this.favoriteBusyProductIds,
     required this.getQuantity,
-    required this.onRestaurantTap,
     required this.onProductTap,
     required this.onFavoriteTap,
     required this.onAddTap,
@@ -526,62 +593,45 @@ class _RestaurantSection extends StatelessWidget {
     required this.onDecrementTap,
   });
 
-  final _RestaurantGroup group;
+  final HomeCategoryProductData first;
+  final HomeCategoryProductData? second;
   final Set<String> favoriteProductIds;
   final Set<String> favoriteBusyProductIds;
   final int Function(String productId) getQuantity;
-  final VoidCallback onRestaurantTap;
   final void Function(HomeCategoryProductData product) onProductTap;
   final void Function(String productId) onFavoriteTap;
-  final void Function(String productId) onAddTap;
-  final void Function(String productId) onIncrementTap;
-  final void Function(String productId) onDecrementTap;
+  final Future<void> Function(HomeCategoryProductData product) onAddTap;
+  final Future<void> Function(HomeCategoryProductData product) onIncrementTap;
+  final void Function(HomeCategoryProductData product) onDecrementTap;
+
+  Widget _card(HomeCategoryProductData product) {
+    return AspectRatio(
+      aspectRatio: 0.72,
+      child: _CategoryProductCard(
+        product: product,
+        quantity: getQuantity(product.id),
+        isFavorite: favoriteProductIds.contains(product.id),
+        isFavoriteBusy: favoriteBusyProductIds.contains(product.id),
+        onProductTap: () => onProductTap(product),
+        onFavoriteTap: () => onFavoriteTap(product.id),
+        onAddTap: () => onAddTap(product),
+        onIncrementTap: () => onIncrementTap(product),
+        onDecrementTap: () => onDecrementTap(product),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
-          onTap: onRestaurantTap,
-          child: LocalizedText(
-            group.restaurant.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1.0,
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        GridView.builder(
-          itemCount: group.products.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            childAspectRatio: 0.72,
-          ),
-          itemBuilder: (context, index) {
-            final product = group.products[index];
-
-            return _CategoryProductCard(
-              product: product,
-              quantity: getQuantity(product.id),
-              isFavorite: favoriteProductIds.contains(product.id),
-              isFavoriteBusy: favoriteBusyProductIds.contains(product.id),
-              onProductTap: () => onProductTap(product),
-              onFavoriteTap: () => onFavoriteTap(product.id),
-              onAddTap: () => onAddTap(product.id),
-              onIncrementTap: () => onIncrementTap(product.id),
-              onDecrementTap: () => onDecrementTap(product.id),
-            );
-          },
+        Expanded(child: _card(first)),
+        const SizedBox(width: 14),
+        Expanded(
+          child: second == null
+              ? const SizedBox.shrink()
+              : _card(second!),
         ),
       ],
     );
