@@ -263,66 +263,79 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
     final selectedId = await showModalBottomSheet<String?>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const LocalizedText(
-                  'Выбрать ресторан',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const LocalizedText(
-                    'Все рестораны',
+        return FractionallySizedBox(
+          heightFactor: 0.72,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const LocalizedText(
+                    'Выбрать ресторан',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
                       color: Colors.black,
                     ),
                   ),
-                  trailing: _selectedRestaurantId == null
-                      ? const Icon(
-                          Icons.check_rounded,
-                          color: Color(0xFF489F2A),
-                        )
-                      : null,
-                  onTap: () => Navigator.of(context).pop(null),
-                ),
-                ...restaurants.map(
-                  (restaurant) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: LocalizedText(
-                      restaurant.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: restaurants.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const LocalizedText(
+                              'Все рестораны',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                            trailing: _selectedRestaurantId == null
+                                ? const Icon(
+                                    Icons.check_rounded,
+                                    color: Color(0xFF489F2A),
+                                  )
+                                : null,
+                            onTap: () => Navigator.of(context).pop(null),
+                          );
+                        }
+
+                        final restaurant = restaurants[index - 1];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: LocalizedText(
+                            restaurant.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
+                          trailing: _selectedRestaurantId == restaurant.id
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  color: Color(0xFF489F2A),
+                                )
+                              : null,
+                          onTap: () =>
+                              Navigator.of(context).pop(restaurant.id),
+                        );
+                      },
                     ),
-                    trailing: _selectedRestaurantId == restaurant.id
-                        ? const Icon(
-                            Icons.check_rounded,
-                            color: Color(0xFF489F2A),
-                          )
-                        : null,
-                    onTap: () => Navigator.of(context).pop(restaurant.id),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
