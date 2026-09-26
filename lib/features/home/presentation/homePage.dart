@@ -263,6 +263,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     onRefresh: _load,
                     child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
+                      scrollCacheExtent: 720,
                       slivers: [
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -296,10 +297,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         const SizedBox(width: 12),
                                     itemBuilder: (context, index) {
                                       final category = data.categories[index];
-                                      return _CategoryCard(
-                                        category: category,
-                                        onTap: () =>
-                                            _openCategoryProducts(category),
+                                      return RepaintBoundary(
+                                        child: _CategoryCard(
+                                          category: category,
+                                          onTap: () =>
+                                              _openCategoryProducts(category),
+                                        ),
                                       );
                                     },
                                   ),
@@ -330,9 +333,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               itemCount: pinnedRestaurants.length,
                               itemBuilder: (context, index) {
                                 final restaurant = pinnedRestaurants[index];
-                                return _PinnedRestaurantCard(
-                                  restaurant: restaurant,
-                                  onTap: () => _openRestaurantMenu(restaurant),
+                                return RepaintBoundary(
+                                  child: _PinnedRestaurantCard(
+                                    restaurant: restaurant,
+                                    onTap: () => _openRestaurantMenu(restaurant),
+                                  ),
                                 );
                               },
                               separatorBuilder: (_, __) =>
@@ -602,7 +607,9 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                 widget.onShown(widget.promos[index]);
               },
               itemBuilder: (context, index) {
-                return _PromoBanner(promo: widget.promos[index]);
+                return RepaintBoundary(
+                  child: _PromoBanner(promo: widget.promos[index]),
+                );
               },
             ),
           ),
@@ -660,7 +667,7 @@ class _PromoBanner extends StatelessWidget {
                   imageUrl,
                   fit: BoxFit.cover,
                   cacheWidth: cacheWidth,
-                  filterQuality: FilterQuality.high,
+                  filterQuality: FilterQuality.low,
                   gaplessPlayback: true,
                   errorBuilder: (_, __, ___) =>
                       const ColoredBox(color: Color(0xFF1F2328)),
@@ -780,7 +787,7 @@ class _CategoryCard extends StatelessWidget {
                         imageUrl,
                         fit: BoxFit.cover,
                         cacheWidth: cacheWidth,
-                        filterQuality: FilterQuality.high,
+                        filterQuality: FilterQuality.low,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) =>
                             const _CategoryImagePlaceholder(),
@@ -884,7 +891,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                           imageUrl,
                           fit: BoxFit.cover,
                           cacheWidth: cacheWidth,
-                          filterQuality: FilterQuality.high,
+                          filterQuality: FilterQuality.low,
                           gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => const ColoredBox(
                             color: Color(0xFF7DC963),
