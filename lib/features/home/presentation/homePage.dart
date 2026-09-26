@@ -263,7 +263,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     onRefresh: _load,
                     child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      scrollCacheExtent: 720,
+                      scrollCacheExtent: const ScrollCacheExtent.pixels(720),
                       slivers: [
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
