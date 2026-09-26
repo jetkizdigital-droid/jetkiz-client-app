@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('network images keep quality rules for static and scrolling surfaces', () {
+  test('network images keep quality rules for static and scrolling surfaces',
+      () {
     final violations = <String>[];
     final scrollOptimizedPaths = <String>{
       'lib/features/home/presentation/homePage.dart',
