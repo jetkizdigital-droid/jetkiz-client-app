@@ -641,6 +641,10 @@ class _PromoBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = promo.fullImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(
+      context,
+      MediaQuery.sizeOf(context).width - 34,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
@@ -655,6 +659,7 @@ class _PromoBanner extends StatelessWidget {
                 Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
+                  cacheWidth: cacheWidth,
                   filterQuality: FilterQuality.high,
                   gaplessPlayback: true,
                   errorBuilder: (_, __, ___) =>
@@ -853,6 +858,10 @@ class _PinnedRestaurantCard extends StatelessWidget {
         : restaurant.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
     final isOpen = restaurant.isOpenForOrders;
     final imageUrl = restaurant.fullCoverImageUrl?.trim();
+    final cacheWidth = _imageCacheWidth(
+      context,
+      MediaQuery.sizeOf(context).width - 32,
+    );
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -874,6 +883,7 @@ class _PinnedRestaurantCard extends StatelessWidget {
                       ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          cacheWidth: cacheWidth,
                           filterQuality: FilterQuality.high,
                           gaplessPlayback: true,
                           errorBuilder: (_, __, ___) => const ColoredBox(
