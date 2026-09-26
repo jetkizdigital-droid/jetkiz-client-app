@@ -14,52 +14,33 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Scan RU literals missing from KK catalogue
+      - name: Scan direct unlocalized RU text
         shell: bash
         run: |
           python3 - <<'PY'
-          import ast
           import pathlib
           import re
 
-          root = pathlib.Path('lib')
-          catalogue_source = (root / 'core/localization/appStrings.dart').read_text(encoding='utf-8')
+          roots = sorted(pathlib.Path('lib/features').glob('**/presentation/**/*.dart'))
+          cyr = r'[А-Яа-яЁё]'
 
-          # Extract exact RU keys from the Dart map. This is intentionally a
-          # diagnostic audit, not a build gate.
-          key_pattern = re.compile(r"^\s*'((?:\\.|[^'\\])*)'\s*:", re.MULTILINE)
-          keys = {bytes(m.group(1), 'utf-8').decode('unicode_escape') if '\\' in m.group(1) else m.group(1)
-                  for m in key_pattern.finditer(catalogue_source)}
+          patterns = [
+              ('Text', re.compile(r'(?<!Localized)\bText\s*\(\s*([\'\"])(?P<value>(?:\\.|(?!\1).)*)\1', re.DOTALL)),
+              ('TextSpan', re.compile(r'\bTextSpan\s*\([^)]*?\btext\s*:\s*([\'\"])(?P<value>(?:\\.|(?!\1).)*)\1', re.DOTALL)),
+          ]
 
-          literal_pattern = re.compile(r"(?<![A-Za-z0-9_])(['\"])((?:\\.|(?!\1).)*)\1", re.DOTALL)
-          cyr = re.compile(r'[А-Яа-яЁё]')
-
-          missing = []
-          for path in sorted(root.glob('features/**/presentation/**/*.dart')):
+          hits = []
+          for path in roots:
               source = path.read_text(encoding='utf-8')
-              for m in literal_pattern.finditer(source):
-                  value = m.group(2)
-                  if not cyr.search(value):
-                      continue
-                  # Ignore import-like or code-ish strings.
-                  if value.startswith('package:') or value.startswith('http'):
-                      continue
-                  normalized = value.replace('\\n', '\n').replace("\\'", "'").replace('\\\"', '"')
-                  if normalized not in keys:
-                      line = source.count('\n', 0, m.start()) + 1
-                      missing.append((str(path), line, normalized))
+              for kind, pattern in patterns:
+                  for match in pattern.finditer(source):
+                      value = match.group('value')
+                      if not re.search(cyr, value):
+                          continue
+                      line = source.count('\n', 0, match.start()) + 1
+                      hits.append((str(path), line, kind, value.replace('\n', '\\n')))
 
-          seen = set()
-          unique = []
-          for item in missing:
-              key = (item[0], item[2])
-              if key in seen:
-                  continue
-              seen.add(key)
-              unique.append(item)
-
-          print(f'MISSING_COUNT={len(unique)}')
-          for path, line, value in unique:
-              printable = value.replace('\n', '\\n')
-              print(f'{path}:{line}: {printable}')
+          print(f'DIRECT_UNLOCALIZED_COUNT={len(hits)}')
+          for path, line, kind, value in hits:
+              print(f'{path}:{line}: {kind}: {value}')
           PY
