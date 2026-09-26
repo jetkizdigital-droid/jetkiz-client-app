@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
+import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/menu/presentation/restaurantMenuPage.dart';
 import 'package:jetkiz_mobile/features/search/data/searchApi.dart';
@@ -562,50 +563,73 @@ class _SearchBody extends StatelessWidget {
       );
     }
 
-    return ListView(
+    final restaurantCount = result.restaurants.length;
+    final productCount = result.products.length;
+    final restaurantSectionCount =
+        restaurantCount == 0 ? 0 : restaurantCount + 1;
+    final productSectionCount = productCount == 0 ? 0 : productCount + 1;
+    final footerIndex = restaurantSectionCount + productSectionCount;
+
+    return ListView.builder(
       controller: controller,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      children: [
-        if (result.restaurants.isNotEmpty) ...[
-          const _SectionTitle(title: 'Рестораны'),
-          const SizedBox(height: 10),
-          ...result.restaurants.asMap().entries.map(
-            (entry) {
-              final index = entry.key;
-              final item = entry.value;
+      itemCount: footerIndex + 1,
+      itemBuilder: (context, index) {
+        var cursor = 0;
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _RestaurantTile(
-                  item: item,
-                  onTap: () => onRestaurantTap(item, index + 1),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-        ],
-        if (result.products.isNotEmpty) ...[
-          const _SectionTitle(title: 'Блюда и напитки'),
-          const SizedBox(height: 10),
-          ...result.products.asMap().entries.map(
-            (entry) {
-              final index = entry.key;
-              final item = entry.value;
-              final position = result.restaurants.length + index + 1;
+        if (restaurantCount > 0) {
+          if (index == cursor) {
+            return const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: _SectionTitle(title: 'Рестораны'),
+            );
+          }
+          cursor += 1;
 
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _ProductTile(
-                  item: item,
-                  onTap: () => onProductTap(item, position),
-                ),
-              );
-            },
-          ),
-        ],
-        if (isLoadingMore)
-          const Padding(
+          if (index < cursor + restaurantCount) {
+            final restaurantIndex = index - cursor;
+            final item = result.restaurants[restaurantIndex];
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _RestaurantTile(
+                item: item,
+                onTap: () => onRestaurantTap(item, restaurantIndex + 1),
+              ),
+            );
+          }
+          cursor += restaurantCount;
+        }
+
+        if (productCount > 0) {
+          if (index == cursor) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: restaurantCount > 0 ? 8 : 0,
+                bottom: 10,
+              ),
+              child: const _SectionTitle(title: 'Блюда и напитки'),
+            );
+          }
+          cursor += 1;
+
+          if (index < cursor + productCount) {
+            final productIndex = index - cursor;
+            final item = result.products[productIndex];
+            final position = restaurantCount + productIndex + 1;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ProductTile(
+                item: item,
+                onTap: () => onProductTap(item, position),
+              ),
+            );
+          }
+        }
+
+        if (isLoadingMore) {
+          return const Padding(
             padding: EdgeInsets.symmetric(vertical: 18),
             child: Center(
               child: SizedBox(
@@ -614,9 +638,11 @@ class _SearchBody extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2.5),
               ),
             ),
-          )
-        else if (loadMoreFailed || result.hasMore)
-          Padding(
+          );
+        }
+
+        if (loadMoreFailed || result.hasMore) {
+          return Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 18),
             child: Center(
               child: TextButton(
@@ -624,8 +650,11 @@ class _SearchBody extends StatelessWidget {
                 child: const LocalizedText('Загрузить ещё'),
               ),
             ),
-          ),
-      ],
+          );
+        }
+
+        return const SizedBox(height: 8);
+      },
     );
   }
 }
@@ -685,6 +714,7 @@ class _RestaurantTile extends StatelessWidget {
                     ? Image.network(
                         item.coverImageUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: imageDecodeWidth(context, 76),
                         filterQuality: FilterQuality.high,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const _ImagePlaceholder(
@@ -801,6 +831,7 @@ class _ProductTile extends StatelessWidget {
                     ? Image.network(
                         item.imageUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: imageDecodeWidth(context, 76),
                         filterQuality: FilterQuality.high,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => const _ImagePlaceholder(
