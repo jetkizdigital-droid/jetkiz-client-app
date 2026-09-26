@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
 import 'package:jetkiz_mobile/features/auth/data/authSessionController.dart';
@@ -525,6 +526,7 @@ class _ProductFavoriteCard extends StatelessWidget {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
+                            cacheWidth: imageDecodeWidth(context, 92),
                             filterQuality: FilterQuality.high,
                             gaplessPlayback: true,
                             errorBuilder: (_, __, ___) =>

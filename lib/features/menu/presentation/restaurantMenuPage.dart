@@ -4,6 +4,8 @@ import 'package:jetkiz_mobile/core/config/appConfig.dart';
 import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
+import 'package:jetkiz_mobile/core/ui/appScrollBehavior.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
@@ -596,13 +598,10 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                         onRetry: _load,
                       )
                     : ScrollConfiguration(
-                        behavior: const _SmoothScrollBehavior(),
+                        behavior: const AppScrollBehavior(),
                         child: CustomScrollView(
                           keyboardDismissBehavior:
                               ScrollViewKeyboardDismissBehavior.onDrag,
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
                           slivers: [
                             SliverAppBar(
                               pinned: true,
@@ -711,10 +710,8 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                                 },
                               ),
                             ),
-                            SliverPersistentHeader(
-                              pinned: true,
-                              delegate: _FixedHeaderDelegate(
-                                height: 142,
+                            SliverToBoxAdapter(
+                              child: RepaintBoundary(
                                 child: Container(
                                   color: const Color(0xFFF7F7F7),
                                   padding:
@@ -746,41 +743,48 @@ class _RestaurantMenuPageState extends State<RestaurantMenuPage> {
                             SliverPersistentHeader(
                               pinned: true,
                               delegate: _FixedHeaderDelegate(
-                                height: 56,
-                                child: Container(
+                                height: 102,
+                                child: ColoredBox(
                                   color: const Color(0xFFF7F7F7),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                  child: _MenuSearchField(
-                                    controller: _searchController,
-                                    focusNode: _searchFocusNode,
-                                    hintText: _searchHint(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _searchQuery = value;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SliverPersistentHeader(
-                              pinned: true,
-                              delegate: _FixedHeaderDelegate(
-                                height: 46,
-                                child: Container(
-                                  color: const Color(0xFFF7F7F7),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                  child: _CategoriesStrip(
-                                    groups: _allGroups,
-                                    selectedTabId: _selectedTabId,
-                                    allTabTitle: _allTabTitle(),
-                                    onTabSelected: (tabId) {
-                                      setState(() {
-                                        _selectedTabId = tabId;
-                                      });
-                                    },
+                                  child: Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          0,
+                                          16,
+                                          12,
+                                        ),
+                                        child: _MenuSearchField(
+                                          controller: _searchController,
+                                          focusNode: _searchFocusNode,
+                                          hintText: _searchHint(),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _searchQuery = value;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          0,
+                                          16,
+                                          12,
+                                        ),
+                                        child: _CategoriesStrip(
+                                          groups: _allGroups,
+                                          selectedTabId: _selectedTabId,
+                                          allTabTitle: _allTabTitle(),
+                                          onTabSelected: (tabId) {
+                                            setState(() {
+                                              _selectedTabId = tabId;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -907,32 +911,26 @@ class _CategoriesStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 34,
-      child: ScrollConfiguration(
-        behavior: const _SmoothScrollBehavior(),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _MenuCategoryChip(
+            title: allTabTitle,
+            isSelected: selectedTabId == 'all',
+            onTap: () => onTabSelected('all'),
           ),
-          children: [
-            _MenuCategoryChip(
-              title: allTabTitle,
-              isSelected: selectedTabId == 'all',
-              onTap: () => onTabSelected('all'),
-            ),
-            const SizedBox(width: 8),
-            ...groups.expand((group) {
-              return [
-                _MenuCategoryChip(
-                  title: group.category.title,
-                  isSelected: selectedTabId == group.category.id,
-                  onTap: () => onTabSelected(group.category.id),
-                ),
-                const SizedBox(width: 8),
-              ];
-            }),
-          ],
-        ),
+          const SizedBox(width: 8),
+          ...groups.expand((group) {
+            return [
+              _MenuCategoryChip(
+                title: group.category.title,
+                isSelected: selectedTabId == group.category.id,
+                onTap: () => onTabSelected(group.category.id),
+              ),
+              const SizedBox(width: 8),
+            ];
+          }),
+        ],
       ),
     );
   }
@@ -951,20 +949,28 @@ class _HeroImageLayer extends StatelessWidget {
       return const _RestaurantHeroPlaceholder();
     }
 
-    return SizedBox.expand(
-      child: Image.network(
-        normalized,
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
-        filterQuality: FilterQuality.high,
-        gaplessPlayback: true,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return const _RestaurantHeroPlaceholder();
-        },
-        errorBuilder: (_, __, ___) {
-          return const _RestaurantHeroPlaceholder();
-        },
+    final cacheWidth = imageDecodeWidth(
+      context,
+      MediaQuery.sizeOf(context).width,
+    );
+
+    return RepaintBoundary(
+      child: SizedBox.expand(
+        child: Image.network(
+          normalized,
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          cacheWidth: cacheWidth,
+          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const _RestaurantHeroPlaceholder();
+          },
+          errorBuilder: (_, __, ___) {
+            return const _RestaurantHeroPlaceholder();
+          },
+        ),
       ),
     );
   }
@@ -1825,34 +1831,6 @@ class _RestaurantMenuErrorState extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _SmoothScrollBehavior extends ScrollBehavior {
-  const _SmoothScrollBehavior();
-
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    final platform = getPlatform(context);
-
-    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
-      return const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      );
-    }
-
-    return const ClampingScrollPhysics(
-      parent: AlwaysScrollableScrollPhysics(),
-    );
-  }
-
-  @override
-  Widget buildOverscrollIndicator(
-    BuildContext context,
-    Widget child,
-    ScrollableDetails details,
-  ) {
-    return child;
   }
 }
 

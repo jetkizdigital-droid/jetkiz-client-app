@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/analytics/analyticsService.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
 import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/auth/data/authStorage.dart';
@@ -762,6 +763,11 @@ class _CartItemCard extends StatelessWidget {
                   ? Image.network(
                       item.imageUrl!,
                       fit: BoxFit.cover,
+                      cacheWidth: imageDecodeWidthForCover(
+                        context,
+                        logicalWidth: 96,
+                        logicalHeight: 112,
+                      ),
                       filterQuality: FilterQuality.high,
                       gaplessPlayback: true,
                       errorBuilder: (_, __, ___) => _imageFallback(),
