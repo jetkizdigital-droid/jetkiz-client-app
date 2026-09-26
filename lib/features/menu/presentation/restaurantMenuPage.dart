@@ -1478,135 +1478,136 @@ class _MenuProductCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Opacity(
-          opacity: isAvailable ? 1 : 0.58,
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFD9D9D9),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    _MenuProductImage(item: item),
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Material(
-                        color: Colors.white,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: isFavoriteBusy ? null : onFavoriteTap,
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: isFavoriteBusy
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Icon(
-                                    isFavorite
-                                        ? Icons.favorite_rounded
-                                        : Icons.favorite_border_rounded,
-                                    color:
-                                        isFavorite ? Colors.red : Colors.black,
-                                    size: 22,
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (!isAvailable)
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Opacity(
+            opacity: isAvailable ? 1 : 0.58,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFD9D9D9),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    children: [
+                      _MenuProductImage(item: item),
                       Positioned(
-                        left: 8,
-                        bottom: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xB3000000),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const LocalizedText(
-                            'Недоступно',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                        top: 6,
+                        right: 6,
+                        child: Material(
+                          color: Colors.white,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: isFavoriteBusy ? null : onFavoriteTap,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: isFavoriteBusy
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Icon(
+                                      isFavorite
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      color: isFavorite
+                                          ? Colors.red
+                                          : Colors.black,
+                                      size: 22,
+                                    ),
                             ),
                           ),
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 30,
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: LocalizedText(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        height: 1.15,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: LocalizedText(
-                          formatMenuPrice(item.price),
-                          maxLines: 1,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            height: 1.0,
+                      if (!isAvailable)
+                        Positioned(
+                          left: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xB3000000),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const LocalizedText(
+                              'Недоступно',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 30,
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: LocalizedText(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          height: 1.15,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    if (!isAvailable)
-                      const SizedBox.shrink()
-                    else if (quantity > 0)
-                      _MenuQuantityControl(
-                        quantity: quantity,
-                        onAdd: onAdd,
-                        onRemove: onRemove,
-                      )
-                    else
-                      _CompactAddButton(onTap: onAddFirst),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: LocalizedText(
+                            formatMenuPrice(item.price),
+                            maxLines: 1,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (!isAvailable)
+                        const SizedBox.shrink()
+                      else if (quantity > 0)
+                        _MenuQuantityControl(
+                          quantity: quantity,
+                          onAdd: onAdd,
+                          onRemove: onRemove,
+                        )
+                      else
+                        _CompactAddButton(onTap: onAddFirst),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-      );
     );
   }
 }
