@@ -951,20 +951,27 @@ class _HeroImageLayer extends StatelessWidget {
       return const _RestaurantHeroPlaceholder();
     }
 
-    return SizedBox.expand(
-      child: Image.network(
-        normalized,
-        fit: BoxFit.cover,
-        alignment: Alignment.center,
-        filterQuality: FilterQuality.high,
-        gaplessPlayback: true,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return const _RestaurantHeroPlaceholder();
-        },
-        errorBuilder: (_, __, ___) {
-          return const _RestaurantHeroPlaceholder();
-        },
+    final logicalWidth = MediaQuery.sizeOf(context).width;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = (logicalWidth * pixelRatio).round().clamp(720, 2048);
+
+    return RepaintBoundary(
+      child: SizedBox.expand(
+        child: Image.network(
+          normalized,
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          cacheWidth: cacheWidth,
+          filterQuality: FilterQuality.high,
+          gaplessPlayback: true,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return const _RestaurantHeroPlaceholder();
+          },
+          errorBuilder: (_, __, ___) {
+            return const _RestaurantHeroPlaceholder();
+          },
+        ),
       ),
     );
   }
@@ -1467,9 +1474,10 @@ class _MenuProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAvailable = item.isAvailable && restaurantCanOrder;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+    return RepaintBoundary(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Opacity(
@@ -1598,6 +1606,7 @@ class _MenuProductCard extends StatelessWidget {
           ),
         ),
       ),
+      );
     );
   }
 }
