@@ -35,4 +35,44 @@ void main() {
     expect(mainSource, contains("eventName: 'app_open'"));
     expect(mainSource, contains("source: 'app_start'"));
   });
+  test('release manifest does not regain unused microphone dependency', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+
+    expect(pubspec, isNot(contains(RegExp(r'^\\s*record:', multiLine: true))));
+  });
+
+  test('pending payment is never labeled as paid in order details', () {
+    final source = File(
+      'lib/features/orders/presentation/orderDetailsPage.dart',
+    ).readAsStringSync();
+
+    expect(
+      source,
+      contains("case 'PENDING':\n        return 'Ожидает оплаты';"),
+    );
+    expect(
+      source,
+      isNot(
+        contains("case 'PENDING':\n        return 'Оплачено';"),
+      ),
+    );
+    expect(source, isNot(contains("'января'")));
+    expect(source, isNot(contains("'декабря'")));
+  });
+
+  test('technical restaurantId error is not exposed to users', () {
+    final source = File(
+      'lib/features/menu/presentation/productDetailsPage.dart',
+    ).readAsStringSync();
+
+    expect(
+      source,
+      isNot(
+        contains(
+          'Передай restaurantId при открытии ProductDetailsPage',
+        ),
+      ),
+    );
+  });
+
 }
