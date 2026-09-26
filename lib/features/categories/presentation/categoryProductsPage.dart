@@ -5,6 +5,7 @@ import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/cartAddFlow.dart';
 import 'package:jetkiz_mobile/features/cart/presentation/widgets/cartSummaryBar.dart';
 import 'package:jetkiz_mobile/features/favorites/data/favoritesController.dart';
+import 'package:jetkiz_mobile/features/home/data/homeApi.dart';
 import 'package:jetkiz_mobile/features/home/domain/homeData.dart';
 import 'package:jetkiz_mobile/features/menu/data/financeConfigApi.dart';
 import 'package:jetkiz_mobile/features/menu/domain/restaurantMenuData.dart';
@@ -25,8 +26,10 @@ class CategoryProductsPage extends StatefulWidget {
 
 class _CategoryProductsPageState extends State<CategoryProductsPage> {
   late final FinanceConfigApi _financeConfigApi;
+  late final HomeApi _homeApi;
   final FavoritesController _favorites = FavoritesController.instance;
 
+  late HomeCategoryData _category;
   String? _selectedRestaurantId;
   int _deliveryFee = 0;
 
@@ -37,10 +40,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     final apiClient = ApiClient();
 
     _financeConfigApi = FinanceConfigApi(apiClient);
+    _homeApi = HomeApi(apiClient);
+    _category = widget.category;
     _favorites.addListener(_handleFavoritesChanged);
     _favorites.initialize();
 
     _loadDeliveryFeeSilently();
+    _refreshCategorySilently();
   }
 
   @override
@@ -51,6 +57,33 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   void _handleFavoritesChanged() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _refreshCategorySilently() async {
+    try {
+      final home = await _homeApi.getHomeData();
+      HomeCategoryData? freshCategory;
+      for (final category in home.categories) {
+        if (category.id == widget.category.id) {
+          freshCategory = category;
+          break;
+        }
+      }
+
+      if (!mounted || freshCategory == null) return;
+
+      setState(() {
+        _category = freshCategory!;
+        if (_selectedRestaurantId != null &&
+            !_category.products.any(
+              (link) => link.product?.restaurant.id == _selectedRestaurantId,
+            )) {
+          _selectedRestaurantId = null;
+        }
+      });
+    } catch (_) {
+      // Keep the category snapshot received from HomePage on transient errors.
+    }
   }
 
   Future<void> _loadDeliveryFeeSilently() async {
@@ -175,7 +208,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   List<HomeCategoryProductData> _getValidProducts() {
-    return widget.category.products
+    return _category.products
         .where((link) => link.isActive)
         .where((link) => link.product != null)
         .map((link) => link.product!)
@@ -365,13 +398,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       body: SafeArea(
         child: groups.isEmpty
             ? _EmptyCategoryState(
-                categoryTitle: widget.category.title,
+                categoryTitle: _category.title,
                 onFilterTap: _openRestaurantPicker,
               )
             : Column(
                 children: [
                   _CategoryHeader(
-                    title: widget.category.title,
+                    title: _category.title,
                     onBackTap: () => Navigator.of(context).pop(),
                     onFilterTap: _openRestaurantPicker,
                   ),
@@ -709,17 +742,15 @@ class _CategoryProductCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Expanded(
-                child: LocalizedText(
-                  product.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
-                  ),
+              LocalizedText(
+                product.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
                 ),
               ),
               const SizedBox(height: 8),
