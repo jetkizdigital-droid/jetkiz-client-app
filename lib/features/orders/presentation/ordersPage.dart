@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
+import 'package:jetkiz_mobile/core/media/imageDecodeSize.dart';
 import 'package:jetkiz_mobile/core/network/apiClient.dart';
 import 'package:jetkiz_mobile/features/orders/data/ordersApi.dart';
 import 'package:jetkiz_mobile/features/orders/domain/orderHistoryItem.dart';
@@ -690,6 +691,7 @@ class _RestaurantThumb extends StatelessWidget {
         width: 42,
         height: 42,
         fit: BoxFit.cover,
+        cacheWidth: imageDecodeWidth(context, 42),
         filterQuality: FilterQuality.high,
         gaplessPlayback: true,
         errorBuilder: (_, __, ___) => _placeholder(),
