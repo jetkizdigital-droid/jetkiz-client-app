@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:jetkiz_mobile/core/localization/appLanguage.dart';
+import 'package:jetkiz_mobile/core/localization/appLocalizationScope.dart';
 import 'package:jetkiz_mobile/core/localization/localizedText.dart';
 import 'package:jetkiz_mobile/features/cart/data/cartRepository.dart';
 
@@ -35,17 +37,20 @@ Future<CartAddResult> addItemWithRestaurantConfirmation({
   if (result != CartAddResult.rejectedDifferentRestaurant) return result;
   if (!context.mounted) return result;
 
-  final normalizedRestaurantName = restaurantName.trim().isEmpty
-      ? 'другого ресторана'
-      : '«${restaurantName.trim()}»';
+  final restaurantLabel = restaurantName.trim();
+  final language = AppLocalizationScope.of(context).language;
+  final confirmationMessage = language == AppLanguage.kk
+      ? restaurantLabel.isEmpty
+          ? 'Себетте басқа мейрамхананың тағамдары бар. Себетті тазалап, басқа мейрамхананың тағамдарын қосу керек пе?'
+          : 'Себетте басқа мейрамхананың тағамдары бар. Себетті тазалап, «$restaurantLabel» мейрамханасының тағамдарын қосу керек пе?'
+      : restaurantLabel.isEmpty
+          ? 'В корзине уже есть блюда из другого ресторана. Очистить корзину и добавить блюда из другого ресторана?'
+          : 'В корзине уже есть блюда из другого ресторана. Очистить корзину и добавить блюда из «$restaurantLabel»?';
   final replace = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const LocalizedText('В корзине другой ресторан'),
-      content: LocalizedText(
-        'В корзине уже есть блюда из другого ресторана. '
-        'Очистить корзину и добавить блюда из $normalizedRestaurantName?',
-      ),
+      content: Text(confirmationMessage),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
