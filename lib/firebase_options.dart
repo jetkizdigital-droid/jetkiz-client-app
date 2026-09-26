@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCzMILm99MIxSGAkmFv4R2U2HPsFwitZZM',
-    appId: '1:97147344656:ios:af1d91deb1420a8f5f7795',
+    appId: '1:97147344656:ios:2e897fbdf28266895f7795',
     messagingSenderId: '97147344656',
     projectId: 'jetkiz-mobile',
     storageBucket: 'jetkiz-mobile.firebasestorage.app',
-    iosBundleId: 'com.example.jetkizMobile',
+    iosBundleId: 'asia.jetkiz.client',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
