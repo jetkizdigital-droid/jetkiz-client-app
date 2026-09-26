@@ -16,7 +16,6 @@ int imageDecodeWidth(
   return pixels.clamp(minPixels, maxPixels).toInt();
 }
 
-
 /// Returns a safe decode width for a BoxFit.cover destination when the source
 /// aspect ratio is unknown. The height contributes to the requested width so
 /// common landscape food photos are not decoded too narrowly and then scaled
