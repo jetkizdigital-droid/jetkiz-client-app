@@ -1,0 +1,154 @@
+name: Final Android Release Audit 2026-09-26
+
+on:
+  push:
+    branches:
+      - audit/final-android-release-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit production Android artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter --version
+          java -version
+          grep '^version:' pubspec.yaml
+          grep 'targetSdk' android/app/build.gradle.kts
+          grep 'com.android.application' android/settings.gradle.kts
+          grep 'org.jetbrains.kotlin.android' android/settings.gradle.kts
+          grep 'distributionUrl' android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze and test
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter analyze
+          flutter test
+
+      - name: Prepare ephemeral signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -v             -keystore "$RUNNER_TEMP/client-audit.jks"             -storepass audit-not-for-production             -keypass audit-not-for-production             -keyalg RSA             -keysize 2048             -validity 3650             -alias client-audit             -dname "CN=JETKIZ Client Audit,O=JETKIZ,C=KZ"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/client-audit.jks
+          storePassword=audit-not-for-production
+          keyAlias=client-audit
+          keyPassword=audit-not-for-production
+          EOF
+
+      - name: Build release artifacts
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Audit merged APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          AAPT="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name aapt -print | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name zipalign -print | sort -V | tail -n 1)"
+          test -s "$APK"
+          test -x "$AAPT"
+          test -x "$ZIPALIGN"
+
+          "$AAPT" dump badging "$APK" | tee /tmp/badging.txt
+          "$AAPT" dump permissions "$APK" | tee /tmp/permissions.txt
+
+          grep -F "package: name='kz.jetkiz.app'" /tmp/badging.txt
+          grep -F "targetSdkVersion:'36'" /tmp/badging.txt
+          grep -F "application-label:'JETKIZ'" /tmp/badging.txt
+
+          for perm in             android.permission.ACCESS_FINE_LOCATION             android.permission.ACCESS_COARSE_LOCATION             android.permission.ACCESS_BACKGROUND_LOCATION             android.permission.CAMERA             android.permission.RECORD_AUDIO             android.permission.READ_SMS             android.permission.RECEIVE_SMS             android.permission.SEND_SMS             android.permission.READ_CONTACTS             android.permission.WRITE_CONTACTS             android.permission.READ_PHONE_STATE             android.permission.MANAGE_EXTERNAL_STORAGE             android.permission.REQUEST_INSTALL_PACKAGES; do
+            if grep -F "$perm" /tmp/permissions.txt; then
+              echo "Unexpected sensitive permission: $perm"
+              exit 1
+            fi
+          done
+
+          "$ZIPALIGN" -c -P 16 -v 4 "$APK"
+          echo "APK 16 KB zip alignment verified"
+
+      - name: Audit native libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          rm -rf /tmp/native-libs
+          mkdir -p /tmp/native-libs
+          unzip -q "$APK" 'lib/*/*.so' -d /tmp/native-libs
+          find /tmp/native-libs -type f -name '*.so' -print | sort
+
+          python3 - <<'PY'
+          import pathlib, re, subprocess, sys
+
+          libs = sorted(pathlib.Path('/tmp/native-libs').glob('lib/*/*.so'))
+          if not libs:
+              raise SystemExit('No native libraries found in release APK')
+
+          bad = []
+          for lib in libs:
+              output = subprocess.check_output(
+                  ['readelf', '-lW', str(lib)],
+                  text=True,
+                  stderr=subprocess.STDOUT,
+              )
+              aligns = []
+              for line in output.splitlines():
+                  if line.lstrip().startswith('LOAD '):
+                      parts = line.split()
+                      try:
+                          align = int(parts[-1], 16)
+                      except (ValueError, IndexError):
+                          continue
+                      aligns.append(align)
+              minimum = min(aligns) if aligns else 0
+              print(f'{lib}: LOAD alignments={aligns}')
+              if minimum < 0x4000:
+                  bad.append((str(lib), minimum))
+          if bad:
+              for lib, align in bad:
+                  print(f'16 KB incompatible ELF alignment: {lib}: 0x{align:x}')
+              sys.exit(1)
+          print('All native ELF LOAD segments are aligned for 16 KB pages')
+          PY
+
+      - name: Audit AAB structure and native payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB=build/app/outputs/bundle/release/app-release.aab
+          test -s "$AAB"
+          unzip -t "$AAB" >/dev/null
+          echo "AAB bytes=$(stat -c %s "$AAB")"
+          unzip -Z1 "$AAB" | grep '^base/lib/' | sort || true
+          unzip -Z1 "$AAB" | grep -F 'base/manifest/AndroidManifest.xml'
+          unzip -Z1 "$AAB" | grep -F 'base/resources.pb'
+          echo "AAB structure verified"
+
+      - name: Remove ephemeral signing
+        if: always()
+        shell: bash
+        run: rm -f android/key.properties "$RUNNER_TEMP/client-audit.jks"
