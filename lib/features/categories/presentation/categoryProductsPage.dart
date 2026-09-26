@@ -179,7 +179,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         .where((link) => link.isActive)
         .where((link) => link.product != null)
         .map((link) => link.product!)
-        .where(_isProductOrderable)
+        .where((product) => product.isAvailable)
         .toList();
   }
 
