@@ -261,7 +261,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                   const SizedBox(height: 14),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: restaurants.isEmpty ? 2 : restaurants.length + 1,
+                      itemCount:
+                          restaurants.isEmpty ? 2 : restaurants.length + 1,
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return ListTile(
