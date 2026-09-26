@@ -10,7 +10,6 @@ int imageDecodeWidth(
   int minPixels = 64,
   int maxPixels = 2048,
 }) {
-  final pixels =
-      (logicalWidth * MediaQuery.devicePixelRatioOf(context)).ceil();
+  final pixels = (logicalWidth * MediaQuery.devicePixelRatioOf(context)).ceil();
   return pixels.clamp(minPixels, maxPixels).toInt();
 }
