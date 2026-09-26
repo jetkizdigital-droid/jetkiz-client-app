@@ -36,7 +36,7 @@ void main() {
 
   test('long category and search pages stay lazily built', () {
     final category = File(
-      'lib/features/menu/presentation/categoryProductsPage.dart',
+      'lib/features/categories/presentation/categoryProductsPage.dart',
     ).readAsStringSync();
     final search = File(
       'lib/features/search/presentation/searchPage.dart',
@@ -46,6 +46,7 @@ void main() {
     expect(category, isNot(contains('GridView.builder')));
     expect(category, contains('ListView.separated'));
     expect(category, contains('ListView.builder'));
+    expect(category, contains('isScrollControlled: true'));
 
     expect(search, contains('ListView.builder'));
     expect(search, isNot(contains('...result.products.asMap().entries.map')));
