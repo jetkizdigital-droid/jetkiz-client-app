@@ -24,10 +24,13 @@ class _SearchPageState extends State<SearchPage> {
 
   late final SearchApi _searchApi;
   late final AnalyticsService _analyticsService;
+  late final ScrollController _scrollController;
 
   Timer? _debounce;
 
   bool _isLoading = false;
+  bool _isLoadingMore = false;
+  bool _loadMoreFailed = false;
   String? _error;
   SearchResult _result = const SearchResult(
     restaurants: [],
@@ -39,6 +42,7 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     _searchApi = SearchApi(_apiClient);
     _analyticsService = AnalyticsService(_apiClient);
+    _scrollController = ScrollController()..addListener(_handleScroll);
 
     unawaited(
       _trackClientEvent(
@@ -57,8 +61,31 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        _isLoadingMore ||
+        !_result.hasMore) {
+      return;
+    }
+
+    if (_scrollController.position.extentAfter < 600) {
+      unawaited(_loadMore());
+    }
+  }
+
+  void _scheduleLoadMoreCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _handleScroll();
+    });
   }
 
   void _onChanged(String value) {
@@ -69,6 +96,8 @@ class _SearchPageState extends State<SearchPage> {
     if (query.isEmpty) {
       setState(() {
         _isLoading = false;
+        _isLoadingMore = false;
+        _loadMoreFailed = false;
         _error = null;
         _result = const SearchResult(
           restaurants: [],
@@ -97,11 +126,13 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _search(String query) async {
     setState(() {
       _isLoading = true;
+      _isLoadingMore = false;
+      _loadMoreFailed = false;
       _error = null;
     });
 
     try {
-      final result = await _searchApi.search(query);
+      final result = await _searchApi.search(query, page: 1, limit: 20);
 
       if (!mounted) {
         return;
@@ -116,6 +147,7 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _result = result;
       });
+      _scheduleLoadMoreCheck();
     } catch (_) {
       if (!mounted) {
         return;
@@ -137,12 +169,53 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  Future<void> _loadMore() async {
+    if (_isLoading || _isLoadingMore || !_result.hasMore) return;
+
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+
+    final nextPage = _result.page + 1;
+    setState(() {
+      _isLoadingMore = true;
+      _loadMoreFailed = false;
+    });
+
+    try {
+      final next = await _searchApi.search(
+        query,
+        page: nextPage,
+        limit: _result.limit,
+      );
+
+      if (!mounted || _controller.text.trim() != query) return;
+
+      setState(() {
+        _result = _result.append(next);
+      });
+      _scheduleLoadMoreCheck();
+    } catch (_) {
+      if (!mounted || _controller.text.trim() != query) return;
+      setState(() {
+        _loadMoreFailed = true;
+      });
+    } finally {
+      if (mounted && _controller.text.trim() == query) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
   void _clear() {
     _debounce?.cancel();
     _controller.clear();
 
     setState(() {
       _isLoading = false;
+      _isLoadingMore = false;
+      _loadMoreFailed = false;
       _error = null;
       _result = const SearchResult(
         restaurants: [],
@@ -407,8 +480,11 @@ class _SearchPageState extends State<SearchPage> {
           ),
           Expanded(
             child: _SearchBody(
+              controller: _scrollController,
               query: query,
               isLoading: _isLoading,
+              isLoadingMore: _isLoadingMore,
+              loadMoreFailed: _loadMoreFailed,
               error: _error,
               result: _result,
               onRestaurantTap: (item, position) {
@@ -424,6 +500,7 @@ class _SearchPageState extends State<SearchPage> {
                 );
               },
               isEmptyResult: isEmptyResult,
+              onLoadMore: _loadMore,
             ),
           ),
         ],
@@ -434,22 +511,30 @@ class _SearchPageState extends State<SearchPage> {
 
 class _SearchBody extends StatelessWidget {
   const _SearchBody({
+    required this.controller,
     required this.query,
     required this.isLoading,
+    required this.isLoadingMore,
+    required this.loadMoreFailed,
     required this.error,
     required this.result,
     required this.onRestaurantTap,
     required this.onProductTap,
     required this.isEmptyResult,
+    required this.onLoadMore,
   });
 
+  final ScrollController controller;
   final String query;
   final bool isLoading;
+  final bool isLoadingMore;
+  final bool loadMoreFailed;
   final String? error;
   final SearchResult result;
   final void Function(SearchRestaurantItem item, int position) onRestaurantTap;
   final void Function(SearchProductItem item, int position) onProductTap;
   final bool isEmptyResult;
+  final Future<void> Function() onLoadMore;
 
   @override
   Widget build(BuildContext context) {
@@ -478,6 +563,7 @@ class _SearchBody extends StatelessWidget {
     }
 
     return ListView(
+      controller: controller,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
         if (result.restaurants.isNotEmpty) ...[
@@ -518,6 +604,27 @@ class _SearchBody extends StatelessWidget {
             },
           ),
         ],
+        if (isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+            ),
+          )
+        else if (loadMoreFailed || result.hasMore)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 18),
+            child: Center(
+              child: TextButton(
+                onPressed: onLoadMore,
+                child: const LocalizedText('Загрузить ещё'),
+              ),
+            ),
+          ),
       ],
     );
   }
