@@ -564,6 +564,10 @@ class _SearchBody extends StatelessWidget {
 
     return CustomScrollView(
       controller: controller,
+      cacheExtent: 600,
+      physics: const ClampingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       slivers: [
         if (result.restaurants.isNotEmpty) ...[
           const SliverPadding(
@@ -678,7 +682,10 @@ class _RestaurantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cacheWidth =
-        (76 * MediaQuery.devicePixelRatioOf(context)).round().clamp(152, 512);
+        (76 * MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(152, 512)
+            .toInt();
     final ratingText = item.ratingAvg == 0
         ? '0,0'
         : item.ratingAvg.toStringAsFixed(1).replaceAll('.', ',');
@@ -794,7 +801,10 @@ class _ProductTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cacheWidth =
-        (76 * MediaQuery.devicePixelRatioOf(context)).round().clamp(152, 512);
+        (76 * MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(152, 512)
+            .toInt();
     final subtitleParts = <String>[
       if (item.restaurantName.trim().isNotEmpty) item.restaurantName.trim(),
       if (item.categoryTitle?.trim().isNotEmpty == true)
