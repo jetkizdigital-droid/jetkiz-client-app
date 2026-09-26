@@ -26,7 +26,12 @@ void main() {
       reason:
           'One occurrence is the actual sticky search/categories header and one is its delegate base class.',
     );
-    expect(source, contains('SliverToBoxAdapter(\n                              child: RepaintBoundary('));
+    expect(
+      source,
+      contains(
+        'SliverToBoxAdapter(\n                              child: RepaintBoundary(',
+      ),
+    );
   });
 
   test('long category and search pages stay lazily built', () {
@@ -44,7 +49,10 @@ void main() {
 
     expect(search, contains('ListView.builder'));
     expect(search, isNot(contains('...result.products.asMap().entries.map')));
-    expect(search, isNot(contains('...result.restaurants.asMap().entries.map')));
+    expect(
+      search,
+      isNot(contains('...result.restaurants.asMap().entries.map')),
+    );
   });
 
   test('scrolling thumbnails decode close to their display width', () {
