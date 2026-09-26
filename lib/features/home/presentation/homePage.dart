@@ -336,7 +336,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 return RepaintBoundary(
                                   child: _PinnedRestaurantCard(
                                     restaurant: restaurant,
-                                    onTap: () => _openRestaurantMenu(restaurant),
+                                    onTap: () =>
+                                        _openRestaurantMenu(restaurant),
                                   ),
                                 );
                               },
