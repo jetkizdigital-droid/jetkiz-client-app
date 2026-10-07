@@ -1148,8 +1148,8 @@ class _CheckoutLoadingCard extends StatelessWidget {
   const _CheckoutLoadingCard();
 
   @override
-  Widget build(BuildContext context) => const Container(
-        padding: EdgeInsets.all(18),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.all(Radius.circular(22)),

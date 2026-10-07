@@ -9,7 +9,7 @@ void main() {
       restaurantId: 'restaurant-1',
       fulfillmentType: OrderFulfillmentType.pickup,
       cutleryCount: 5,
-      items: [
+      items: const [
         CreateOrderItemPayload(productId: 'product-1', quantity: 1),
       ],
     );
