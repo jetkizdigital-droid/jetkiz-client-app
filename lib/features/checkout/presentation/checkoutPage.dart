@@ -74,8 +74,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   int _cutleryMaxCount = 10;
   int _cutleryCount = 0;
 
-  int get _cutleryPaidCount =>
-      max(0, _cutleryCount - _cutleryFreeLimit);
+  int get _cutleryPaidCount => max(0, _cutleryCount - _cutleryFreeLimit);
   int get _cutleryAmount => _cutleryPaidCount * _cutleryUnitPrice;
 
   bool get _isPickup => _fulfillmentType == OrderFulfillmentType.pickup;
@@ -146,7 +145,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     });
 
     try {
-      final restaurant = await _restaurantsApi.getPublicRestaurant(restaurantId);
+      final restaurant =
+          await _restaurantsApi.getPublicRestaurant(restaurantId);
       if (!mounted || _cutleryRestaurantId != restaurantId) return;
       setState(() {
         _cutleryEnabled = restaurant.cutleryEnabled;
@@ -403,8 +403,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         idempotencyKey: _pendingOrderKey,
       );
       final createdOrder = _CreatedOrderView.fromJson(order);
-      final expectedTotal =
-          _cartRepository.state.subtotal + _effectiveDeliveryFee + _cutleryAmount;
+      final expectedTotal = _cartRepository.state.subtotal +
+          _effectiveDeliveryFee +
+          _cutleryAmount;
       if (createdOrder.total != null && createdOrder.total != expectedTotal) {
         _pendingOrderKey = null;
         _pendingOrderFingerprint = null;
@@ -1153,7 +1154,8 @@ class _CheckoutLoadingCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.all(Radius.circular(22)),
         ),
-        child: Center(child: CircularProgressIndicator(color: Color(0xFF489F2A))),
+        child:
+            Center(child: CircularProgressIndicator(color: Color(0xFF489F2A))),
       );
 }
 
