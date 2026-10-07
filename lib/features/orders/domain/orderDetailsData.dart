@@ -11,6 +11,11 @@ class OrderDetailsData {
     required this.deliveryFee,
     required this.discountAmount,
     required this.deliveryDiscountAmount,
+    this.cutleryCount = 0,
+    this.cutleryFreeLimitApplied = 0,
+    this.cutleryUnitPriceApplied = 0,
+    this.cutleryPaidCount = 0,
+    this.cutleryAmount = 0,
     required this.total,
     required this.phone,
     required this.paymentMethod,
@@ -38,6 +43,11 @@ class OrderDetailsData {
   final int deliveryFee;
   final int discountAmount;
   final int deliveryDiscountAmount;
+  final int cutleryCount;
+  final int cutleryFreeLimitApplied;
+  final int cutleryUnitPriceApplied;
+  final int cutleryPaidCount;
+  final int cutleryAmount;
   final int total;
   final String phone;
   final String? comment;
@@ -82,6 +92,11 @@ class OrderDetailsData {
       deliveryFee: _parseInt(json['deliveryFee']),
       discountAmount: _parseInt(json['discountAmount']),
       deliveryDiscountAmount: _parseInt(json['deliveryDiscountAmount']),
+      cutleryCount: _parseInt(json['cutleryCount']),
+      cutleryFreeLimitApplied: _parseInt(json['cutleryFreeLimitApplied']),
+      cutleryUnitPriceApplied: _parseInt(json['cutleryUnitPriceApplied']),
+      cutleryPaidCount: _parseInt(json['cutleryPaidCount']),
+      cutleryAmount: _parseInt(json['cutleryAmount']),
       total: _parseInt(json['total']),
       phone: (json['phone'] ?? '').toString(),
       comment: _nullableString(json['comment']),

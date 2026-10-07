@@ -45,6 +45,7 @@ class CreateOrderPayload {
     this.leaveAtDoor = false,
     this.comment,
     this.promoCode,
+    this.cutleryCount = 0,
   });
 
   final String restaurantId;
@@ -62,6 +63,7 @@ class CreateOrderPayload {
 
   final String? comment;
   final String? promoCode;
+  final int cutleryCount;
   final List<CreateOrderItemPayload> items;
 
   bool get isValid {
@@ -70,6 +72,8 @@ class CreateOrderPayload {
 
     return restaurantId.trim().isNotEmpty &&
         hasRequiredAddress &&
+        cutleryCount >= 0 &&
+        cutleryCount <= 20 &&
         validItems.isNotEmpty;
   }
 
@@ -87,6 +91,7 @@ class CreateOrderPayload {
       'fulfillmentType': fulfillmentType.wireName,
       'leaveAtDoor':
           fulfillmentType == OrderFulfillmentType.pickup ? false : leaveAtDoor,
+      'cutleryCount': cutleryCount,
       'items': validItems.map((item) => item.toJson()).toList(),
     };
 
