@@ -973,6 +973,15 @@ class _PriceSummaryBlock extends StatelessWidget {
                     ? 'Бесплатно'
                     : '${order.deliveryFee} ₸',
           ),
+          if (order.cutleryCount > 0) ...[
+            const SizedBox(height: 10),
+            _PriceRow(
+              title: 'Приборы · ${order.cutleryCount}',
+              value: order.cutleryAmount == 0
+                  ? 'Бесплатно'
+                  : '${order.cutleryAmount} ₸',
+            ),
+          ],
           if (order.finalDiscount > 0) ...[
             const SizedBox(height: 10),
             _PriceRow(

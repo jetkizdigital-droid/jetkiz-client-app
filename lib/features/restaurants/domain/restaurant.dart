@@ -40,6 +40,10 @@ class Restaurant extends Equatable {
     required this.minOrderAmount,
     required this.isPickupEnabled,
     required this.pickupPreparationMinutes,
+    this.cutleryEnabled = false,
+    this.cutleryFreeLimit = 0,
+    this.cutleryUnitPrice = 0,
+    this.cutleryMaxCount = 10,
     this.serverIsOpenNow,
     this.serverCanAcceptOrders,
   });
@@ -79,6 +83,10 @@ class Restaurant extends Equatable {
   final int? minOrderAmount;
   final bool isPickupEnabled;
   final int? pickupPreparationMinutes;
+  final bool cutleryEnabled;
+  final int cutleryFreeLimit;
+  final int cutleryUnitPrice;
+  final int cutleryMaxCount;
 
   RestaurantAvailability get availability {
     return RestaurantAvailability(
@@ -215,6 +223,12 @@ class Restaurant extends Equatable {
       isPickupEnabled: _readBool(json['isPickupEnabled'], fallback: false),
       pickupPreparationMinutes:
           _readNullableInt(json['pickupPreparationMinutes']),
+      cutleryEnabled: _readBool(json['cutleryEnabled'], fallback: false),
+      cutleryFreeLimit: _readInt(json['cutleryFreeLimit']),
+      cutleryUnitPrice: _readInt(json['cutleryUnitPrice']),
+      cutleryMaxCount: _readInt(json['cutleryMaxCount']) > 0
+          ? _readInt(json['cutleryMaxCount'])
+          : 10,
     );
   }
 
@@ -246,6 +260,10 @@ class Restaurant extends Equatable {
       'minOrderAmount': minOrderAmount,
       'isPickupEnabled': isPickupEnabled,
       'pickupPreparationMinutes': pickupPreparationMinutes,
+      'cutleryEnabled': cutleryEnabled,
+      'cutleryFreeLimit': cutleryFreeLimit,
+      'cutleryUnitPrice': cutleryUnitPrice,
+      'cutleryMaxCount': cutleryMaxCount,
     };
   }
 
@@ -276,6 +294,10 @@ class Restaurant extends Equatable {
     int? minOrderAmount,
     bool? isPickupEnabled,
     int? pickupPreparationMinutes,
+    bool? cutleryEnabled,
+    int? cutleryFreeLimit,
+    int? cutleryUnitPrice,
+    int? cutleryMaxCount,
   }) {
     return Restaurant(
       id: id ?? this.id,
@@ -307,6 +329,10 @@ class Restaurant extends Equatable {
       isPickupEnabled: isPickupEnabled ?? this.isPickupEnabled,
       pickupPreparationMinutes:
           pickupPreparationMinutes ?? this.pickupPreparationMinutes,
+      cutleryEnabled: cutleryEnabled ?? this.cutleryEnabled,
+      cutleryFreeLimit: cutleryFreeLimit ?? this.cutleryFreeLimit,
+      cutleryUnitPrice: cutleryUnitPrice ?? this.cutleryUnitPrice,
+      cutleryMaxCount: cutleryMaxCount ?? this.cutleryMaxCount,
     );
   }
 
@@ -444,5 +470,9 @@ class Restaurant extends Equatable {
         minOrderAmount,
         isPickupEnabled,
         pickupPreparationMinutes,
+        cutleryEnabled,
+        cutleryFreeLimit,
+        cutleryUnitPrice,
+        cutleryMaxCount,
       ];
 }

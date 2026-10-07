@@ -21,6 +21,7 @@ import 'package:jetkiz_mobile/features/payments/domain/paymentFlowState.dart';
 import 'package:jetkiz_mobile/features/payments/domain/savedPaymentCard.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnPage.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
+import 'package:jetkiz_mobile/features/restaurants/data/restaurantsApi.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -39,6 +40,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   late final AnalyticsService _analyticsService;
   late final FinanceConfigApi _financeConfigApi;
   late final ProfileApi _profileApi;
+  late final RestaurantsApi _restaurantsApi;
   late final OrderApi _orderApi;
   late final PaymentCheckoutApi _paymentCheckoutApi;
   final PaymentMethodsRepository _paymentMethodsRepository =
@@ -63,6 +65,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _pendingOrderKey;
   String? _pendingOrderFingerprint;
 
+  String? _cutleryRestaurantId;
+  bool _isCutleryLoading = false;
+  bool _hasCutleryError = false;
+  bool _cutleryEnabled = false;
+  int _cutleryFreeLimit = 0;
+  int _cutleryUnitPrice = 0;
+  int _cutleryMaxCount = 10;
+  int _cutleryCount = 0;
+
+  int get _cutleryPaidCount =>
+      max(0, _cutleryCount - _cutleryFreeLimit);
+  int get _cutleryAmount => _cutleryPaidCount * _cutleryUnitPrice;
+
   bool get _isPickup => _fulfillmentType == OrderFulfillmentType.pickup;
 
   int get _effectiveDeliveryFee => _isPickup ? 0 : _deliveryFee;
@@ -75,6 +90,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _analyticsService = AnalyticsService(apiClient);
     _financeConfigApi = FinanceConfigApi(apiClient);
     _profileApi = ProfileApi(apiClient);
+    _restaurantsApi = RestaurantsApi(apiClient);
     _orderApi = OrderApi(apiClient);
     _paymentCheckoutApi = PaymentCheckoutApi(apiClient);
 
@@ -82,6 +98,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _addressRepository.addListener(_handleExternalStateChanged);
     _loadDeliveryFee();
     _loadSavedCards();
+    unawaited(_loadCutlerySettings());
     _initialPaymentCleanup = _discardAbandonedPaymentReference();
     unawaited(
       _analyticsService.trackScreenView(
@@ -101,7 +118,56 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _handleExternalStateChanged() {
     if (!mounted) return;
+    final restaurantId = _cartRepository.state.restaurantId?.trim();
+    if (restaurantId != _cutleryRestaurantId) {
+      unawaited(_loadCutlerySettings());
+    }
     setState(() {});
+  }
+
+  Future<void> _loadCutlerySettings() async {
+    final restaurantId = _cartRepository.state.restaurantId?.trim();
+    if (restaurantId == null || restaurantId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _cutleryRestaurantId = null;
+        _cutleryEnabled = false;
+        _cutleryCount = 0;
+        _isCutleryLoading = false;
+        _hasCutleryError = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _cutleryRestaurantId = restaurantId;
+      _isCutleryLoading = true;
+      _hasCutleryError = false;
+    });
+
+    try {
+      final restaurant = await _restaurantsApi.getPublicRestaurant(restaurantId);
+      if (!mounted || _cutleryRestaurantId != restaurantId) return;
+      setState(() {
+        _cutleryEnabled = restaurant.cutleryEnabled;
+        _cutleryFreeLimit = restaurant.cutleryFreeLimit;
+        _cutleryUnitPrice = restaurant.cutleryUnitPrice;
+        _cutleryMaxCount = restaurant.cutleryMaxCount.clamp(1, 20);
+        _cutleryCount = restaurant.cutleryEnabled
+            ? _cutleryCount.clamp(0, _cutleryMaxCount)
+            : 0;
+        _isCutleryLoading = false;
+        _hasCutleryError = false;
+      });
+    } catch (_) {
+      if (!mounted || _cutleryRestaurantId != restaurantId) return;
+      setState(() {
+        _cutleryEnabled = false;
+        _cutleryCount = 0;
+        _isCutleryLoading = false;
+        _hasCutleryError = true;
+      });
+    }
   }
 
   Future<void> _loadDeliveryFee() async {
@@ -194,6 +260,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     if (_isSubmitting || _orderPlaced) return;
 
+    if (_isCutleryLoading || _hasCutleryError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: LocalizedText(
+            'Не удалось проверить условия приборов. Повторите загрузку.',
+          ),
+        ),
+      );
+      return;
+    }
+
     await _initialPaymentCleanup;
     if (!mounted || _isSubmitting || _orderPlaced) return;
 
@@ -284,6 +361,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         leaveAtDoor: false,
         comment: null,
         promoCode: null,
+        cutleryCount: _cutleryEnabled ? _cutleryCount : 0,
         items: orderItems
             .map(
               (item) => CreateOrderItemPayload(
@@ -325,6 +403,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
         idempotencyKey: _pendingOrderKey,
       );
       final createdOrder = _CreatedOrderView.fromJson(order);
+      final expectedTotal =
+          _cartRepository.state.subtotal + _effectiveDeliveryFee + _cutleryAmount;
+      if (createdOrder.total != null && createdOrder.total != expectedTotal) {
+        _pendingOrderKey = null;
+        _pendingOrderFingerprint = null;
+        await _loadCutlerySettings();
+        throw const _CheckoutBlockedException(
+          'Условия заказа обновились. Проверьте итоговую сумму и подтвердите ещё раз.',
+        );
+      }
       final orderId = createdOrder.id?.trim() ?? '';
       if (orderId.isEmpty) {
         throw const _CheckoutBlockedException(
@@ -514,7 +602,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final subtotal = cartState.subtotal;
     final deliveryFee = _effectiveDeliveryFee;
-    final total = subtotal + deliveryFee;
+    final cutleryAmount = _cutleryEnabled ? _cutleryAmount : 0;
+    final total = subtotal + deliveryFee + cutleryAmount;
     final paymentStrings = PaymentStrings.of(context);
 
     final normalCheckoutDisabled = cartState.isEmpty ||
@@ -522,7 +611,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         (!_isPickup && _hasDeliveryError) ||
         _isCardsLoading ||
         (!_useNewCard && _selectedCardId == null) ||
-        _isDeliveryLoading;
+        _isDeliveryLoading ||
+        _isCutleryLoading ||
+        _hasCutleryError;
     final isConfirmDisabled = _isSubmitting || normalCheckoutDisabled;
 
     return Scaffold(
@@ -598,6 +689,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   const _CheckoutSectionTitle(title: 'Ваш заказ'),
                   const SizedBox(height: 10),
                   _CheckoutItemsCard(items: items),
+                  const SizedBox(height: 18),
+                  const _CheckoutSectionTitle(title: 'Приборы'),
+                  const SizedBox(height: 10),
+                  if (_isCutleryLoading)
+                    const _CheckoutLoadingCard()
+                  else if (_hasCutleryError)
+                    _CheckoutRetryCard(onRetry: _loadCutlerySettings)
+                  else if (!_cutleryEnabled)
+                    const _CutleryDisabledCard()
+                  else
+                    _CutleryPickerCard(
+                      count: _cutleryCount,
+                      freeLimit: _cutleryFreeLimit,
+                      unitPrice: _cutleryUnitPrice,
+                      maxCount: _cutleryMaxCount,
+                      amount: _cutleryAmount,
+                      enabled: !_isSubmitting,
+                      onChanged: (value) {
+                        setState(() => _cutleryCount = value);
+                      },
+                    ),
                   const SizedBox(height: 18),
                   const _CheckoutSectionTitle(title: 'Способ оплаты'),
                   const SizedBox(height: 10),
@@ -697,6 +809,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   _CheckoutSummaryCard(
                     subtotal: subtotal,
                     deliveryFee: deliveryFee,
+                    cutleryCount: _cutleryEnabled ? _cutleryCount : 0,
+                    cutleryAmount: cutleryAmount,
                     total: total,
                     isDeliveryLoading: _isDeliveryLoading,
                   ),
@@ -1029,6 +1143,168 @@ class _CheckoutItemRow extends StatelessWidget {
   }
 }
 
+class _CheckoutLoadingCard extends StatelessWidget {
+  const _CheckoutLoadingCard();
+
+  @override
+  Widget build(BuildContext context) => const Container(
+        padding: EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(22)),
+        ),
+        child: Center(child: CircularProgressIndicator(color: Color(0xFF489F2A))),
+      );
+}
+
+class _CheckoutRetryCard extends StatelessWidget {
+  const _CheckoutRetryCard({required this.onRetry});
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF6E8),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFF0D9AD)),
+        ),
+        child: Row(
+          children: [
+            const Expanded(
+              child: LocalizedText(
+                'Не удалось загрузить условия приборов',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            TextButton(
+              onPressed: () => onRetry(),
+              child: const LocalizedText('Повторить'),
+            ),
+          ],
+        ),
+      );
+}
+
+class _CutleryDisabledCard extends StatelessWidget {
+  const _CutleryDisabledCard();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: const LocalizedText(
+          'Этот ресторан не предоставляет приборы',
+          style: TextStyle(
+            color: Color(0xFF6B7280),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+}
+
+class _CutleryPickerCard extends StatelessWidget {
+  const _CutleryPickerCard({
+    required this.count,
+    required this.freeLimit,
+    required this.unitPrice,
+    required this.maxCount,
+    required this.amount,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final int count;
+  final int freeLimit;
+  final int unitPrice;
+  final int maxCount;
+  final int amount;
+  final bool enabled;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final paidCount = max(0, count - freeLimit);
+    final details = count == 0
+        ? 'Приборы не нужны'
+        : amount == 0
+            ? freeLimit > 0
+                ? 'До $freeLimit бесплатно'
+                : 'Бесплатно'
+            : '$freeLimit бесплатно · $paidCount × $unitPrice ₸ = $amount ₸';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.flatware_rounded, color: Color(0xFF489F2A)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LocalizedText(
+                  count == 0 ? 'Не нужны' : '$count шт.',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                LocalizedText(
+                  details,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF6B7280),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: enabled && count > 0 ? () => onChanged(count - 1) : null,
+            icon: const Icon(Icons.remove_circle_outline_rounded),
+          ),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$count',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed:
+                enabled && count < maxCount ? () => onChanged(count + 1) : null,
+            icon: const Icon(Icons.add_circle_outline_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CheckoutCardTile extends StatelessWidget {
   const _CheckoutCardTile({
     required this.card,
@@ -1242,12 +1518,16 @@ class _CheckoutSummaryCard extends StatelessWidget {
   const _CheckoutSummaryCard({
     required this.subtotal,
     required this.deliveryFee,
+    required this.cutleryCount,
+    required this.cutleryAmount,
     required this.total,
     required this.isDeliveryLoading,
   });
 
   final int subtotal;
   final int deliveryFee;
+  final int cutleryCount;
+  final int cutleryAmount;
   final int total;
   final bool isDeliveryLoading;
 
@@ -1268,6 +1548,13 @@ class _CheckoutSummaryCard extends StatelessWidget {
           _CheckoutSummaryRow(label: 'Стоимость товаров', value: '$subtotal ₸'),
           const SizedBox(height: 10),
           _CheckoutSummaryRow(label: 'Доставка', value: deliveryText),
+          if (cutleryCount > 0) ...[
+            const SizedBox(height: 10),
+            _CheckoutSummaryRow(
+              label: 'Приборы · $cutleryCount',
+              value: cutleryAmount == 0 ? 'Бесплатно' : '$cutleryAmount ₸',
+            ),
+          ],
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
@@ -1548,10 +1835,15 @@ class _CheckoutSuccessScreenState extends State<_CheckoutSuccessScreen> {
 }
 
 class _CreatedOrderView {
-  const _CreatedOrderView({required this.id, required this.pickupCode});
+  const _CreatedOrderView({
+    required this.id,
+    required this.pickupCode,
+    required this.total,
+  });
 
   final String? id;
   final String? pickupCode;
+  final int? total;
 
   factory _CreatedOrderView.fromJson(Map<String, dynamic> json) {
     final rawId = json['id']?.toString().trim() ?? '';
@@ -1562,6 +1854,9 @@ class _CreatedOrderView {
       pickupCode: rawPickup.isEmpty || rawPickup.toLowerCase() == 'null'
           ? null
           : rawPickup,
+      total: json['total'] is num
+          ? (json['total'] as num).round()
+          : int.tryParse(json['total']?.toString() ?? ''),
     );
   }
 }

@@ -45,6 +45,13 @@ class RestaurantsApi {
     );
   }
 
+  Future<Restaurant> getPublicRestaurant(String restaurantId) async {
+    final response = await _apiClient.dio.get(
+      '/restaurants/${restaurantId.trim()}',
+    );
+    return Restaurant.fromJson(_asMap(response.data));
+  }
+
   Future<List<Restaurant>> getAllPublicRestaurants({
     bool random = true,
   }) async {
