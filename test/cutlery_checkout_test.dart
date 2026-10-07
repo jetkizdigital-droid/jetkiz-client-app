@@ -9,7 +9,7 @@ void main() {
       restaurantId: 'restaurant-1',
       fulfillmentType: OrderFulfillmentType.pickup,
       cutleryCount: 5,
-      items: const [
+      items: [
         CreateOrderItemPayload(productId: 'product-1', quantity: 1),
       ],
     );
@@ -19,7 +19,7 @@ void main() {
   });
 
   test('restaurant parses cutlery policy with safe defaults', () {
-    final restaurant = Restaurant.fromJson({
+    final restaurant = Restaurant.fromJson(const {
       'id': 'restaurant-1',
       'cutleryEnabled': true,
       'cutleryFreeLimit': 3,
