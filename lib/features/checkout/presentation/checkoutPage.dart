@@ -1150,12 +1150,13 @@ class _CheckoutLoadingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.all(Radius.circular(22)),
         ),
-        child:
-            Center(child: CircularProgressIndicator(color: Color(0xFF489F2A))),
+        child: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF489F2A)),
+        ),
       );
 }
 
