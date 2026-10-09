@@ -46,8 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/signing" "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "$CERT" | base64 --decode > "$RUNNER_TEMP/signing/distribution.p12"
-          echo "$PROFILE" | base64 --decode > "$RUNNER_TEMP/signing/jetkiz.mobileprovision"
+          echo "$CERT" | base64 -D > "$RUNNER_TEMP/signing/distribution.p12"
+          echo "$PROFILE" | base64 -D > "$RUNNER_TEMP/signing/jetkiz.mobileprovision"
           security create-keychain -p "$RUNNER_TEMP" "$RUNNER_TEMP/jetkiz.keychain-db"
           security set-keychain-settings -lut 21600 "$RUNNER_TEMP/jetkiz.keychain-db"
           security unlock-keychain -p "$RUNNER_TEMP" "$RUNNER_TEMP/jetkiz.keychain-db"
@@ -69,7 +69,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.appstoreconnect/private_keys"
-          echo "$API_KEY" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
+          echo "$API_KEY" | base64 -D > "$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
           chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
       - name: Install Flutter dependencies
         run: flutter pub get
