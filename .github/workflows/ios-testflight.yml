@@ -113,7 +113,7 @@ jobs:
           path.write_text(content.replace(marker, replacement))
           PY
       - name: Build signed iOS IPA
-        run: flutter build ipa --release --export-options-plist="$RUNNER_TEMP/exportOptions.plist" --dart-define=JETKIZ_API_BASE_URL=https://api.jetkiz.asia
+        run: flutter build ipa --release --build-number=6 --export-options-plist="$RUNNER_TEMP/exportOptions.plist" --dart-define=JETKIZ_API_BASE_URL=https://api.jetkiz.asia
       - name: Upload to TestFlight
         env:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
