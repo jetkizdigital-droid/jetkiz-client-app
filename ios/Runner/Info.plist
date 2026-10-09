@@ -33,6 +33,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Доступ к фотографиям необходим, чтобы выбрать изображение из галереи.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Доступ к камере необходим, чтобы сделать фотографию в приложении.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Геолокация используется во время работы приложения, чтобы определить адрес доставки и показать доступные рестораны поблизости.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
