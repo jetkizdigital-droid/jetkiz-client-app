@@ -137,8 +137,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
               if (error.isForMainFrame != true || !mounted) return;
               setState(() {
                 _webViewLoading = false;
-                _errorMessage =
-                    PaymentStrings.of(context).checkoutLoadError;
+                _errorMessage = PaymentStrings.of(context).checkoutLoadError;
               });
             },
             onNavigationRequest: (request) {
@@ -167,8 +166,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
       if (!mounted) return;
       setState(() {
         _webViewLoading = false;
-        _errorMessage =
-            PaymentStrings.of(context).checkoutUnavailable;
+        _errorMessage = PaymentStrings.of(context).checkoutUnavailable;
       });
     } finally {
       if (mounted) setState(() => _isOpeningProvider = false);
@@ -184,7 +182,8 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
         mode: LaunchMode.externalApplication,
       );
       if (!opened && mounted) {
-        setState(() => _errorMessage = PaymentStrings.of(context).browserOpenError);
+        setState(
+            () => _errorMessage = PaymentStrings.of(context).browserOpenError);
       }
     } catch (_) {
       if (mounted) {
