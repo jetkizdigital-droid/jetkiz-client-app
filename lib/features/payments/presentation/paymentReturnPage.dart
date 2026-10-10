@@ -110,7 +110,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
     if (uri == null) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Сервер вернул небезопасную ссылку оплаты';
+        _errorMessage = PaymentStrings.of(context).checkoutUnsafeLink;
       });
       return;
     }
@@ -138,7 +138,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
               setState(() {
                 _webViewLoading = false;
                 _errorMessage =
-                    'Не удалось загрузить оплату. Можно открыть её в браузере.';
+                    PaymentStrings.of(context).checkoutLoadError;
               });
             },
             onNavigationRequest: (request) {
@@ -168,7 +168,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
       setState(() {
         _webViewLoading = false;
         _errorMessage =
-            'Встроенная форма недоступна. Откройте оплату в браузере.';
+            PaymentStrings.of(context).checkoutUnavailable;
       });
     } finally {
       if (mounted) setState(() => _isOpeningProvider = false);
@@ -184,7 +184,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
         mode: LaunchMode.externalApplication,
       );
       if (!opened && mounted) {
-        setState(() => _errorMessage = 'Не удалось открыть браузер');
+        setState(() => _errorMessage = PaymentStrings.of(context).browserOpenError);
       }
     } catch (_) {
       if (mounted) {
@@ -284,38 +284,6 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                   children: [
                     if (_webViewLoading)
                       const LinearProgressIndicator(color: _green),
-                    Container(
-                      width: double.infinity,
-                      color: Colors.white,
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.credit_card_rounded, color: _green),
-                              SizedBox(width: 9),
-                              Text(
-                                'Оплата картой',
-                                style: TextStyle(
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF172016),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'Защищённая форма PayLink внутри JETKIZ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     Expanded(
                       child: WebViewWidget(controller: _webViewController!),
                     ),
@@ -327,22 +295,22 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                             Text(_errorMessage!, textAlign: TextAlign.center),
                       ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
                       child: Row(
                         children: [
+                          if (_errorMessage != null) ...[
+                            Expanded(
+                              child: TextButton(
+                                onPressed: _openInExternalBrowser,
+                                child: Text(strings.openInBrowser),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: _openInExternalBrowser,
-                              child: const Text('Открыть в браузере'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: _checkOnce,
-                              style: FilledButton.styleFrom(
-                                  backgroundColor: _green),
-                              child: const Text('Проверить оплату'),
+                              onPressed: _isChecking ? null : _checkOnce,
+                              child: Text(strings.checkAgain),
                             ),
                           ),
                         ],
