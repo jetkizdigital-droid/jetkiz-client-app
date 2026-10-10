@@ -8,6 +8,7 @@ import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnBridge
 import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentSuccessPage.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 enum PaymentReturnResult {
   secured,
@@ -51,6 +52,8 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
   bool _isChecking = false;
   PaymentOrderState? _state;
   String? _errorMessage;
+  WebViewController? _webViewController;
+  bool _webViewLoading = false;
 
   @override
   void initState() {
@@ -114,36 +117,79 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
 
     setState(() {
       _isOpeningProvider = true;
+      _webViewLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // Keep hosted PayLink in a secure platform-managed browser surface
-      // (SFSafariViewController on iOS / Custom Tabs on Android).
-      // Bank redirects remain controlled by the OS; do not intercept PAN/CVV.
-      var opened = await launchUrl(
-        uri,
-        mode: LaunchMode.inAppBrowserView,
-      );
-      if (!opened) {
-        // Fallback for unsupported devices/3-D Secure browser requirements.
-        opened = await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.white)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (_) {
+              if (mounted) setState(() => _webViewLoading = true);
+            },
+            onPageFinished: (_) {
+              if (mounted) setState(() => _webViewLoading = false);
+            },
+            onWebResourceError: (error) {
+              if (!error.isForMainFrame || !mounted) return;
+              setState(() {
+                _webViewLoading = false;
+                _errorMessage =
+                    'Не удалось загрузить оплату. Можно открыть её в браузере.';
+              });
+            },
+            onNavigationRequest: (request) {
+              final target = Uri.tryParse(request.url);
+              if (target == null) return NavigationDecision.prevent;
+              if (target.scheme == 'https') {
+                return NavigationDecision.navigate;
+              }
+              if (target.scheme == 'http') return NavigationDecision.prevent;
+              // Banking apps and 3-D Secure may require native URL schemes.
+              // External requests are user-visible and never mark payment paid.
+              if (target.scheme != 'about') {
+                unawaited(launchUrl(
+                  target,
+                  mode: LaunchMode.externalApplication,
+                ));
+              }
+              return NavigationDecision.prevent;
+            },
+          ),
         );
-      }
-      if (!opened && mounted) {
-        setState(() {
-          _errorMessage = 'Не удалось открыть защищённую страницу оплаты';
-        });
-      }
+      if (!mounted) return;
+      setState(() => _webViewController = controller);
+      await controller.loadRequest(uri);
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Не удалось открыть защищённую страницу оплаты';
+        _webViewLoading = false;
+        _errorMessage =
+            'Встроенная форма недоступна. Откройте оплату в браузере.';
       });
     } finally {
       if (mounted) setState(() => _isOpeningProvider = false);
+    }
+  }
+
+  Future<void> _openInExternalBrowser() async {
+    final uri = _secureCheckoutUri;
+    if (uri == null) return;
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        setState(() => _errorMessage = 'Не удалось открыть браузер');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Не удалось открыть браузер');
+      }
     }
   }
 
@@ -231,7 +277,44 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
-        body: SafeArea(
+        body: _webViewController != null && !failed
+            ? SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    if (_webViewLoading)
+                      const LinearProgressIndicator(color: _green),
+                    Expanded(child: WebViewWidget(controller: _webViewController!)),
+                    if (_errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: Text(_errorMessage!, textAlign: TextAlign.center),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _openInExternalBrowser,
+                              child: const Text('Открыть в браузере'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _checkOnce,
+                              style: FilledButton.styleFrom(backgroundColor: _green),
+                              child: const Text('Проверить оплату'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
