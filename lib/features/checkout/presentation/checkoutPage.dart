@@ -20,6 +20,7 @@ import 'package:jetkiz_mobile/features/payments/data/paymentPendingStore.dart';
 import 'package:jetkiz_mobile/features/payments/domain/paymentFlowState.dart';
 import 'package:jetkiz_mobile/features/payments/domain/savedPaymentCard.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnPage.dart';
+import 'package:jetkiz_mobile/features/payments/presentation/paymentReturnRecoveryPage.dart';
 import 'package:jetkiz_mobile/features/payments/presentation/paymentStrings.dart';
 import 'package:jetkiz_mobile/features/restaurants/data/restaurantsApi.dart';
 
@@ -98,7 +99,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _loadDeliveryFee();
     _loadSavedCards();
     unawaited(_loadCutlerySettings());
-    _initialPaymentCleanup = _discardAbandonedPaymentReference();
+    _initialPaymentCleanup = Future<void>.value();
     unawaited(
       _analyticsService.trackScreenView(
         screen: 'checkout',
@@ -273,6 +274,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     await _initialPaymentCleanup;
     if (!mounted || _isSubmitting || _orderPlaced) return;
+
+    // Check for an unresolved previous payment before creating another order.
+    // A lost return redirect is not proof that the charge failed.
+    final previousPayment = await _paymentPendingStore.read();
+    if (!mounted) return;
+    if (previousPayment != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => const PaymentReturnRecoveryPage(),
+        ),
+      );
+      return;
+    }
 
     if (!_isPickup && _hasDeliveryError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -463,18 +477,31 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
 
       if (paymentResult != PaymentReturnResult.secured) {
-        unawaited(
-          _analyticsService.trackEvent(
-            eventName: 'payment_failed',
-            entityType: 'order',
-            entityId: orderId,
-            source: 'checkout_return',
-            metadata: {'result': paymentResult?.name ?? 'closed'},
-          ),
-        );
-        await _discardAbandonedPaymentReference();
-        _pendingOrderKey = null;
-        _pendingOrderFingerprint = null;
+        if (paymentResult == PaymentReturnResult.failed) {
+          unawaited(
+            _analyticsService.trackEvent(
+              eventName: 'payment_failed',
+              entityType: 'order',
+              entityId: orderId,
+              source: 'checkout_return',
+              metadata: {'result': 'confirmed_failed'},
+            ),
+          );
+          await _discardAbandonedPaymentReference();
+          _pendingOrderKey = null;
+          _pendingOrderFingerprint = null;
+        } else {
+          // Pending/closed is unresolved, not a bank decline.
+          unawaited(
+            _analyticsService.trackEvent(
+              eventName: 'checkout_step',
+              entityType: 'order',
+              entityId: orderId,
+              source: 'checkout_return',
+              metadata: {'step': 'payment_pending', 'result': 'unresolved'},
+            ),
+          );
+        }
         return;
       }
 
