@@ -284,11 +284,14 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                   children: [
                     if (_webViewLoading)
                       const LinearProgressIndicator(color: _green),
-                    Expanded(child: WebViewWidget(controller: _webViewController!)),
+                    Expanded(
+                        child: WebViewWidget(controller: _webViewController!)),
                     if (_errorMessage != null)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        child: Text(_errorMessage!, textAlign: TextAlign.center),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
+                        child:
+                            Text(_errorMessage!, textAlign: TextAlign.center),
                       ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -304,7 +307,8 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                           Expanded(
                             child: FilledButton(
                               onPressed: _checkOnce,
-                              style: FilledButton.styleFrom(backgroundColor: _green),
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: _green),
                               child: const Text('Проверить оплату'),
                             ),
                           ),
@@ -315,119 +319,125 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                 ),
               )
             : SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-            child: Column(
-              children: [
-                const Spacer(),
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    color: (failed ? const Color(0xFFD33A2C) : _green)
-                        .withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: failed
-                      ? const Icon(
-                          Icons.error_outline_rounded,
-                          color: Color(0xFFD33A2C),
-                          size: 40,
-                        )
-                      : _isChecking
-                          ? const Padding(
-                              padding: EdgeInsets.all(26),
-                              child: CircularProgressIndicator(
-                                color: _green,
-                                strokeWidth: 3,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.shield_outlined,
-                              color: _green,
-                              size: 40,
-                            ),
-                ),
-                const SizedBox(height: 22),
-                Text(
-                  failed ? strings.paymentFailed : strings.paymentStillPending,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 23,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1F271E),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  failed ? strings.paymentFailedHint : strings.paymentCheckHint,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    height: 1.45,
-                    color: Color(0xFF5F685D),
-                  ),
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: Color(0xFFD33A2C),
-                    ),
-                  ),
-                ],
-                const Spacer(),
-                if (!failed) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _isOpeningProvider ? null : _openProvider,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  child: Column(
+                    children: [
+                      const Spacer(),
+                      Container(
+                        width: 84,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          color: (failed ? const Color(0xFFD33A2C) : _green)
+                              .withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        child: failed
+                            ? const Icon(
+                                Icons.error_outline_rounded,
+                                color: Color(0xFFD33A2C),
+                                size: 40,
+                              )
+                            : _isChecking
+                                ? const Padding(
+                                    padding: EdgeInsets.all(26),
+                                    child: CircularProgressIndicator(
+                                      color: _green,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.shield_outlined,
+                                    color: _green,
+                                    size: 40,
+                                  ),
+                      ),
+                      const SizedBox(height: 22),
+                      Text(
+                        failed
+                            ? strings.paymentFailed
+                            : strings.paymentStillPending,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1F271E),
                         ),
                       ),
-                      icon: const Icon(Icons.open_in_browser_rounded),
-                      label: Text(
-                        strings.openPayLink,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      const SizedBox(height: 12),
+                      Text(
+                        failed
+                            ? strings.paymentFailedHint
+                            : strings.paymentCheckHint,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.45,
+                          color: Color(0xFF5F685D),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isChecking ? null : _checkOnce,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: Text(strings.checkAgain),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _green,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.4,
+                            color: Color(0xFFD33A2C),
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      if (!failed) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed:
+                                _isOpeningProvider ? null : _openProvider,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            icon: const Icon(Icons.open_in_browser_rounded),
+                            label: Text(
+                              strings.openPayLink,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _isChecking ? null : _checkOnce,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: Text(strings.checkAgain),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _green,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: _backToOrder,
+                        child: Text(strings.backToOrder),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: _backToOrder,
-                  child: Text(strings.backToOrder),
-                ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
