@@ -118,10 +118,20 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
     });
 
     try {
-      final opened = await launchUrl(
+      // Keep hosted PayLink in a secure platform-managed browser surface
+      // (SFSafariViewController on iOS / Custom Tabs on Android).
+      // Bank redirects remain controlled by the OS; do not intercept PAN/CVV.
+      var opened = await launchUrl(
         uri,
-        mode: LaunchMode.externalApplication,
+        mode: LaunchMode.inAppBrowserView,
       );
+      if (!opened) {
+        // Fallback for unsupported devices/3-D Secure browser requirements.
+        opened = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      }
       if (!opened && mounted) {
         setState(() {
           _errorMessage = 'Не удалось открыть защищённую страницу оплаты';
