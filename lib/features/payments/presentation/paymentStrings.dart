@@ -45,6 +45,19 @@ class PaymentStrings {
       ? 'Болашақ төлемдер үшін картаны сақтау'
       : 'Сохранить карту для будущих платежей';
   String get paymentCheck => _kk ? 'Төлем' : 'Оплата';
+  String get checkoutUnsafeLink => _kk
+      ? 'Төлем сілтемесі жарамсыз'
+      : 'Недействительная ссылка оплаты';
+  String get checkoutLoadError => _kk
+      ? 'Төлемді жүктеу мүмкін болмады'
+      : 'Не удалось загрузить оплату';
+  String get checkoutUnavailable => _kk
+      ? 'Төлем бетін ашу мүмкін болмады'
+      : 'Не удалось открыть оплату';
+  String get openInBrowser => _kk ? 'Браузерде ашу' : 'Открыть в браузере';
+  String get browserOpenError => _kk
+      ? 'Браузерді ашу мүмкін болмады'
+      : 'Не удалось открыть браузер';
   String get paymentCheckHint => _kk
       ? 'Төлем нәтижесін тексеріп жатырмыз.'
       : 'Проверяем результат оплаты.';
