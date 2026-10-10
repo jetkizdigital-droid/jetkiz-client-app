@@ -538,11 +538,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: LocalizedText(error.message)));
     } on PaymentCheckoutException catch (error) {
+      // Checkout API errors are not verified provider declines.
       unawaited(
         _analyticsService.trackEvent(
-          eventName: 'payment_failed',
+          eventName: 'checkout_step',
           source: 'checkout_page',
-          metadata: {'stage': 'checkout_create'},
+          metadata: {'step': 'payment_setup', 'result': 'failed'},
         ),
       );
       if (!mounted) return;
