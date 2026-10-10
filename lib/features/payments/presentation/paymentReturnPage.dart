@@ -134,7 +134,7 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
               if (mounted) setState(() => _webViewLoading = false);
             },
             onWebResourceError: (error) {
-              if (!error.isForMainFrame || !mounted) return;
+              if (error.isForMainFrame != true || !mounted) return;
               setState(() {
                 _webViewLoading = false;
                 _errorMessage =
