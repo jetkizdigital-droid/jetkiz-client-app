@@ -284,8 +284,41 @@ class _PaymentReturnPageState extends State<PaymentReturnPage>
                   children: [
                     if (_webViewLoading)
                       const LinearProgressIndicator(color: _green),
+                    Container(
+                      width: double.infinity,
+                      color: Colors.white,
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.credit_card_rounded, color: _green),
+                              SizedBox(width: 9),
+                              Text(
+                                'Оплата картой',
+                                style: TextStyle(
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF172016),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            'Защищённая форма PayLink внутри JETKIZ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     Expanded(
-                        child: WebViewWidget(controller: _webViewController!)),
+                      child: WebViewWidget(controller: _webViewController!),
+                    ),
                     if (_errorMessage != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(
